@@ -23,7 +23,7 @@ from pathlib import Path
 
 # ── Path config ────────────────────────────────────────────────────────────────
 BASE_DIR    = Path(__file__).resolve().parent          # …/Code
-DATASET_DIR = BASE_DIR.parent / "Datasets"             # …/Datasets
+DATASET_DIR = BASE_DIR / "InputImages"             # …/InputImages
 RESULT_DIR  = BASE_DIR / "Result"                      # …/Code/Result
 
 LAYOUTDET_DIR = RESULT_DIR / "LayoutDetection"
