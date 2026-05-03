@@ -1,0 +1,11 @@
+# Core image processing
+opencv-python>=4.9.0
+numpy>=1.26.0
+Pillow>=10.3.0
+
+# Surya OCR / Layout / Detection
+surya-ocr>=0.6.0
+
+# Optional but recommended for GPU acceleration
+# torch>=2.2.0
+# torchvision>=0.17.0
