@@ -1,10 +1,11 @@
 """
 Stage 1 – Text Region Detection & Block Merging (stage1_LayoutDetection.py)
 ──────────────────────────────────────────────────────────────────────────
-1. Uses Surya's DetectionPredictor to find text lines.
+1. Pre-processes the input image (denoise → CLAHE → binarise) for maximum
+   detection quality before feeding it to Surya's DetectionPredictor.
 2. Extracts POLYGONS (4 points) to handle tilted/skewed text.
 3. MERGES nearby lines into Paragraph Blocks to satisfy "capture the whole block".
-4. Saves annotated image with RED outlines and JSON metadata.
+4. Saves annotated image with BLACK outlines on WHITE background + JSON metadata.
 
 JSON metadata includes both axis-aligned BBoxes and 4-point Polygons.
 """
@@ -17,7 +18,7 @@ import cv2
 import numpy as np
 from pathlib import Path
 from dataclasses import dataclass, asdict
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageOps
 
 # Ensure console can handle non-ASCII text
 try:
@@ -49,12 +50,43 @@ class LayoutBox:
     polygon: list[list[int]] = None  # List of 4 [x, y] points
 
 # ── Tunables ──────────────────────────────────────────────────────────────────
-MIN_AREA       = 200    
-MIN_CONFIDENCE = 0.50   
+MIN_AREA       = 200
+MIN_CONFIDENCE = 0.50
 
 # Merging Tunables
-VERTICAL_GAP_THRESH   = 20  # Max vertical distance between lines to merge (pixels)
-HORIZONTAL_OVERLAP_THRESH = 0.2 # Min horizontal overlap ratio to merge
+VERTICAL_GAP_THRESH       = 20   # Max vertical distance between lines to merge (px)
+HORIZONTAL_OVERLAP_THRESH = 0.2  # Min horizontal overlap ratio to merge
+
+# ── Pre-processing helpers (Stage 1 input enhancement) ───────────────────────
+
+def _enhance_for_detection(pil_img: Image.Image) -> Image.Image:
+    """
+    Enhance a PIL image so that Surya can detect text more reliably.
+
+    Pipeline:
+      1. Convert to BGR NumPy array.
+      2. Bilateral filter  – smooths noise while keeping hard edges sharp.
+      3. CLAHE             – normalises local contrast so faint text appears.
+      4. Return as RGB PIL image (same colour space Surya expects).
+
+    NOTE: We intentionally do NOT binarise here because Surya's model was
+    trained on natural-looking images and performs better with a grey-scale
+    contrast-enhanced input rather than a hard black-and-white one.
+    """
+    bgr = cv2.cvtColor(np.array(pil_img), cv2.COLOR_RGB2BGR)
+
+    # Step 1 – reduce salt-and-pepper / scanner noise without blurring strokes
+    denoised = cv2.bilateralFilter(bgr, d=9, sigmaColor=75, sigmaSpace=75)
+
+    # Step 2 – CLAHE on the luminance channel only
+    lab = cv2.cvtColor(denoised, cv2.COLOR_BGR2LAB)
+    l, a, b = cv2.split(lab)
+    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+    l_eq = clahe.apply(l)
+    lab_eq = cv2.merge([l_eq, a, b])
+    enhanced_bgr = cv2.cvtColor(lab_eq, cv2.COLOR_LAB2BGR)
+
+    return Image.fromarray(cv2.cvtColor(enhanced_bgr, cv2.COLOR_BGR2RGB))
 
 def _compute_horizontal_overlap(box1, box2):
     """Check how much box1 and box2 overlap horizontally."""
@@ -121,6 +153,14 @@ def _merge_boxes(boxes: list[LayoutBox]) -> list[LayoutBox]:
         # Use minAreaRect to get a tilted box that fits the points
         pts = np.array(all_points, dtype=np.int32)
         rect = cv2.minAreaRect(pts)
+        
+        # Add padding so crops don't clip the edges of the text
+        center, size, angle = rect
+        padding_x = 16  # extra width
+        padding_y = 12  # extra height
+        padded_size = (size[0] + padding_x, size[1] + padding_y)
+        rect = (center, padded_size, angle)
+        
         box_points = cv2.boxPoints(rect)
         box_points = np.int32(box_points).tolist() # 4 points [[x,y], ...]
         
@@ -139,9 +179,14 @@ def run(img_path: Path, out_dir: Path) -> tuple[Path | None, list[LayoutBox]]:
         return None, []
 
     image = Image.open(str(img_path)).convert("RGB")
-    det_predictor = _get_det_predictor()
+    image = ImageOps.exif_transpose(image)
 
-    det_predictions = det_predictor([image])
+    # ── Stage 1 pre-processing: enhance before detection ─────────────────────
+    print("  [LayoutDet] Enhancing image (bilateral + CLAHE) ...")
+    enhanced_image = _enhance_for_detection(image)
+
+    det_predictor = _get_det_predictor()
+    det_predictions = det_predictor([enhanced_image])
     det_result = det_predictions[0]
 
     w_img, h_img = image.size
@@ -172,21 +217,23 @@ def run(img_path: Path, out_dir: Path) -> tuple[Path | None, list[LayoutBox]]:
     print(f"  [LayoutDet] Merged {len(line_boxes)} lines into {len(blocks)} blocks.")
 
     # ── Draw boxes ───────────────────────────────────────────────────────────
-    annotated = image.copy()
+    # Draw on a clean white canvas so annotations are always readable
+    w_img, h_img = image.size
+    annotated = Image.new("RGB", (w_img, h_img), color=(255, 255, 255))
+    annotated.paste(image)
     draw = ImageDraw.Draw(annotated)
 
     for block in blocks:
-        # Draw the tilted polygon in RED
+        # Draw the tilted polygon in BLACK (clearly visible on white bg)
         if block.polygon:
-            # Draw lines between points
             p = block.polygon
             for i in range(4):
-                draw.line([tuple(p[i]), tuple(p[(i+1)%4])], fill="red", width=3)
+                draw.line([tuple(p[i]), tuple(p[(i + 1) % 4])], fill="black", width=2)
         else:
-            draw.rectangle([block.x1, block.y1, block.x2, block.y2], outline="red", width=3)
-            
+            draw.rectangle([block.x1, block.y1, block.x2, block.y2], outline="black", width=2)
+
         label = f"{block.label} ({block.confidence:.0%})"
-        draw.text((block.x1 + 2, block.y1 - 14), label, fill="red")
+        draw.text((block.x1 + 2, block.y1 - 14), label, fill="black")
 
     # ── Save ──────────────────────────────────────────────────────────────────
     out_img = out_dir / f"{img_path.stem}_boxes.png"

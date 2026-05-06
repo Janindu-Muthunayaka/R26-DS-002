@@ -19,6 +19,7 @@ Output structure:
 """
 
 import sys
+import random
 from pathlib import Path
 
 # ── Path config ────────────────────────────────────────────────────────────────
@@ -50,12 +51,20 @@ def collect_images(folder: Path) -> list[Path]:
 
 
 def main():
-    images = collect_images(DATASET_DIR)
-    if not images:
+    all_images = collect_images(DATASET_DIR)
+    if not all_images:
         print(f"[Main] No images found in {DATASET_DIR}")
         sys.exit(0)
 
-    print(f"[Main] Found {len(images)} image(s) to process.\n")
+    # ── Random sample ─────────────────────────────────────────────────────────
+    SAMPLE_SIZE = 9
+    images = random.sample(all_images, min(SAMPLE_SIZE, len(all_images)))
+    images.sort()   # sort sampled list for readable output
+
+    print(f"[Main] Found {len(all_images)} image(s). Randomly sampled {len(images)}.\n")
+    for p in images:
+        print(f"  • {p.name}")
+    print()
 
     for img_path in images:
         print(f"{'='*60}")
