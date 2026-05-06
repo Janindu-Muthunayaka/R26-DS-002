@@ -5,7 +5,7 @@ Calls Stage 1 → Stage 2 → Stage 3 for every image found in DATASET_DIR.
 Pipeline:
   Stage 1 – Layout Detection : Detect layout boxes, draw RED outlines + labels.
   Stage 2 – Crop & Deskew    : Crop heading/title boxes, deskew if needed.
-  Stage 3 – Sentence Strips  : Split crops into lines, stitch into 512px strips.
+  Stage 3 – Sentence Strips  : Split crops into lines using CCA, stitch into 512px strips.
 
 Output structure:
   Result/
@@ -24,7 +24,7 @@ from pathlib import Path
 
 # ── Path config ────────────────────────────────────────────────────────────────
 BASE_DIR    = Path(__file__).resolve().parent          # …/Code
-DATASET_DIR = BASE_DIR / "InputImages"             # …/InputImages
+DATASET_DIR = BASE_DIR / "InputImages"                 # …/InputImages
 RESULT_DIR  = BASE_DIR / "Result"                      # …/Code/Result
 
 LAYOUTDET_DIR = RESULT_DIR / "LayoutDetection"
@@ -72,6 +72,7 @@ def main():
 
         # ── Stage 1 : Layout detection (RED boxes + labels) ────────
         annotated_path, boxes = layout_detect_run(img_path, LAYOUTDET_DIR)
+            
         if not boxes:
             print(f"[Main] Stage 1 found no layout regions for {img_path.name}, skipping.")
             continue
@@ -86,7 +87,7 @@ def main():
         original_stem = img_path.stem   # e.g. "A", "B"
         for crop_path in crop_paths:
             sentence_run(crop_path, SENTENCE_DIR, original_stem)
-
+            
     print(f"\n[Main] Pipeline complete.  Results in: {RESULT_DIR}")
 
 
