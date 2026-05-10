@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Sinhala OCR Pipeline Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#07080e;--s1:#0d0f1c;--s2:#121528;--s3:#181c33;
+  --border:#1e2440;--accent:#5e7bff;--green:#4ecca3;--red:#e94560;--amber:#f0a500;
+  --text:#d4d9ef;--muted:#4a5170;
+}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+/* ── Header ── */
+header{
+  background:linear-gradient(135deg,#090d2e 0%,#1a1f4a 100%);
+  padding:28px 48px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:16px
+}
+.logo{font-size:28px}
+header h1{font-size:20px;font-weight:800;color:#fff}
+header .sub{font-size:12px;color:var(--muted);margin-top:2px}
+/* ── Layout ── */
+.container{display:grid;grid-template-columns:420px 1fr;gap:0;min-height:calc(100vh - 85px)}
+/* ── Left panel ── */
+.left{background:var(--s1);border-right:1px solid var(--border);padding:28px;display:flex;flex-direction:column;gap:20px}
+.panel-title{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:4px}
+/* ── Drop zone ── */
+#drop-zone{
+  border:2px dashed var(--border);border-radius:14px;padding:40px 20px;text-align:center;
+  cursor:pointer;transition:all .2s;background:var(--s2)
+}
+#drop-zone.drag{border-color:var(--accent);background:rgba(94,123,255,.08)}
+#drop-zone .dz-icon{font-size:40px;margin-bottom:12px}
+#drop-zone .dz-title{font-size:15px;font-weight:600;color:#fff;margin-bottom:4px}
+#drop-zone .dz-sub{font-size:12px;color:var(--muted)}
+#file-input{display:none}
+/* ── File list ── */
+#file-list{list-style:none;display:flex;flex-direction:column;gap:6px;max-height:240px;overflow-y:auto}
+.file-item{
+  display:flex;align-items:center;gap:10px;
+  background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:8px 12px
+}
+.file-thumb{width:36px;height:36px;object-fit:cover;border-radius:5px;background:#fff;flex-shrink:0}
+.file-info{flex:1;min-width:0}
+.file-name{font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.file-size{font-size:10px;color:var(--muted);margin-top:2px}
+.file-remove{background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;padding:2px 6px;border-radius:4px;transition:.15s}
+.file-remove:hover{color:var(--red);background:rgba(233,69,96,.1)}
+/* ── Buttons ── */
+.btn{
+  padding:12px 20px;border-radius:10px;border:none;font-family:inherit;
+  font-size:14px;font-weight:600;cursor:pointer;transition:all .2s;width:100%
+}
+.btn-primary{background:linear-gradient(135deg,var(--accent),#7b5fff);color:#fff}
+.btn-primary:hover{filter:brightness(1.15);transform:translateY(-1px)}
+.btn-primary:disabled{background:var(--s3);color:var(--muted);cursor:not-allowed;transform:none;filter:none}
+.btn-outline{background:transparent;border:1px solid var(--border);color:var(--text)}
+.btn-outline:hover{border-color:var(--accent);color:var(--accent)}
+/* ── Progress ── */
+.progress-wrap{display:none}
+.progress-stages{display:flex;gap:8px;margin-bottom:14px}
+.stage-dot{
+  flex:1;height:4px;border-radius:4px;background:var(--border);transition:.4s
+}
+.stage-dot.active{background:var(--accent)}
+.stage-dot.done{background:var(--green)}
+.stage-dot.fail{background:var(--red)}
+.status-label{font-size:12px;color:var(--muted);margin-bottom:8px;text-align:center}
+/* ── Log ── */
+#log-box{
+  background:var(--bg);border:1px solid var(--border);border-radius:8px;
+  padding:10px 12px;font-size:11px;font-family:monospace;height:180px;
+  overflow-y:auto;color:#7a8aaa;line-height:1.6
+}
+#log-box .log-ok  {color:var(--green)}
+#log-box .log-err {color:var(--red)}
+#log-box .log-hdr {color:var(--accent);font-weight:bold}
+/* ── Right panel ── */
+.right{padding:28px;overflow-y:auto}
+.right-empty{
+  height:100%;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:12px;opacity:.4
+}
+.right-empty .big{font-size:64px}
+.right-empty p{font-size:14px;color:var(--muted)}
+/* ── Report rows ── */
+.report-row{
+  background:var(--s1);border:1px solid var(--border);border-radius:12px;
+  margin-bottom:12px;overflow:hidden;transition:border-color .2s;box-shadow:0 4px 12px rgba(0,0,0,0.2)
+}
+.report-row:hover{border-color:var(--accent)}
+.row-header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 18px;cursor:pointer;gap:14px
+}
+.row-left{display:flex;align-items:center;gap:14px;flex:1;min-width:0}
+.orig-thumb{width:56px;height:56px;object-fit:cover;border-radius:7px;background:#fff;flex-shrink:0;border:1px solid var(--border);cursor:zoom-in}
+.row-meta{flex:1;min-width:0}
+.row-fname{font-size:14px;font-weight:700;color:#fff;display:flex;align-items:center;gap:8px;margin-bottom:3px}
+.row-preview{font-size:18px;color:var(--green);letter-spacing:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:3px}
+.row-stats{font-size:10px;color:var(--muted)}
+.row-toggle{font-size:18px;color:var(--muted);transition:transform .3s;flex-shrink:0}
+.row-header.open .row-toggle{transform:rotate(180deg)}
+.row-detail{border-top:1px solid var(--border);padding:18px;display:none}
+
+/* ── Tabs ── */
+.row-tabs{display:flex;gap:8px;margin-bottom:16px;border-bottom:1px solid var(--border);padding-bottom:8px}
+.tab-btn{
+  background:transparent;border:none;color:var(--muted);font-family:inherit;font-size:12px;font-weight:700;
+  padding:6px 12px;cursor:pointer;border-radius:6px;transition:all .2s
+}
+.tab-btn.active{background:var(--accent);color:#fff}
+.tab-content{display:none}
+.tab-content.active{display:block;animation:fadeIn 0.3s ease-out}
+@keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── OCR Results ── */
+.detail-texts{margin-bottom:16px}
+.text-line{
+  display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;
+  padding:10px 14px;background:var(--s2);border-radius:8px;margin-bottom:8px
+}
+.text-label{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;flex-shrink:0}
+.si-text{font-size:22px;color:var(--green);letter-spacing:2px}
+.strip-grid{display:flex;flex-wrap:wrap;gap:12px}
+.strip-card{
+  background:var(--s2);border:1px solid var(--border);border-radius:10px;
+  padding:10px;width:180px;cursor:pointer;transition:all .2s;text-decoration:none;color:inherit;display:block
+}
+.strip-card:hover{border-color:var(--accent);transform:translateY(-2px)}
+.strip-img{width:100%;height:70px;object-fit:contain;background:#fff;border-radius:6px;display:block;margin-bottom:7px}
+.strip-stats{font-size:10px;color:var(--amber);text-align:center;margin-bottom:4px;font-weight:600}
+
+/* ── Walkthrough ── */
+.walk-stage{background:var(--s2);border-radius:10px;padding:12px;margin-bottom:12px;border:1px solid var(--border)}
+.walk-lbl{font-size:11px;font-weight:800;color:var(--accent);margin-bottom:8px;text-transform:uppercase}
+.walk-img{max-width:100%;border-radius:6px;cursor:zoom-in;border:1px solid var(--border)}
+.walk-grid{display:flex;flex-wrap:wrap;gap:8px}
+.walk-crop{height:80px;background:#fff;border-radius:4px;cursor:zoom-in}
+.walk-strip{width:100%;height:60px;background:#fff;border-radius:4px;cursor:zoom-in;margin-bottom:4px}
+
+.badge{font-size:9px;font-weight:700;padding:2px 6px;border-radius:20px;text-transform:uppercase}
+.badge-ok{background:rgba(78,204,163,.15);color:var(--green)}
+.badge-err{background:rgba(233,69,96,.15);color:var(--red)}
+.report-actions{display:flex;gap:10px;margin-bottom:20px}
+
+/* ── Modal ── */
+#modal{
+  display:none;position:fixed;z-index:9999;left:0;top:0;width:100%;height:100%;
+  background:rgba(0,0,0,0.9);align-items:center;justify-content:center;
+}
+#modal img{max-width:90%;max-height:90%;border-radius:8px;box-shadow:0 0 40px #000}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">🔤</div>
+  <div>
+    <h1>Sinhala OCR Pipeline</h1>
+    <div class="sub">Multi-stage document analysis dashboard</div>
+  </div>
+</header>
+
+<div class="container">
+  <div class="left">
+    <div>
+      <div class="panel-title">1 · Upload</div>
+      <div id="drop-zone" onclick="document.getElementById('file-input').click()" ondragover="e=>e.preventDefault()" ondrop="handleDrop(event)">
+        <div class="dz-icon">📂</div>
+        <div class="dz-title">Drop images</div>
+        <div class="dz-sub">or click to browse</div>
+      </div>
+      <input type="file" id="file-input" multiple accept="image/*" onchange="handleFiles(this.files)">
+    </div>
+
+    <div>
+      <div class="panel-title">2 · Queue</div>
+      <ul id="file-list"></ul>
+      <div id="no-files" style="color:var(--muted);font-size:12px">No images</div>
+    </div>
+
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-primary" id="run-btn" onclick="startPipeline()" disabled>▶ Run OCR</button>
+      <button class="btn btn-outline" id="clear-btn" onclick="clearAll()" style="width:auto;padding:12px 16px">✕</button>
+    </div>
+
+    <div class="progress-wrap" id="progress-wrap">
+      <div class="panel-title">3 · Status</div>
+      <div class="progress-stages">
+        <div class="stage-dot" id="dot-pre"></div>
+        <div class="stage-dot" id="dot-rec"></div>
+        <div class="stage-dot" id="dot-rep"></div>
+      </div>
+      <div class="status-label" id="status-label">Starting…</div>
+      <div id="log-box"></div>
+    </div>
+  </div>
+
+  <div class="right" id="right-panel">
+    <div class="right-empty" id="empty-state">
+      <div class="big">📋</div>
+      <p>Results will appear here</p>
+    </div>
+    <div id="results-area" style="display:none">
+      <div class="report-actions">
+        <button class="btn btn-outline" id="open-report-btn" onclick="openReport()">📄 Open Final Report</button>
+        <button class="btn btn-outline" onclick="clearAll()">↺ Reset</button>
+      </div>
+      <div id="results-list"></div>
+    </div>
+  </div>
+</div>
+
+<div id="modal" onclick="this.style.display='none'"><img id="modal-img"></div>
+
+<script>
+let uploadedFiles = [];
+let currentJobId  = null;
+let pollInterval  = null;
+let logOffset     = 0;
+
+function handleFiles(fl) {
+  [...fl].forEach(f => {
+    if(!uploadedFiles.find(u=>u.name===f.name))
+      uploadedFiles.push({name:f.name,size:f.size,file:f,url:URL.createObjectURL(f)});
+  });
+  renderFileList();
+  uploadToServer();
+}
+function handleDrop(e) { e.preventDefault(); handleFiles(e.dataTransfer.files); }
+function renderFileList() {
+  const ul = document.getElementById('file-list');
+  ul.innerHTML = '';
+  document.getElementById('no-files').style.display = uploadedFiles.length?'none':'block';
+  uploadedFiles.forEach((f,i)=>{
+    const li = document.createElement('li'); li.className='file-item';
+    li.innerHTML = `<img src="${f.url}" class="file-thumb"><div class="file-info"><div class="file-name">${esc(f.name)}</div></div><button class="file-remove" onclick="removeFile(${i})">✕</button>`;
+    ul.appendChild(li);
+  });
+  document.getElementById('run-btn').disabled = !uploadedFiles.length;
+}
+function removeFile(i) { URL.revokeObjectURL(uploadedFiles[i].url); uploadedFiles.splice(i,1); renderFileList(); }
+function clearAll() {
+  uploadedFiles.forEach(f=>URL.revokeObjectURL(f.url)); uploadedFiles=[];
+  currentJobId=null; logOffset=0; clearInterval(pollInterval);
+  renderFileList();
+  document.getElementById('progress-wrap').style.display='none';
+  document.getElementById('empty-state').style.display='flex';
+  document.getElementById('results-area').style.display='none';
+  fetch('/api/clear_inputs',{method:'POST'});
+}
+async function uploadToServer() {
+  const fd = new FormData(); uploadedFiles.forEach(f=>fd.append('images',f.file,f.name));
+  await fetch('/api/upload',{method:'POST',body:fd});
+}
+
+async function startPipeline() {
+  document.getElementById('run-btn').disabled=true;
+  document.getElementById('progress-wrap').style.display='block';
+  document.getElementById('empty-state').style.display='none';
+  document.getElementById('results-area').style.display='block';
+  document.getElementById('results-list').innerHTML='';
+  logOffset=0; setStage('pre');
+  const res = await fetch('/api/run',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({images:uploadedFiles.map(f=>f.name)})});
+  const data = await res.json();
+  currentJobId = data.job_id;
+  pollInterval = setInterval(pollJob, 1500);
+}
+
+async function pollJob() {
+  const r = await fetch(`/api/job/${currentJobId}?log_offset=${logOffset}`);
+  const data = await r.json();
+  if(data.log?.length){ appendLog(data.log); logOffset+=data.log.length; }
+  if(data.status==='running_preprocess') setStage('pre');
+  else if(data.status==='running_recognition') setStage('rec');
+  else if(data.status==='done'||data.status==='failed') {
+    setStage(data.status==='done'?'done':'fail'); clearInterval(pollInterval);
+    document.getElementById('run-btn').disabled=false;
+    if(data.status==='done') renderResults(data.results);
+  }
+}
+
+function setStage(s) {
+  document.getElementById('status-label').textContent = {pre:'⚙ Preprocessing...',rec:'🔍 Recognition...',done:'✔ Done',fail:'✘ Failed'}[s]||s;
+  const dots=['dot-pre','dot-rec','dot-rep'], idx={pre:0,rec:1,rep:2,done:3,fail:3}[s];
+  dots.forEach((id,i)=>document.getElementById(id).className='stage-dot '+(i<idx?'done':i===idx?'active':s==='fail'?'fail':''));
+}
+function appendLog(lines) {
+  const box = document.getElementById('log-box');
+  lines.forEach(l=>{
+    const d=document.createElement('div'); d.textContent=l;
+    if(l.includes('OK')) d.className='log-ok'; if(l.includes('FAILED')) d.className='log-err';
+    box.appendChild(d);
+  });
+  box.scrollTop=box.scrollHeight;
+}
+
+function renderResults(results) {
+  const container = document.getElementById('results-list');
+  container.innerHTML = '';
+  results.forEach((r, idx) => {
+    const texts=r.texts||[], splits=r.splits||[], crops=r.crop_images||[];
+    const badge = r.error?'<span class="badge badge-err">ERROR</span>':'<span class="badge badge-ok">OK</span>';
+    
+    // OCR Content
+    const textsHtml = texts.map((t,i)=>`<div class="text-line"><span class="text-label">Text ${i+1}:</span><span class="si-text">${esc(t)}</span></div>`).join('');
+    const stripsHtml = splits.map(sp => `
+      <a class="strip-card" href="/api/image/${sp.detail_html}" target="_blank">
+        <img src="/api/image/${sp.strip_image}" class="strip-img">
+        <div class="strip-stats">CER: ${sp.cer.toFixed(1)}%</div>
+        <div class="strip-text si-text">${esc(sp.predicted_text)}</div>
+      </a>`).join('');
+
+    // Walkthrough Content
+    const walkStrips = splits.length 
+      ? splits.map(s=>`<img src="/api/image/${s.strip_image}" class="walk-strip" onclick="zoomImg(this.src)">`).join('')
+      : '<div class="no-strips">No sentence strips found.</div>';
+
+    const walkHtml = `
+      <div class="walk-stage"><div class="walk-lbl">Stage 1: Layout Detection</div><img src="/api/image/${r.layout_image}" class="walk-img" onclick="zoomImg(this.src)"></div>
+      <div class="walk-stage"><div class="walk-lbl">Stage 2: Crops</div><div class="walk-grid">${crops.map(c=>`<img src="/api/image/${c}" class="walk-crop" onclick="zoomImg(this.src)">`).join('')}</div></div>
+      <div class="walk-stage"><div class="walk-lbl">Stage 3: Strips</div><div class="walk-grid">${walkStrips}</div></div>
+    `;
+
+    const row = document.createElement('div'); row.className='report-row';
+    row.innerHTML = `
+      <div class="row-header" onclick="toggleRow(${idx})">
+        <div class="row-left">
+          <img src="/api/image/${r.original_image}" class="orig-thumb" onclick="event.stopPropagation();zoomImg(this.src)">
+          <div class="row-meta">
+            <div class="row-fname">${esc(r.fname)} ${badge}</div>
+            <div class="row-preview">${esc(r.predicted_text).slice(0,60)}...</div>
+          </div>
+        </div>
+        <div class="row-toggle">▾</div>
+      </div>
+      <div class="row-detail" id="rd-${idx}">
+        <div class="row-tabs">
+          <button class="tab-btn active" onclick="showTab(${idx},'ocr')">OCR Results</button>
+          <button class="tab-btn" onclick="showTab(${idx},'walk')">Walkthrough</button>
+        </div>
+        <div id="ocr-${idx}" class="tab-content active"><div class="detail-texts">${textsHtml}</div><div class="strip-grid">${stripsHtml}</div></div>
+        <div id="walk-${idx}" class="tab-content">${walkHtml}</div>
+      </div>`;
+    container.appendChild(row);
+  });
+}
+function toggleRow(i){ const d=document.getElementById('rd-'+i); d.style.display=d.style.display==='block'?'none':'block'; d.previousElementSibling.classList.toggle('open'); }
+function showTab(r,t){ 
+  const rd=document.getElementById('rd-'+r);
+  const btns = rd.querySelectorAll('.tab-btn');
+  const contents = rd.querySelectorAll('.tab-content');
+
+  btns.forEach(b=>b.classList.remove('active'));
+  contents.forEach(c=>c.classList.remove('active'));
+
+  const targetBtn = Array.from(btns).find(b => {
+    const txt = b.textContent.toLowerCase();
+    if (t === 'ocr') return txt.includes('ocr');
+    return txt.includes('walkthrough') || txt.includes('preprocess');
+  });
+
+  const targetContent = document.getElementById(t+'-'+r);
+  if (targetBtn) targetBtn.classList.add('active');
+  if (targetContent) targetContent.classList.add('active');
+}
+function zoomImg(s){ const m=document.getElementById('modal'); document.getElementById('modal-img').src=s; m.style.display='flex'; }
+function openReport(){ window.open('/outputs/report.html'); }
+function esc(s){ const d=document.createElement('div'); d.textContent=s||''; return d.innerHTML; }
+</script>
+</body>
+</html>
