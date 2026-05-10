@@ -24,8 +24,8 @@ from pathlib import Path
 
 # ── Path config ────────────────────────────────────────────────────────────────
 BASE_DIR    = Path(__file__).resolve().parent          # …/Code
-DATASET_DIR = BASE_DIR / "InputImages"                 # …/InputImages
-RESULT_DIR  = BASE_DIR / "Result"                      # …/Code/Result
+DATASET_DIR = Path(r"E:\Sliit\Research\Main Repository\R26-DS-002\Work\Janindu\2_Recogniton\InputFolder")
+RESULT_DIR  = Path(r"E:\Sliit\Research\Main Repository\R26-DS-002\Work\Janindu\2_Recogniton\OutputFolder")
 
 LAYOUTDET_DIR = RESULT_DIR / "LayoutDetection"
 CROP_DIR      = RESULT_DIR / "Crops"

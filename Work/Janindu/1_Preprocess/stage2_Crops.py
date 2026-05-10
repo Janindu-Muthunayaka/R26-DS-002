@@ -142,5 +142,5 @@ def run(img_path: Path, boxes: list[LayoutBox], crop_root: Path) -> list[Path]:
 
 if __name__ == "__main__":
     import sys
-    print("Stage 2 is not meant to run standalone — use Main.py.")
+    print("Stage 2 is not meant to run standalone — use MainPreProcess.py.")
     sys.exit(1)
