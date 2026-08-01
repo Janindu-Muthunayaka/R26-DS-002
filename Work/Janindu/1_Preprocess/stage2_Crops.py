@@ -58,8 +58,8 @@ def _poly_to_bbox(poly: list | np.ndarray) -> tuple[int, int, int, int]:
     return (int(np.min(poly[:, 0])), int(np.min(poly[:, 1])),
             int(np.max(poly[:, 0])), int(np.max(poly[:, 1])))
 
-def perspective_warp(img: np.ndarray, points: np.ndarray, expand_pct: float = 0.02) -> np.ndarray:
-    """Warp a 4-point polygon into a perfectly straightened rectangle, slightly expanded."""
+def perspective_warp(img: np.ndarray, points: np.ndarray, expand_pct: float = 0.02, pad_color: list[int] = [255, 255, 255]) -> np.ndarray:
+    """Warp a 4-point polygon into a perfectly straightened rectangle, slightly expanded and padded."""
     points = np.array(points, dtype=np.float32)
     
     # Expand boundaries by a tiny percent so letters don't get chopped
@@ -87,9 +87,8 @@ def perspective_warp(img: np.ndarray, points: np.ndarray, expand_pct: float = 0.
     M = cv2.getPerspectiveTransform(points, dst_pts)
     warped = cv2.warpPerspective(img, M, (max_width, max_height), flags=cv2.INTER_CUBIC, borderMode=cv2.BORDER_REPLICATE)
     
-    # Pad with whitespace (10px on all sides)
-    warped = cv2.copyMakeBorder(warped, 10, 10, 10, 10, cv2.BORDER_CONSTANT, value=[255, 255, 255])
-    
+    # We delay padding until after we calculate polarity on the raw warped borders
+    # So we return the unpadded warped image and pad it in the main loop
     return warped
 
 
@@ -173,9 +172,6 @@ def run(img_path: Path,
         dt_polys = sorted(dt_polys, key=lambda p: float(np.mean(np.array(p)[:, 1])))
 
         block_crop_gray = cv2.cvtColor(block_crop, cv2.COLOR_BGR2GRAY)
-        # Determine background polarity for the entire block
-        # Since text usually occupies less than 50% of the block area, the median represents the background.
-        is_dark_bg = bool(np.median(block_crop_gray) < 127)
         
         meta_lines = []
         words = []
@@ -197,10 +193,35 @@ def run(img_path: Path,
                 continue
 
             # ── Level 3: warp the individual line using perspective transform ──
+            # We warp without padding first to check the raw outer border
             line_crop = perspective_warp(block_crop, poly)
             lh, lw    = line_crop.shape[:2]
             if lh < MIN_LINE_H or lw < MIN_LINE_W:
                 continue
+                
+            # Determine background polarity dynamically PER WORD
+            # By comparing the brightness of the center (text) to the edges (background)
+            gray_crop = cv2.cvtColor(line_crop, cv2.COLOR_BGR2GRAY)
+            
+            # The CRAFT bounding box fits tightly around the text, so the center is guaranteed to be text.
+            h, w = gray_crop.shape
+            center_region = gray_crop[h//4:3*h//4, w//4:3*w//4]
+            text_brightness = np.median(center_region) if center_region.size > 0 else 127
+            
+            border_pixels = np.concatenate([
+                gray_crop[0, :],         # top
+                gray_crop[-1, :],        # bottom
+                gray_crop[:, 0],         # left
+                gray_crop[:, -1]         # right
+            ])
+            bg_brightness = np.median(border_pixels) if border_pixels.size > 0 else 127
+            
+            # If the text is brighter than the background, it's a dark background document
+            is_dark_bg = bool(text_brightness > bg_brightness)
+            
+            # Now pad dynamically
+            pad_color = [0, 0, 0] if is_dark_bg else [255, 255, 255]
+            line_crop = cv2.copyMakeBorder(line_crop, 10, 10, 10, 10, cv2.BORDER_CONSTANT, value=pad_color)
 
             word_id = f"{block_id}_word_{line_idx:03d}"
 
