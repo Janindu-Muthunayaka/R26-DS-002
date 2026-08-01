@@ -1,8 +1,24 @@
 """
-Stage 3 – Sentence Strip Stitching
+Stage 3 – Sentence Strip Stitching  (stage3_Sentences.py)
 ──────────────────────────────────────────────────────────
-Applies Centroid Clustering (Coordinate-Based) (CCA) to split crops into lines.
-Outputs a single combined strip image.
+Reads the pre-binarised line-crop PNGs produced by Stage 2 (one per text
+line), resizes each to a common height, and stitches them left-to-right
+with a white gap into a single horizontal strip — ready for the MAT OCR.
+
+The CCA / connected-component logic from the old Surya-based stage is
+REMOVED; line splitting is now handled upstream by PaddleOCR TextDetection
+in Stage 2, so Stage 3 only needs to stitch.
+
+Input  : a *block directory*  <crop_root>/<stem>/<block_id>/
+            line_001.png, line_002.png, …   (already binarised, sorted)
+Output : <sentence_root>/<original_stem>/<block_id>_strip.png
+
+Public API (same as the old stage):
+    run(crop_path, sentence_root, original_stem) -> Path | None
+
+crop_path here is expected to be either:
+  • A block directory   (new style, Stage 2 output)
+  • An individual line file (old single-file style — handled as a 1-line strip)
 """
 
 from __future__ import annotations
@@ -12,151 +28,163 @@ import numpy as np
 from pathlib import Path
 
 # ── Tunables ──────────────────────────────────────────────────────────────────
-STRIP_HEIGHT = 512    # px – uniform height for the output strip
-GAP_PX       = 40     # px – wider white gap between stitched lines
-MIN_LINE_H   = 15     # px – ignore lines shorter than this
-LINE_PAD_H   = 20     # px – horizontal padding for each line piece
-
-def _split_lines(img: np.ndarray) -> list[np.ndarray]:
-    """
-    Uses connected components and clusters them by their Y-centroids to form lines (CCA).
-    """
-    h, w = img.shape[:2]
-    if h < MIN_LINE_H:
-        return [img]
-
-    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    _, bw = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY_INV | cv2.THRESH_OTSU)
-
-    num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(bw, connectivity=8)
-    
-    components = []
-    for i in range(1, num_labels):
-        if stats[i, cv2.CC_STAT_AREA] > 8:
-            x = stats[i, cv2.CC_STAT_LEFT]
-            y = stats[i, cv2.CC_STAT_TOP]
-            w_box = stats[i, cv2.CC_STAT_WIDTH]
-            h_box = stats[i, cv2.CC_STAT_HEIGHT]
-            cy = y + h_box / 2
-            components.append({'x': x, 'y': y, 'w': w_box, 'h': h_box, 'cy': cy})
-            
-    if not components:
-        return [img]
-        
-    components.sort(key=lambda c: c['cy'])
-    
-    clusters = []
-    current_cluster = [components[0]]
-    
-    for comp in components[1:]:
-        avg_h = sum(c['h'] for c in current_cluster) / len(current_cluster)
-        last_cy_avg = sum(c['cy'] for c in current_cluster[-3:]) / min(3, len(current_cluster))
-        
-        # If cy difference is small enough, merge
-        if abs(comp['cy'] - last_cy_avg) < avg_h * 0.7:
-            current_cluster.append(comp)
-        else:
-            clusters.append(current_cluster)
-            current_cluster = [comp]
-            
-    if current_cluster:
-        clusters.append(current_cluster)
-        
-    line_crops = []
-    for cluster in clusters:
-        min_x = min(c['x'] for c in cluster)
-        min_y = min(c['y'] for c in cluster)
-        max_x = max(c['x'] + c['w'] for c in cluster)
-        max_y = max(c['y'] + c['h'] for c in cluster)
-        
-        # Filter noise clusters
-        if (max_y - min_y) < MIN_LINE_H or (max_x - min_x) < w * 0.02:
-            continue
-            
-        pad_y = 4
-        y1 = max(0, min_y - pad_y)
-        y2 = min(h, max_y + pad_y)
-        x1 = max(0, min_x - LINE_PAD_H)
-        x2 = min(w, max_x + LINE_PAD_H)
-        
-        line_crops.append(img[y1:y2, x1:x2])
-        
-    return line_crops if line_crops else [img]
+STRIP_HEIGHT = 384    # px – uniform height for the output strip
+GAP_PX       = 40     # px – white gap between stitched line pieces
+MIN_LINE_H   = 8      # px – skip lines shorter than this (degenerate guard)
+MIN_LINE_W   = 20     # px – skip lines narrower than this
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# Helpers
-# ──────────────────────────────────────────────────────────────────────────────
+# ── Helpers ───────────────────────────────────────────────────────────────────
 def _resize_to_height(img: np.ndarray, target_h: int) -> np.ndarray:
+    """Resize line crop to target_h using high-quality Lanczos4 interpolation."""
     h, w = img.shape[:2]
     if h == 0 or w == 0:
         return np.ones((target_h, 10, 3), dtype=np.uint8) * 255
+        
     scale = target_h / h
     new_w = max(1, int(w * scale))
-    interp = cv2.INTER_AREA if scale < 1.0 else cv2.INTER_LANCZOS4
-    return cv2.resize(img, (new_w, target_h), interpolation=interp)
-
-def _white_gap(height: int, width: int = None) -> np.ndarray:
-    w = width if width else GAP_PX
-    return np.ones((height, w, 3), dtype=np.uint8) * 255
-
-def _sharpen_and_clean(strip: np.ndarray) -> np.ndarray:
-    gray = cv2.cvtColor(strip, cv2.COLOR_BGR2GRAY)
-    blurred = cv2.GaussianBlur(gray, (0, 0), sigmaX=1.0)
-    sharpened = cv2.addWeighted(gray, 1.5, blurred, -0.5, 0)
-    sharpened = np.clip(sharpened, 0, 255).astype(np.uint8)
-    _, final_bw = cv2.threshold(sharpened, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-    if np.sum(final_bw == 255) < np.sum(final_bw == 0):
-        final_bw = cv2.bitwise_not(final_bw)
-    return cv2.cvtColor(final_bw, cv2.COLOR_GRAY2BGR)
+    
+    # Use Lanczos4 for premium anti-aliasing during the stitch-resize
+    return cv2.resize(img, (new_w, target_h), interpolation=cv2.INTER_LANCZOS4)
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# Public API
-# ──────────────────────────────────────────────────────────────────────────────
-def run(crop_path: Path, sentence_root: Path, original_stem: str) -> Path | None:
+def _white_gap(height: int, width: int = GAP_PX) -> np.ndarray:
+    return np.ones((height, width, 3), dtype=np.uint8) * 255
+
+
+def _load_line_images_from_dir(block_dir: Path) -> list[np.ndarray]:
     """
-    Applies Centroid Clustering (CCA) to the crop and saves a single strip.
-    Returns the path to the saved strip.
+    Load line PNG files from a block directory in sorted order.
+    Returns a list of BGR numpy arrays.
     """
+    line_files = sorted(block_dir.glob("*line_*.png"))
+        
+    imgs: list[np.ndarray] = []
+    for lf in line_files:
+        img = cv2.imread(str(lf))
+        if img is None:
+            continue
+        h, w = img.shape[:2]
+        if h < MIN_LINE_H or w < MIN_LINE_W:
+            continue
+        imgs.append(img)
+    return imgs
+
+
+def stitch_images(line_imgs: list[np.ndarray]) -> np.ndarray | None:
+    """Resize all lines to STRIP_HEIGHT and stitch horizontally."""
+    if not line_imgs:
+        return None
+
+    pieces: list[np.ndarray] = []
+    for i, img in enumerate(line_imgs):
+        pieces.append(_resize_to_height(img, STRIP_HEIGHT))
+        if i < len(line_imgs) - 1:
+            pieces.append(_white_gap(STRIP_HEIGHT))
+
+    strip = cv2.hconcat(pieces)
+    
+    # Discard if length is higher than 15,000px
+    if strip.shape[1] > 15000:
+        print(f"  [Sentence] Skipping strip: width ({strip.shape[1]}) exceeds 15000 limit.")
+        return None
+
+    return strip
+
+# ── Public API ────────────────────────────────────────────────────────────────
+def run(crop_input: Path | list[Path],
+        sentence_root: Path,
+        original_stem: str,
+        block_id_hint: str = None) -> Path | None:
+    """
+    Stage 3 entry point.
+
+    Parameters
+    ----------
+    crop_input    : Path | list[Path] – block directory (Stage 2 output) OR
+                                        list of specific line paths OR
+                                        a single line PNG (fallback)
+    sentence_root : Path              – root directory for sentence strip output
+    original_stem : str               – stem of the original source image (e.g. "A")
+    block_id_hint : str               – optional label for the output filename
+
+    Returns
+    -------
+    Path | None  – path to the saved strip PNG, or None on failure
+    """
+    out_dir = sentence_root / original_stem
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    # ── Case 0: crop_input is a list of paths ───────────────────────────────
+    if isinstance(crop_input, list):
+        if not crop_input:
+            return None
+        line_imgs = []
+        for p in crop_input:
+            img = cv2.imread(str(p))
+            if img is not None:
+                line_imgs.append(img)
+        
+        if not line_imgs:
+            return None
+            
+        # If it's a list, we assume they are MAT crops, since this is a fallback.
+        block_id = block_id_hint or "strip"
+        stitched = _stitch(line_imgs)
+        if stitched is None:
+            return None
+            
+        out_path = out_dir / f"{block_id}_strip.png"
+        cv2.imwrite(str(out_path), stitched)
+        print(f"  [Sentence] {block_id}: stitched {len(line_imgs)} line(s) from list → {out_path.name}")
+        return out_path
+
+    # Use internal name for following cases
+    crop_path = crop_input
+    # ── Case 1: crop_path is a block directory ───────────────────────────────
+    if crop_path.is_dir():
+        block_id   = crop_path.name
+        
+        line_imgs = _load_line_images_from_dir(crop_path)
+        
+        if not line_imgs:
+            print(f"  [Sentence] {block_id}: no line images found in directory, skipping.")
+            return None
+
+        stitched = _stitch(line_imgs)
+        if stitched is None:
+            return None
+
+        out_path = out_dir / f"{block_id}_strip.png"
+        cv2.imwrite(str(out_path), stitched)
+        print(f"  [Sentence] {block_id}: stitched {len(line_imgs)} line(s) → {out_path.name}")
+        return out_path
+
+    # ── Case 2: crop_path is a single file (legacy / fallback) ──────────────
     img = cv2.imread(str(crop_path))
     if img is None:
         print(f"  [Sentence] ERROR: cannot read {crop_path}")
         return None
 
-    line_crops = _split_lines(img)
-
-    if not line_crops:
-        print(f"  [Sentence] No text found in {crop_path.name}, skipping.")
+    h, w = img.shape[:2]
+    if h < MIN_LINE_H or w < MIN_LINE_W:
+        print(f"  [Sentence] {crop_path.name}: image too small, skipping.")
         return None
 
-    out_dir = sentence_root / original_stem
-    out_dir.mkdir(parents=True, exist_ok=True)
-    
-    resized = [_resize_to_height(lc, STRIP_HEIGHT) for lc in line_crops]
-    
-    pieces = []
-    for i, s in enumerate(resized):
-        pieces.append(s)
-        if i < len(resized) - 1:
-            pieces.append(_white_gap(STRIP_HEIGHT))
-            
-    if not pieces:
+    stitched = _stitch([img])
+    if stitched is None:
         return None
 
-    strip = cv2.hconcat(pieces)
-    strip = _sharpen_and_clean(strip)
-    
     out_path = out_dir / f"{crop_path.stem}_strip.png"
-    cv2.imwrite(str(out_path), strip)
-
-    print(f"  [Sentence] {crop_path.name}: Generated CCA strip ({len(line_crops)} lines).")
+    cv2.imwrite(str(out_path), stitched)
+    print(f"  [Sentence] {crop_path.name}: saved single-line strip → {out_path.name}")
     return out_path
+
 
 if __name__ == "__main__":
     import sys
     if len(sys.argv) < 3:
-        print("Usage: python stage3_Sentences.py <crop_image_path> <original_stem>")
+        print("Usage: python stage3_Sentences.py <block_dir_or_line_png> <original_stem>")
         sys.exit(1)
     src = Path(sys.argv[1])
     out = src.parent.parent.parent / "Result" / "Sentences"

@@ -1,10 +1,22 @@
 """
-Stage 2 – Crop & Straighten (stage2_Crops.py)
-─────────────────────────────────────────────
-1. Uses Perspective Transform to straighten tilted/skewed text regions
-   captured as 4-point polygons in Stage 1.
-2. Post-processes each crop: denoise → Otsu binarise → morphological
-   closing → invert → BLACK text on WHITE background.
+Stage 2 – Crop & Line Detection  (stage2_Crops.py)
+────────────────────────────────────────────────────
+For each layout block returned by Stage 1:
+  1. Crop the block from the corrected full image.
+  2. Run PaddleOCR TextDetection (PP-OCRv5_server_det) on the block crop
+     to get individual text-line polygons.
+  3. Crop each text line, apply adaptive binarisation, and save as a PNG.
+
+Output per source image
+  <crop_root>/<stem>/<block_id>/line_001.png
+                               line_002.png
+                               …
+  <crop_root>/<stem>/<block_id>_meta.json   ← line polygon metadata
+
+The run() function now returns a list of (block_dir, block_meta) tuples
+instead of raw crop paths so Stage 3 can iterate line-by-line.
+For backward compatibility it also returns the list of individual line paths
+(same shape as the old list[Path] return value) via a flat list.
 """
 
 from __future__ import annotations
@@ -12,133 +24,222 @@ from __future__ import annotations
 import json
 import cv2
 import numpy as np
-from PIL import Image, ImageOps
 from pathlib import Path
+from PIL import Image, ImageOps
 
 # Import the LayoutBox dataclass from Stage 1
 from stage1_LayoutDetection import LayoutBox
 
-def _order_points(pts):
-    """
-    Orders 4 points: [top-left, top-right, bottom-right, bottom-left]
-    Uses the sum/difference method which is robust to rotation.
-    """
-    pts = np.array(pts, dtype="float32")
-    rect = np.zeros((4, 2), dtype="float32")
+# ── Tunables ──────────────────────────────────────────────────────────────────
+BLOCK_PAD    = 10   # px – expand each layout block crop
+LINE_PAD     = 3    # px – expand each line crop
+MIN_LINE_H   = 8    # px – discard line crops shorter than this
+MIN_LINE_W   = 20   # px – discard line crops narrower than this
 
-    # Top-left has the smallest sum, Bottom-right has the largest sum
-    s = pts.sum(axis=1)
-    rect[0] = pts[np.argmin(s)]
-    rect[2] = pts[np.argmax(s)]
+# ── Lazy model singleton ──────────────────────────────────────────────────────
+_text_detector = None
 
-    # Top-right has the smallest difference (y - x), 
-    # Bottom-left has the largest difference (y - x)
-    diff = np.diff(pts, axis=1)
-    rect[1] = pts[np.argmin(diff)]
-    rect[3] = pts[np.argmax(diff)]
+def _get_text_detector():
+    global _text_detector
+    if _text_detector is None:
+        from craft_text_detector import Craft
+        import torch
+        print("  [Crop] Loading CRAFT TextDetection model …")
+        cuda = torch.cuda.is_available()
+        _text_detector = Craft(output_dir=None, crop_type="poly", cuda=cuda)
+        print("  [Crop] CRAFT TextDetection model ready.")
+    return _text_detector
 
-    return rect
 
-def _straighten_crop(img: np.ndarray, polygon: list[list[int]]) -> np.ndarray:
-    """
-    Applies Perspective Transform to straighten a tilted text region.
-    """
-    pts = _order_points(polygon)
-    (tl, tr, br, bl) = pts
+# ── Helpers ───────────────────────────────────────────────────────────────────
+def _poly_to_bbox(poly: list | np.ndarray) -> tuple[int, int, int, int]:
+    """Convert a polygon to an axis-aligned bounding box [x1,y1,x2,y2]."""
+    poly = np.array(poly)
+    return (int(np.min(poly[:, 0])), int(np.min(poly[:, 1])),
+            int(np.max(poly[:, 0])), int(np.max(poly[:, 1])))
 
-    # Compute the width of the new image
-    widthA = np.sqrt(((br[0] - bl[0]) ** 2) + ((br[1] - bl[1]) ** 2))
-    widthB = np.sqrt(((tr[0] - tl[0]) ** 2) + ((tr[1] - tl[1]) ** 2))
-    maxWidth = max(int(widthA), int(widthB))
+def perspective_warp(img: np.ndarray, points: np.ndarray, expand_pct: float = 0.02) -> np.ndarray:
+    """Warp a 4-point polygon into a perfectly straightened rectangle, slightly expanded."""
+    points = np.array(points, dtype=np.float32)
+    
+    # Expand boundaries by a tiny percent so letters don't get chopped
+    center = np.mean(points, axis=0)
+    points = points + (points - center) * expand_pct
+    
+    width_top = np.linalg.norm(points[0] - points[1])
+    width_bottom = np.linalg.norm(points[2] - points[3])
+    max_width = int(max(width_top, width_bottom))
 
-    # Compute the height of the new image
-    heightA = np.sqrt(((tr[0] - br[0]) ** 2) + ((tr[1] - br[1]) ** 2))
-    heightB = np.sqrt(((tl[0] - bl[0]) ** 2) + ((tl[1] - bl[1]) ** 2))
-    maxHeight = max(int(heightA), int(heightB))
+    height_left = np.linalg.norm(points[0] - points[3])
+    height_right = np.linalg.norm(points[1] - points[2])
+    max_height = int(max(height_left, height_right))
+    
+    if max_width == 0 or max_height == 0:
+        return np.zeros((1, 1, 3), dtype=np.uint8)
 
-    # Construct the set of destination points
-    dst = np.array([
+    dst_pts = np.array([
         [0, 0],
-        [maxWidth - 1, 0],
-        [maxWidth - 1, maxHeight - 1],
-        [0, maxHeight - 1]], dtype="float32")
+        [max_width - 1, 0],
+        [max_width - 1, max_height - 1],
+        [0, max_height - 1]
+    ], dtype=np.float32)
 
-    # Compute the perspective transform matrix and warp the image
-    M = cv2.getPerspectiveTransform(pts, dst)
-    warped = cv2.warpPerspective(img, M, (maxWidth, maxHeight), borderMode=cv2.BORDER_REPLICATE)
+    M = cv2.getPerspectiveTransform(points, dst_pts)
+    warped = cv2.warpPerspective(img, M, (max_width, max_height), flags=cv2.INTER_CUBIC, borderMode=cv2.BORDER_REPLICATE)
+    
+    # Pad with whitespace (10px on all sides)
+    warped = cv2.copyMakeBorder(warped, 10, 10, 10, 10, cv2.BORDER_CONSTANT, value=[255, 255, 255])
     
     return warped
 
 
-def _binarise_crop(crop_bgr: np.ndarray) -> np.ndarray:
+def _crop_region(img: np.ndarray, x1: int, y1: int,
+                 x2: int, y2: int, pad: int = 0) -> np.ndarray:
+    h, w = img.shape[:2]
+    return img[max(0, y1 - pad):min(h, y2 + pad),
+               max(0, x1 - pad):min(w, x2 + pad)]
+
+
+
+
+# ── Public API ────────────────────────────────────────────────────────────────
+def run(img_path: Path,
+        corrected_img_path: Path | None,
+        boxes: list[LayoutBox],
+        crop_root: Path) -> list[Path]:
     """
-    Convert a colour crop to a clean BLACK-on-WHITE image using Otsu.
-    We avoid adaptive thresholding here because it creates noise dots in 
-    uniform background areas.
+    Stage 2 entry point.
 
-    Pipeline:
-      1. Mild bilateral filter  – softens noise while keeping stroke edges.
-      2. Grayscale + Otsu       – global threshold for clean background.
-      3. Morphological closing  – fills gaps inside strokes.
-      4. Polarity fix           – ensure black ink on white background.
+    Parameters
+    ----------
+    img_path           : Path             – original source image path
+    corrected_img_path : Path | None      – explicitly passed corrected image path from Stage 1
+    boxes              : list[LayoutBox]  – layout blocks from Stage 1
+    crop_root          : Path             – root directory for crop output
+
+    Returns
+    -------
+    list[Path]  – flat list of all saved line-crop PNG paths
     """
-    # Step 1: mild denoise
-    denoised = cv2.bilateralFilter(crop_bgr, d=7, sigmaColor=50, sigmaSpace=50)
+    # Use the explicitly passed corrected image, or fallback to the original
+    target_path = corrected_img_path if corrected_img_path and corrected_img_path.exists() else img_path
+    
+    if target_path == img_path:
+        print(f"  [Crop] WARNING: using original image (corrected not provided or missing): {img_path.name}")
+    else:
+        print(f"  [Crop] Using corrected image: {target_path.name}")
 
-    # Step 2: grayscale + Otsu threshold
-    gray = cv2.cvtColor(denoised, cv2.COLOR_BGR2GRAY)
-    _, bw = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+    # Load via PIL (respects EXIF) then convert to OpenCV BGR
+    pil_img  = Image.open(str(target_path)).convert("RGB")
+    pil_img  = ImageOps.exif_transpose(pil_img)
+    full_img = cv2.cvtColor(np.array(pil_img), cv2.COLOR_RGB2BGR)
 
-    # Step 3: morphological closing – tiny 2×2 kernel fills ink gaps
-    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (2, 2))
-    closed = cv2.morphologyEx(bw, cv2.MORPH_CLOSE, kernel)
+    stem     = img_path.stem
+    img_root = crop_root / stem
+    img_root.mkdir(parents=True, exist_ok=True)
 
-    # Step 4: polarity check — ensure text is black on white
-    white_px = np.sum(closed == 255)
-    black_px = np.sum(closed == 0)
-    if white_px < black_px:
-        closed = cv2.bitwise_not(closed)
+    detector  = _get_text_detector()
+    all_blocks_dict: dict[str, list[dict]] = {}
 
-    # Convert single-channel back to 3-channel BGR for downstream compatibility
-    return cv2.cvtColor(closed, cv2.COLOR_GRAY2BGR)
+    for box in boxes:
+        block_id = box.label   # e.g. "body_000", "title_001"
 
-def run(img_path: Path, boxes: list[LayoutBox], crop_root: Path) -> list[Path]:
-    # Use PIL to load to ensure EXIF orientation is respected consistently with Stage 1
-    pil_img = Image.open(str(img_path)).convert("RGB")
-    pil_img = ImageOps.exif_transpose(pil_img)
-    img = cv2.cvtColor(np.array(pil_img), cv2.COLOR_RGB2BGR)
-    if img is None:
-        print(f"  [Crop] ERROR: cannot read {img_path}")
-        return []
-
-    stem = img_path.stem
-    img_dir = crop_root / stem
-    img_dir.mkdir(parents=True, exist_ok=True)
-
-    crop_paths: list[Path] = []
-
-    for i, box in enumerate(boxes):
-        if box.polygon:
-            # Straighten using the polygon
-            crop = _straighten_crop(img, box.polygon)
-        else:
-            # Fallback to simple crop
-            crop = img[box.y1:box.y2, box.x1:box.x2]
-
-        if crop.size == 0:
+        # ── Level 1: crop the layout block ──────────────────────────────────
+        block_crop = _crop_region(full_img, box.x1, box.y1, box.x2, box.y2, pad=BLOCK_PAD)
+        if block_crop.size == 0:
             continue
+            
+        # Save the original block crop
+        block_out_name = f"{block_id}_block.png"
+        cv2.imwrite(str(img_root / block_out_name), block_crop)
 
-        # ── Post-process: binarise to black-on-white ───────────────────────
-        crop = _binarise_crop(crop)
+        # ── Level 2: run text-line detection on the block crop ───────────────
+        det_result = detector.detect_text(block_crop)
+        dt_polys = det_result.get("boxes", [])
+        if len(dt_polys) == 0:
+            print(f"  [Crop] {block_id}: no lines detected, skipping block.")
+            continue
+            
+        # Draw CRAFT polygons on a copy of the block crop
+        craft_viz = block_crop.copy()
+        for poly in dt_polys:
+            pts = np.array(poly, np.int32).reshape((-1, 1, 2))
+            cv2.polylines(craft_viz, [pts], isClosed=True, color=(0, 255, 0), thickness=2)
+        
+        craft_out_name = f"{block_id}_craft.png"
+        cv2.imwrite(str(img_root / craft_out_name), craft_viz)
 
-        out_name = f"{box.label}.png"
-        out_path = img_dir / out_name
+        # Sort lines top-to-bottom
+        dt_polys = sorted(dt_polys, key=lambda p: float(np.mean(np.array(p)[:, 1])))
 
-        cv2.imwrite(str(out_path), crop)
-        crop_paths.append(out_path)
-        print(f"  [Crop] Saved (binarised) → {out_path} ({crop.shape[1]}x{crop.shape[0]} px)")
+        block_crop_gray = cv2.cvtColor(block_crop, cv2.COLOR_BGR2GRAY)
+        # Determine background polarity for the entire block
+        # Since text usually occupies less than 50% of the block area, the median represents the background.
+        is_dark_bg = bool(np.median(block_crop_gray) < 127)
+        
+        meta_lines = []
+        words = []
+        for line_idx, poly in enumerate(dt_polys, start=1):
+            lx1, ly1, lx2, ly2 = _poly_to_bbox(poly)
+            
+            # ── Vertical Filter ──
+            pts = np.array(poly, dtype=np.float32)
+            width_top = np.linalg.norm(pts[0] - pts[1])
+            width_bottom = np.linalg.norm(pts[2] - pts[3])
+            max_w = int(max(width_top, width_bottom))
 
-    return crop_paths
+            height_left = np.linalg.norm(pts[0] - pts[3])
+            height_right = np.linalg.norm(pts[1] - pts[2])
+            max_h = int(max(height_left, height_right))
+            
+            if max_w < max_h:
+                print(f"  [Crop] {block_id}: skipping vertical word (w={max_w}, h={max_h})")
+                continue
+
+            # ── Level 3: warp the individual line using perspective transform ──
+            line_crop = perspective_warp(block_crop, poly)
+            lh, lw    = line_crop.shape[:2]
+            if lh < MIN_LINE_H or lw < MIN_LINE_W:
+                continue
+
+            word_id = f"{block_id}_word_{line_idx:03d}"
+
+            # Absolute bbox in full image
+            abs_x1 = box.x1 + lx1
+            abs_y1 = box.y1 + ly1
+            abs_x2 = box.x1 + lx2
+            abs_y2 = box.y1 + ly2
+
+            meta_lines.append({
+                "word_id":            word_id,
+                "is_dark_bg":         is_dark_bg,
+                "poly_in_block":      [list(map(int, p)) for p in poly],
+                "bbox_in_full_image": [abs_x1, abs_y1, abs_x2, abs_y2],
+            })
+            
+            words.append({
+                "word_id": word_id,
+                "img": line_crop,
+                "is_dark_bg": is_dark_bg
+            })
+
+        # ── Save block metadata JSON ─────────────────────────────────────────
+        meta = {
+            "block_id":   block_id,
+            "label":      box.label,
+            "score":      box.confidence,
+            "coordinate": [box.x1, box.y1, box.x2, box.y2],
+            "words":      meta_lines,
+        }
+        (img_root / f"{block_id}_meta.json").write_text(
+            json.dumps(meta, indent=2), encoding="utf-8"
+        )
+        
+        all_blocks_dict[block_id] = words
+        print(f"  [Crop] {block_id}: {len(words)} word(s) processed")
+
+    return all_blocks_dict
+
 
 if __name__ == "__main__":
     import sys

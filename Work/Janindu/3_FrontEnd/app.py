@@ -125,9 +125,10 @@ def _log(job_id: str, msg: str):
 def _run_stage(job_id: str,
                script: Path,
                script_dir: Path,
-               extra_args: list[str] = None) -> bool:
+               extra_args: list[str] = None,
+               python_exe: str = PYTHON) -> bool:
     """Run a pipeline script as a subprocess, streaming stdout to the job log."""
-    cmd = [PYTHON, str(script)] + (extra_args or [])
+    cmd = [python_exe, str(script)] + (extra_args or [])
     _log(job_id, f"> Running: {' '.join(cmd)}")
     try:
         proc = subprocess.Popen(
@@ -173,15 +174,21 @@ def _pipeline_worker(job_id: str, image_names: list[str]):
     _log(job_id, f"Images: {', '.join(image_names)}")
     _log(job_id, "=" * 60)
 
-    # ── Stage 1: Preprocess (uses 1_Preprocess venv via wrapper) ───────────────
+    # ── Stage 1: Preprocess (uses venvpaddle) ───────────────
     _log(job_id, "\n[Stage 1] Preprocessing …")
+    
+    preprocess_python = PREPROCESS_DIR / "venvpaddle" / "Scripts" / "python.exe"
+    if not preprocess_python.exists():
+        preprocess_python = PYTHON
+
     ok = _run_stage(
         job_id,
-        FRONTEND_DIR / "wrapper_preprocess.py",
-        FRONTEND_DIR,
+        PREPROCESS_DIR / "MainPreProcess.py",
+        PREPROCESS_DIR,
         ["--inputs",  str(INPUTS_DIR),
          "--outputs", str(PROCESSES_DIR),
          "--images"] + image_names,
+        python_exe=str(preprocess_python)
     )
     if not ok:
         update("failed", error="Preprocessing failed. Check logs.")
@@ -192,8 +199,8 @@ def _pipeline_worker(job_id: str, image_names: list[str]):
     _log(job_id, "\n[Stage 2] Recognition …")
     ok = _run_stage(
         job_id,
-        FRONTEND_DIR / "wrapper_recognize.py",
-        FRONTEND_DIR,
+        RECOGNIZE_DIR / "wrapper_recognize.py",
+        RECOGNIZE_DIR,
         ["--processes", str(PROCESSES_DIR),
          "--outputs",   str(OUTPUTS_DIR),
          "--inputs",    str(INPUTS_DIR),
@@ -202,18 +209,6 @@ def _pipeline_worker(job_id: str, image_names: list[str]):
     if not ok:
         update("failed", error="Recognition failed. Check logs.")
         return
-
-    # ── Stage 3: Generate master report ──────────────────────────────────────
-    _log(job_id, "\n[Stage 3] Generating report …")
-    ok = _run_stage(
-        job_id,
-        FRONTEND_DIR / "frontend_reporting.py",
-        FRONTEND_DIR,
-        ["--outputs", str(OUTPUTS_DIR),
-         "--images"] + image_names,
-    )
-    if not ok:
-        _log(job_id, "⚠ Report generation had errors (results may still be partial).")
 
     # ── Collect results ───────────────────────────────────────────────────────
     results = _collect_results(image_names)

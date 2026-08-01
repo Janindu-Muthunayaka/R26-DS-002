@@ -1,13 +1,18 @@
 """
-Stage 1 – Text Region Detection & Block Merging (stage1_LayoutDetection.py)
-──────────────────────────────────────────────────────────────────────────
-1. Pre-processes the input image (denoise → CLAHE → binarise) for maximum
-   detection quality before feeding it to Surya's DetectionPredictor.
-2. Extracts POLYGONS (4 points) to handle tilted/skewed text.
-3. MERGES nearby lines into Paragraph Blocks to satisfy "capture the whole block".
-4. Saves annotated image with BLACK outlines on WHITE background + JSON metadata.
+Stage 1 – Layout Detection & Unwarping  (stage1_LayoutDetection.py)
+────────────────────────────────────────────────────────────────────
+Uses PaddleOCR PPStructureV3 to:
+  1. Correct perspective / orientation of angled document photos.
+  2. Detect semantic layout blocks (title, body text, header, footer …).
+  3. Save an annotated layout visualisation and a corrected full-page image.
 
-JSON metadata includes both axis-aligned BBoxes and 4-point Polygons.
+Returns a list of LayoutBox objects (same interface as the old Surya stage)
+so that Stage 2 / Stage 3 require no structural changes.
+
+PaddleOCR layout labels used (PP-DocLayout_plus-L, 23 classes):
+  document_title, paragraph_title, text, header, footer, page_number,
+  image_caption, aside_text  →  kept as text-bearing regions
+  Everything else (image, table, formula …) → ignored
 """
 
 from __future__ import annotations
@@ -18,7 +23,6 @@ import cv2
 import numpy as np
 from pathlib import Path
 from dataclasses import dataclass, asdict
-from PIL import Image, ImageDraw, ImageOps
 
 # Ensure console can handle non-ASCII text
 try:
@@ -26,19 +30,36 @@ try:
 except Exception:
     pass
 
-# ── Lazy model singleton ─────────────────────────────────────────────────────
-_det_predictor = None
+# ── Lazy model singleton ──────────────────────────────────────────────────────
+_doc_preprocessor = None
+_layout_detector = None
 
-def _get_det_predictor():
-    global _det_predictor
-    if _det_predictor is None:
-        from surya.detection import DetectionPredictor
-        print("  [LayoutDet] Loading Surya detection model ...")
-        _det_predictor = DetectionPredictor()
-        print("  [LayoutDet] Model ready.")
-    return _det_predictor
+def _get_pipeline():
+    global _doc_preprocessor, _layout_detector
+    if _doc_preprocessor is None:
+        from paddleocr import DocPreprocessor, LayoutDetection
+        print("  [LayoutDet] Loading specialized models (Preprocessor + Layout) …")
+        
+        # Load ONLY the orientation and unwarping models
+        _doc_preprocessor = DocPreprocessor(
+            doc_unwarping_model_dir=r"C:\Users\JANINDU\.paddlex\official_models\UVDoc",
+            doc_orientation_classify_model_dir=r"C:\Users\JANINDU\.paddlex\official_models\PP-LCNet_x1_0_doc_ori",
+            use_doc_orientation_classify=True,
+            use_doc_unwarping=True,
+            device="gpu:0"
+        )
+        
+        # Load ONLY the layout detection model
+        _layout_detector = LayoutDetection(
+            model_dir=r"C:\Users\JANINDU\.paddlex\official_models\PP-DocLayout_plus-L",
+            threshold=SCORE_THRESHOLD,
+            device="gpu:0"
+        )
+        print("  [LayoutDet] Models ready. (OCR components skipped for speed)")
+    return _doc_preprocessor, _layout_detector
 
-# ── Data class for detected boxes ─────────────────────────────────────────────
+
+# ── Data class (same interface as the original Surya-based stage) ─────────────
 @dataclass
 class LayoutBox:
     label: str
@@ -47,207 +68,184 @@ class LayoutBox:
     x2: int
     y2: int
     confidence: float = 1.0
-    polygon: list[list[int]] = None  # List of 4 [x, y] points
+    polygon: list[list[int]] | None = None   # 4-point rectangle [[x,y],…]
+
 
 # ── Tunables ──────────────────────────────────────────────────────────────────
-MIN_AREA       = 200
-MIN_CONFIDENCE = 0.50
+SCORE_THRESHOLD = 0.20   # Lowered to 0.20 to be "more observant" of subtle regions
 
-# Merging Tunables
-VERTICAL_GAP_THRESH       = 20   # Max vertical distance between lines to merge (px)
-HORIZONTAL_OVERLAP_THRESH = 0.2  # Min horizontal overlap ratio to merge
+# Text-bearing label groups (from PP-DocLayout_plus-L)
+TEXT_LABELS = {
+    "text", "document_title", "paragraph_title",
+    "header", "footer", "page_number",
+    "image_caption", "aside_text",
+}
 
-# ── Pre-processing helpers (Stage 1 input enhancement) ───────────────────────
+# Colour map for the visualisation overlay (BGR)
+_VIZ_COLOURS = {
+    "text":             (0, 200, 0),
+    "document_title":   (255, 50, 50),
+    "paragraph_title":  (200, 130, 0),
+    "header":           (0, 80, 255),
+    "footer":           (0, 60, 200),
+    "page_number":      (0, 180, 180),
+    "image_caption":    (180, 0, 180),
+    "aside_text":       (100, 200, 100),
+}
 
-def _enhance_for_detection(pil_img: Image.Image) -> Image.Image:
+
+# ── Helpers ───────────────────────────────────────────────────────────────────
+def _label_to_category(label: str) -> str:
+    """Map a PaddleOCR layout label to one of: header / footer / title / body."""
+    if label in ("header", "page_number"):
+        return "header"
+    if label == "footer":
+        return "footer"
+    if label in ("document_title", "paragraph_title"):
+        return "title"
+    return "body"
+
+
+def _paddle_boxes_to_layout_boxes(paddle_boxes: list[dict]) -> list[LayoutBox]:
     """
-    Enhance a PIL image so that Surya can detect text more reliably.
-
-    Pipeline:
-      1. Convert to BGR NumPy array.
-      2. Bilateral filter  – smooths noise while keeping hard edges sharp.
-      3. CLAHE             – normalises local contrast so faint text appears.
-      4. Return as RGB PIL image (same colour space Surya expects).
-
-    NOTE: We intentionally do NOT binarise here because Surya's model was
-    trained on natural-looking images and performs better with a grey-scale
-    contrast-enhanced input rather than a hard black-and-white one.
+    Convert PaddleOCR layout_det_res['boxes'] dicts to LayoutBox objects,
+    applying specific filtering logic for body vs non-body blocks.
     """
-    bgr = cv2.cvtColor(np.array(pil_img), cv2.COLOR_RGB2BGR)
+    body_boxes: list[LayoutBox] = []
+    non_body_boxes: list[LayoutBox] = []
 
-    # Step 1 – reduce salt-and-pepper / scanner noise without blurring strokes
-    denoised = cv2.bilateralFilter(bgr, d=9, sigmaColor=75, sigmaSpace=75)
+    for i, b in enumerate(paddle_boxes):
+        if b.get("score", 0) < SCORE_THRESHOLD:
+            continue
+        if b.get("label", "") not in TEXT_LABELS:
+            continue
 
-    # Step 2 – CLAHE on the luminance channel only
-    lab = cv2.cvtColor(denoised, cv2.COLOR_BGR2LAB)
-    l, a, b = cv2.split(lab)
-    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
-    l_eq = clahe.apply(l)
-    lab_eq = cv2.merge([l_eq, a, b])
-    enhanced_bgr = cv2.cvtColor(lab_eq, cv2.COLOR_LAB2BGR)
+        x1, y1, x2, y2 = [int(c) for c in b["coordinate"]]
+        polygon = [[x1, y1], [x2, y1], [x2, y2], [x1, y2]]
+        cat = _label_to_category(b['label'])
 
-    return Image.fromarray(cv2.cvtColor(enhanced_bgr, cv2.COLOR_BGR2RGB))
+        box_obj = LayoutBox(
+            label=f"{cat}_{i:03d}",
+            x1=x1, y1=y1, x2=x2, y2=y2,
+            confidence=float(b["score"]),
+            polygon=polygon,
+        )
 
-def _compute_horizontal_overlap(box1, box2):
-    """Check how much box1 and box2 overlap horizontally."""
-    x_left = max(box1.x1, box2.x1)
-    x_right = min(box1.x2, box2.x2)
-    overlap = max(0, x_right - x_left)
-    w1 = box1.x2 - box1.x1
-    w2 = box2.x2 - box2.x1
-    if min(w1, w2) == 0: return 0
-    return overlap / min(w1, w2)
+        if cat == "body":
+            body_boxes.append(box_obj)
+        else:
+            non_body_boxes.append(box_obj)
 
-def _merge_boxes(boxes: list[LayoutBox]) -> list[LayoutBox]:
+    # ── Filtering Logic ──────────────────────────────────────────────────────
+    # 1. If we have non-body blocks (titles, headers, etc.):
+    #    - Keep them all.
+    #    - Keep body blocks ONLY if there are fewer than 3 of them.
+    # 2. If we only have body blocks, keep them.
+    if non_body_boxes:
+        if len(body_boxes) < 3:
+            final_boxes = non_body_boxes + body_boxes
+        else:
+            final_boxes = non_body_boxes
+    else:
+        final_boxes = body_boxes
+
+    # Sort in approximate reading order (row-by-row, then left-to-right)
+    final_boxes.sort(key=lambda bx: (bx.y1 // 100, bx.x1))
+    return final_boxes
+
+
+def _save_layout_viz(img_bgr: np.ndarray,
+                     boxes: list,
+                     out_path: Path) -> None:
+    """Draw labelled coloured rectangles on the corrected image and save."""
+    viz = img_bgr.copy()
+    for b in boxes:
+        if isinstance(b, dict):
+            if b.get("score", 0) < SCORE_THRESHOLD:
+                continue
+            x1, y1, x2, y2 = [int(c) for c in b["coordinate"]]
+            label = b.get("label", "")
+            score = b.get("score", 0)
+        else:
+            # LayoutBox object (filtered result)
+            x1, y1, x2, y2 = b.x1, b.y1, b.x2, b.y2
+            # Extract category name (removes the _001 suffix)
+            label = b.label.split("_")[0]
+            score = b.confidence
+
+        colour = _VIZ_COLOURS.get(label, (128, 128, 128))
+        cv2.rectangle(viz, (x1, y1), (x2, y2), colour, 2)
+        cv2.putText(viz, f"{label} {score:.2f}",
+                    (x1, max(0, y1 - 5)),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, colour, 1)
+    cv2.imwrite(str(out_path), viz)
+
+
+# ── Public API ────────────────────────────────────────────────────────────────
+def run(img_path: Path, out_dir: Path) -> tuple[Path | None, Path | None, list[LayoutBox]]:
     """
-    Groups individual lines into Paragraph blocks.
+    Stage 1 entry point.
+    Creates a subfolder for the image and saves:
+      A_corrected.png - the unwarped full-page image
+      B_layout.png    - layout visualization with boxes
+      C_refined.png   - the refined image (for now, same as A)
+      <stem>.json     - metadata
     """
-    if not boxes: return []
-    
-    # Sort boxes by top y coordinate
-    sorted_boxes = sorted(boxes, key=lambda b: b.y1)
-    
-    merged: list[list[LayoutBox]] = []
-    
-    for box in sorted_boxes:
-        found_group = False
-        # Try to find a group to join
-        for group in merged:
-            # Get the bottom-most y of the current group
-            group_y2 = max(b.y2 for b in group)
-            group_x1 = min(b.x1 for b in group)
-            group_x2 = max(b.x2 for b in group)
-            
-            # Simple dummy box for overlap calculation
-            group_box = LayoutBox("", group_x1, 0, group_x2, 0)
-            
-            # Check if this box is close to the bottom of the group
-            v_gap = box.y1 - group_y2
-            h_overlap = _compute_horizontal_overlap(box, group_box)
-            
-            if v_gap < VERTICAL_GAP_THRESH and h_overlap > HORIZONTAL_OVERLAP_THRESH:
-                group.append(box)
-                found_group = True
-                break
-        
-        if not found_group:
-            merged.append([box])
-            
-    # Convert groups back to LayoutBox blocks
-    result: list[LayoutBox] = []
-    for idx, group in enumerate(merged):
-        x1 = min(b.x1 for b in group)
-        y1 = min(b.y1 for b in group)
-        x2 = max(b.x2 for b in group)
-        y2 = max(b.y2 for b in group)
-        
-        # Calculate a combined polygon for the block
-        # For simplicity, we'll take the minAreaRect of all points in the group
-        all_points = []
-        for b in group:
-            if b.polygon:
-                all_points.extend(b.polygon)
-            else:
-                all_points.extend([[b.x1, b.y1], [b.x2, b.y1], [b.x2, b.y2], [b.x1, b.y2]])
-        
-        # Use minAreaRect to get a tilted box that fits the points
-        pts = np.array(all_points, dtype=np.int32)
-        rect = cv2.minAreaRect(pts)
-        
-        # Add padding so crops don't clip the edges of the text
-        center, size, angle = rect
-        padding_x = 16  # extra width
-        padding_y = 12  # extra height
-        padded_size = (size[0] + padding_x, size[1] + padding_y)
-        rect = (center, padded_size, angle)
-        
-        box_points = cv2.boxPoints(rect)
-        box_points = np.int32(box_points).tolist() # 4 points [[x,y], ...]
-        
-        result.append(LayoutBox(
-            label=f"Block_{idx:02d}",
-            x1=int(x1), y1=int(y1), x2=int(x2), y2=int(y2),
-            confidence=sum(b.confidence for b in group) / len(group),
-            polygon=box_points
-        ))
-        
-    return result
-
-def run(img_path: Path, out_dir: Path) -> tuple[Path | None, list[LayoutBox]]:
     if not img_path.exists():
         print(f"  [LayoutDet] ERROR: file not found {img_path}")
-        return None, []
+        return None, None, []
 
-    image = Image.open(str(img_path)).convert("RGB")
-    image = ImageOps.exif_transpose(image)
+    # Create subfolder per image
+    image_subfolder = out_dir / img_path.stem
+    image_subfolder.mkdir(parents=True, exist_ok=True)
 
-    # ── Stage 1 pre-processing: enhance before detection ─────────────────────
-    print("  [LayoutDet] Enhancing image (bilateral + CLAHE) ...")
-    enhanced_image = _enhance_for_detection(image)
+    # ── Run Models ───────────────────────────────────────────────────────────
+    print(f"  [LayoutDet] Processing {img_path.name} (Unwarp + Layout) …")
+    preprocessor, detector = _get_pipeline()
+    
+    # 1. Perspective Correction & Orientation
+    pre_res = preprocessor.predict(str(img_path))[0]
+    full_img = pre_res.get("output_img")
+    
+    corrected_img_path = image_subfolder / "A_corrected.png"
+    if full_img is None:
+        # Fallback if unwarping failed
+        full_img = cv2.imread(str(img_path))
+    
+    cv2.imwrite(str(corrected_img_path), full_img)
 
-    det_predictor = _get_det_predictor()
-    det_predictions = det_predictor([enhanced_image])
-    det_result = det_predictions[0]
+    # 2. Layout Detection on the corrected image
+    # Use 1280 resolution limit here too for memory safety
+    layout_res = detector.predict(full_img)[0]
+    paddle_boxes = layout_res.get("boxes", [])
+    
+    print(f"  [LayoutDet] Detected {len(paddle_boxes)} raw layout regions.")
+    boxes = _paddle_boxes_to_layout_boxes(paddle_boxes)
+    print(f"  [LayoutDet] Kept {len(boxes)} text-bearing blocks.")
 
-    w_img, h_img = image.size
-    line_boxes: list[LayoutBox] = []
+    # ── Save B_layout (visualisation: RAW) ───────────────────────────────────
+    layout_viz_path = image_subfolder / "B_layout.png"
+    _save_layout_viz(full_img, paddle_boxes, layout_viz_path)
 
-    for i, bbox in enumerate(det_result.bboxes):
-        x1, y1, x2, y2 = bbox.bbox
-        conf = bbox.confidence
-        poly = getattr(bbox, "polygon", None)
+    # ── Save C_refined (visualisation: FILTERED) ─────────────────────────────
+    refined_img_path = image_subfolder / "C_refined.png"
+    _save_layout_viz(full_img, boxes, refined_img_path)
 
-        if conf < MIN_CONFIDENCE: continue
-        
-        # Clamp coordinates
-        x1, y1 = max(0, int(x1)), max(0, int(y1))
-        x2, y2 = min(w_img, int(x2)), min(h_img, int(y2))
-
-        if (x2 - x1) * (y2 - y1) < MIN_AREA: continue
-
-        line_boxes.append(LayoutBox(
-            label=f"Line_{i:02d}",
-            x1=x1, y1=y1, x2=x2, y2=y2,
-            confidence=conf,
-            polygon=poly
-        ))
-
-    # ── Merge lines into blocks ──────────────────────────────────────────────
-    blocks = _merge_boxes(line_boxes)
-    print(f"  [LayoutDet] Merged {len(line_boxes)} lines into {len(blocks)} blocks.")
-
-    # ── Draw boxes ───────────────────────────────────────────────────────────
-    # Draw on a clean white canvas so annotations are always readable
-    w_img, h_img = image.size
-    annotated = Image.new("RGB", (w_img, h_img), color=(255, 255, 255))
-    annotated.paste(image)
-    draw = ImageDraw.Draw(annotated)
-
-    for block in blocks:
-        # Draw the tilted polygon in BLACK (clearly visible on white bg)
-        if block.polygon:
-            p = block.polygon
-            for i in range(4):
-                draw.line([tuple(p[i]), tuple(p[(i + 1) % 4])], fill="black", width=2)
-        else:
-            draw.rectangle([block.x1, block.y1, block.x2, block.y2], outline="black", width=2)
-
-        label = f"{block.label} ({block.confidence:.0%})"
-        draw.text((block.x1 + 2, block.y1 - 14), label, fill="black")
-
-    # ── Save ──────────────────────────────────────────────────────────────────
-    out_img = out_dir / f"{img_path.stem}_boxes.png"
-    annotated.save(str(out_img))
-
-    out_json = out_dir / f"{img_path.stem}_boxes.json"
+    # ── Save JSON metadata ────────────────────────────────────────────────────
+    h_img, w_img = full_img.shape[:2]
+    out_json = image_subfolder / f"{img_path.stem}.json"
     json_data = {
-        "source_image": str(img_path),
-        "image_size": {"width": w_img, "height": h_img},
-        "boxes": [asdict(b) for b in blocks],
+        "source_image":    str(img_path),
+        "corrected_image": "A_corrected.png",
+        "layout_image":    "B_layout.png",
+        "refined_image":   "C_refined.png",
+        "image_size":      {"width": w_img, "height": h_img},
+        "boxes":           [asdict(b) for b in boxes],
     }
     out_json.write_text(json.dumps(json_data, indent=2), encoding="utf-8")
 
-    return out_img, blocks
+    return layout_viz_path, corrected_img_path, boxes
+
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
