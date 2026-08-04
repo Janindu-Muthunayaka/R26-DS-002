@@ -159,6 +159,16 @@ def run(img_path: Path,
             print(f"  [Crop] {block_id}: no lines detected, skipping block.")
             continue
             
+        # ── EXTRACT HEATMAP ──
+        # Extract the AI-generated text score heatmap to pinpoint exactly where characters are
+        heatmap_vis = det_result.get("heatmaps", {}).get("text_score_heatmap")
+        if heatmap_vis is not None:
+            heatmap_gray = cv2.cvtColor(heatmap_vis, cv2.COLOR_BGR2GRAY)
+            # CRAFT heatmaps might be a different scale, resize to match the exact block_crop dimensions
+            heatmap_resized = cv2.resize(heatmap_gray, (block_crop.shape[1], block_crop.shape[0]))
+        else:
+            heatmap_resized = None
+            
         # Draw CRAFT polygons on a copy of the block crop
         craft_viz = block_crop.copy()
         for poly in dt_polys:
@@ -200,27 +210,60 @@ def run(img_path: Path,
                 continue
                 
             # Determine background polarity dynamically PER WORD
-            # By comparing the brightness of the center (text) to the edges (background)
             gray_crop = cv2.cvtColor(line_crop, cv2.COLOR_BGR2GRAY)
             
-            # The CRAFT bounding box fits tightly around the text, so the center is guaranteed to be text.
-            h, w = gray_crop.shape
-            center_region = gray_crop[h//4:3*h//4, w//4:3*w//4]
-            text_brightness = np.median(center_region) if center_region.size > 0 else 127
+            is_dark_bg = False
+            # 1. PRIMARY AI METHOD: Use CRAFT's text score heatmap to exactly target characters
+            if heatmap_resized is not None:
+                # Warp the heatmap using the exact same polygon to perfectly align with the word crop
+                heatmap_crop = perspective_warp(heatmap_resized, poly)
+                
+                # Heatmap > 127 = definitely text. Heatmap < 64 = definitely background.
+                text_mask = heatmap_crop > 127
+                bg_mask = heatmap_crop < 64
+                
+                text_pixels = gray_crop[text_mask]
+                bg_pixels = gray_crop[bg_mask]
+                
+                # If we have enough pixels to make a confident decision
+                if len(text_pixels) > 10 and len(bg_pixels) > 10:
+                    text_brightness = np.median(text_pixels)
+                    bg_brightness = np.median(bg_pixels)
+                    is_dark_bg = bool(text_brightness > bg_brightness)
+                else:
+                    heatmap_resized = None # Fallback to Otsu
             
-            border_pixels = np.concatenate([
-                gray_crop[0, :],         # top
-                gray_crop[-1, :],        # bottom
-                gray_crop[:, 0],         # left
-                gray_crop[:, -1]         # right
-            ])
-            bg_brightness = np.median(border_pixels) if border_pixels.size > 0 else 127
+                # Get exact background color for padding
+                if len(bg_pixels) > 10:
+                    # Calculate median BGR color of the background pixels
+                    bg_bgr = line_crop[bg_mask]
+                    pad_color = np.median(bg_bgr, axis=0).astype(int).tolist()
+                else:
+                    pad_color = [0, 0, 0] if is_dark_bg else [255, 255, 255]
             
-            # If the text is brighter than the background, it's a dark background document
-            is_dark_bg = bool(text_brightness > bg_brightness)
-            
-            # Now pad dynamically
-            pad_color = [0, 0, 0] if is_dark_bg else [255, 255, 255]
+            # 2. FALLBACK METHOD: Center vs Border (fails on outline fonts)
+            if heatmap_resized is None:
+                if gray_crop.max() > gray_crop.min():
+                    _, thresh = cv2.threshold(gray_crop, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+                else:
+                    thresh = gray_crop
+                
+                h, w = thresh.shape
+                center_region = thresh[h//4:3*h//4, w//4:3*w//4]
+                text_brightness = np.mean(center_region) if center_region.size > 0 else 127
+                
+                border_pixels = np.concatenate([
+                    thresh[0, :], thresh[-1, :], thresh[:, 0], thresh[:, -1]
+                ])
+                bg_brightness = np.mean(border_pixels) if border_pixels.size > 0 else 127
+                is_dark_bg = bool(text_brightness > bg_brightness)
+                
+                # Get exact background color for padding using raw border pixels
+                raw_border = np.concatenate([
+                    line_crop[0, :], line_crop[-1, :], line_crop[:, 0], line_crop[:, -1]
+                ])
+                pad_color = np.median(raw_border, axis=0).astype(int).tolist()
+                
             line_crop = cv2.copyMakeBorder(line_crop, 10, 10, 10, 10, cv2.BORDER_CONSTANT, value=pad_color)
 
             word_id = f"{block_id}_word_{line_idx:03d}"
