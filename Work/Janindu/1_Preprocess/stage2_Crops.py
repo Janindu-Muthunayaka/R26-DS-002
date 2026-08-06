@@ -178,8 +178,39 @@ def run(img_path: Path,
         craft_out_name = f"{block_id}_craft.png"
         cv2.imwrite(str(img_root / craft_out_name), craft_viz)
 
-        # Sort lines top-to-bottom
-        dt_polys = sorted(dt_polys, key=lambda p: float(np.mean(np.array(p)[:, 1])))
+        # ── 2D Reading Order Sort (Top-to-Bottom, Left-to-Right) ──
+        # 1. Calculate centers and heights for all polygons
+        poly_data = []
+        for p in dt_polys:
+            arr = np.array(p)
+            cx, cy = np.mean(arr, axis=0)
+            h = np.max(arr[:, 1]) - np.min(arr[:, 1])
+            poly_data.append({'poly': p, 'cx': cx, 'cy': cy, 'h': h})
+            
+        if poly_data:
+            # Sort initially by Y-coordinate
+            poly_data.sort(key=lambda d: d['cy'])
+            
+            # Group into lines if Y-centers are within half the average height
+            avg_h = np.mean([d['h'] for d in poly_data])
+            y_threshold = avg_h * 0.5
+            
+            lines = []
+            current_line = [poly_data[0]]
+            
+            for d in poly_data[1:]:
+                if abs(d['cy'] - current_line[-1]['cy']) < y_threshold:
+                    current_line.append(d)
+                else:
+                    lines.append(current_line)
+                    current_line = [d]
+            lines.append(current_line)
+            
+            # Sort each line by X-coordinate (Left-to-Right)
+            dt_polys = []
+            for line in lines:
+                line.sort(key=lambda d: d['cx'])
+                dt_polys.extend([d['poly'] for d in line])
 
         block_crop_gray = cv2.cvtColor(block_crop, cv2.COLOR_BGR2GRAY)
         

@@ -41,12 +41,20 @@ def binarize_strip(img_bgr: np.ndarray, is_dark_bg: bool) -> tuple[np.ndarray, n
     # Boolean array where True means foreground text (black pixels)
     binary = binary_8u == 0
     
-    # Remove specks and noise particles
+    # Remove specks and noise particles dynamically
     num_labels, labels, stats, _ = cv2.connectedComponentsWithStats(binary.astype(np.uint8), connectivity=8)
-    min_area = (target_h * new_w) * 0.00003
-    for l in range(1, num_labels):
-        if stats[l, cv2.CC_STAT_AREA] < min_area:
-            binary[labels == l] = False
+    
+    areas = stats[1:, cv2.CC_STAT_AREA] # Exclude background label 0
+    if len(areas) > 0:
+        max_area = np.max(areas)
+        # Dynamic threshold: 0.1% of the largest character's area.
+        # Clamped between 5 pixels (absolute minimum noise) and 50 pixels (safe upper bound to avoid deleting periods/diacritics)
+        min_area = max(5, min(50, max_area * 0.001))
+        
+        for l in range(1, num_labels):
+            if stats[l, cv2.CC_STAT_AREA] < min_area:
+                binary[labels == l] = False
+
     
     # --- MAT OPTIMIZATION ---
     binary_text = binary.astype(np.uint8) * 255

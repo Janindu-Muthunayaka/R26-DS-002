@@ -104,7 +104,23 @@ def _label_to_category(label: str) -> str:
     if label in ("document_title", "paragraph_title"):
         return "title"
     return "body"
-
+    
+def _calculate_iou(box1: LayoutBox, box2: LayoutBox) -> float:
+    """Calculate the Intersection over Union (IoU) of two LayoutBoxes."""
+    x1 = max(box1.x1, box2.x1)
+    y1 = max(box1.y1, box2.y1)
+    x2 = min(box1.x2, box2.x2)
+    y2 = min(box1.y2, box2.y2)
+    
+    if x2 <= x1 or y2 <= y1:
+        return 0.0
+        
+    intersection = (x2 - x1) * (y2 - y1)
+    area1 = (box1.x2 - box1.x1) * (box1.y2 - box1.y1)
+    area2 = (box2.x2 - box2.x1) * (box2.y2 - box2.y1)
+    union = area1 + area2 - intersection
+    
+    return intersection / union if union > 0 else 0.0
 
 def _paddle_boxes_to_layout_boxes(paddle_boxes: list[dict]) -> list[LayoutBox]:
     """
@@ -149,9 +165,23 @@ def _paddle_boxes_to_layout_boxes(paddle_boxes: list[dict]) -> list[LayoutBox]:
     else:
         final_boxes = body_boxes
 
+    # 3. Filter out overlapping/duplicate blocks (IoU > 0.5)
+    filtered_boxes = []
+    # Sort by confidence so we keep the highest confidence box in case of overlaps
+    final_boxes.sort(key=lambda bx: bx.confidence, reverse=True)
+    
+    for box in final_boxes:
+        is_duplicate = False
+        for kept_box in filtered_boxes:
+            if _calculate_iou(box, kept_box) > 0.5:
+                is_duplicate = True
+                break
+        if not is_duplicate:
+            filtered_boxes.append(box)
+
     # Sort in approximate reading order (row-by-row, then left-to-right)
-    final_boxes.sort(key=lambda bx: (bx.y1 // 100, bx.x1))
-    return final_boxes
+    filtered_boxes.sort(key=lambda bx: (bx.y1 // 100, bx.x1))
+    return filtered_boxes
 
 
 def _save_layout_viz(img_bgr: np.ndarray,
