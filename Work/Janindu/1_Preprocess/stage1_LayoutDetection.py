@@ -75,9 +75,9 @@ class LayoutBox:
 SCORE_THRESHOLD = 0.20   # Lowered to 0.20 to be "more observant" of subtle regions
 
 # Text-bearing label groups (from PP-DocLayout_plus-L)
+# (Headers, footers, and page numbers are intentionally excluded)
 TEXT_LABELS = {
     "text", "document_title", "paragraph_title",
-    "header", "footer", "page_number",
     "image_caption", "aside_text",
 }
 
@@ -105,8 +105,11 @@ def _label_to_category(label: str) -> str:
         return "title"
     return "body"
     
-def _calculate_iou(box1: LayoutBox, box2: LayoutBox) -> float:
-    """Calculate the Intersection over Union (IoU) of two LayoutBoxes."""
+def _calculate_overlap_ratio(box1: LayoutBox, box2: LayoutBox) -> float:
+    """
+    Calculate the Intersection over Minimum Area (IoMin) of two LayoutBoxes.
+    This effectively detects if one box is completely (or mostly) inside another.
+    """
     x1 = max(box1.x1, box2.x1)
     y1 = max(box1.y1, box2.y1)
     x2 = min(box1.x2, box2.x2)
@@ -118,9 +121,9 @@ def _calculate_iou(box1: LayoutBox, box2: LayoutBox) -> float:
     intersection = (x2 - x1) * (y2 - y1)
     area1 = (box1.x2 - box1.x1) * (box1.y2 - box1.y1)
     area2 = (box2.x2 - box2.x1) * (box2.y2 - box2.y1)
-    union = area1 + area2 - intersection
     
-    return intersection / union if union > 0 else 0.0
+    min_area = min(area1, area2)
+    return intersection / min_area if min_area > 0 else 0.0
 
 def _paddle_boxes_to_layout_boxes(paddle_boxes: list[dict]) -> list[LayoutBox]:
     """
@@ -153,27 +156,30 @@ def _paddle_boxes_to_layout_boxes(paddle_boxes: list[dict]) -> list[LayoutBox]:
             non_body_boxes.append(box_obj)
 
     # ── Filtering Logic ──────────────────────────────────────────────────────
-    # 1. If we have non-body blocks (titles, headers, etc.):
-    #    - Keep them all.
-    #    - Keep body blocks ONLY if there are fewer than 3 of them.
-    # 2. If we only have body blocks, keep them.
     if non_body_boxes:
-        if len(body_boxes) < 3:
-            final_boxes = non_body_boxes + body_boxes
-        else:
-            final_boxes = non_body_boxes
+        # User is strictly focusing on titles/headings
+        final_boxes = non_body_boxes
     else:
-        final_boxes = body_boxes
+        # Fallback Rule: If PaddleOCR failed to label any block as a title,
+        # we guess the title by taking the 3 largest blocks on the page.
+        if body_boxes:
+            # Sort by area descending to find the most prominent blocks
+            body_boxes.sort(key=lambda bx: (bx.x2 - bx.x1) * (bx.y2 - bx.y1), reverse=True)
+            # Take up to the 3 largest blocks
+            final_boxes = body_boxes[:3]
+        else:
+            final_boxes = []
 
-    # 3. Filter out overlapping/duplicate blocks (IoU > 0.5)
+    # Filter out nested/overlapping blocks (Overlap > 0.5)
     filtered_boxes = []
-    # Sort by confidence so we keep the highest confidence box in case of overlaps
-    final_boxes.sort(key=lambda bx: bx.confidence, reverse=True)
+    # Sort by AREA descending, so we evaluate and keep the largest encompassing boxes first!
+    final_boxes.sort(key=lambda bx: (bx.x2 - bx.x1) * (bx.y2 - bx.y1), reverse=True)
     
     for box in final_boxes:
         is_duplicate = False
         for kept_box in filtered_boxes:
-            if _calculate_iou(box, kept_box) > 0.5:
+            # If the current box is completely or mostly inside a larger kept box
+            if _calculate_overlap_ratio(box, kept_box) > 0.6:
                 is_duplicate = True
                 break
         if not is_duplicate:
