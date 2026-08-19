@@ -472,9 +472,13 @@ function renderResults(results) {
 
                 <!-- Extracted Text -->
                 <div>
-                  <div style="font-size: 10px; font-weight: 800; color: var(--green); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px;">6. Extracted Text</div>
-                  <div style="background: var(--s2); border: 1px solid var(--border); border-radius: 8px; padding: 16px;">
+                  <div style="font-size: 10px; font-weight: 800; color: var(--green); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px;">6. Mat Extracted Text</div>
+                  <div style="background: var(--s2); border: 1px solid var(--border); border-radius: 8px; padding: 16px; margin-bottom: 16px;">
                     <div class="si-text" style="font-size: 26px; color: var(--green); line-height: 1.5;">${esc(sp.predicted_text)}</div>
+                  </div>
+                  <div style="font-size: 10px; font-weight: 800; color: var(--green); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px;">7. Regular extract text</div>
+                  <div style="background: var(--s2); border: 1px solid var(--border); border-radius: 8px; padding: 16px;">
+                    <div class="si-text" style="font-size: 26px; color: var(--green); line-height: 1.5;">${esc(sp.predicted_text_raw)}</div>
                   </div>
                 </div>
 

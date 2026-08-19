@@ -21,6 +21,7 @@ import sys
 import os
 import json
 import shutil
+import concurrent.futures
 from pathlib import Path
 from datetime import datetime
 import pytesseract
@@ -34,6 +35,7 @@ FRONTEND_DIR  = BASE_DIR / "3_FrontEnd"
 # Path to our custom tesseract model data directory
 TESSDATA_DIR = RECOGNIZE_DIR / "tessdata"
 CUSTOM_LANG  = "sin_custom"
+CUSTOM_LANG_RAW = "sin_raw"
 
 import io
 if sys.stdout.encoding != "utf-8":
@@ -184,24 +186,40 @@ def main():
                 block_id = strip_path.name.replace("_strip.png", "")
                 word_dir = processes_dir / "Preprocessed" / stem / block_id
                 
-                predicted_words = []
-                if word_dir.exists():
-                    word_files = sorted(word_dir.glob("*_mat.png"))
-                    for word_file in word_files:
-                        img = Image.open(word_file)
-                        # Process each word individually with PSM 8
-                        word_pred = pytesseract.image_to_string(img, lang=CUSTOM_LANG, config=tess_word_config).strip()
-                        if word_pred:
-                            predicted_words.append(word_pred)
+                def recognize_mat():
+                    predicted_words = []
+                    if word_dir.exists():
+                        word_files = sorted(word_dir.glob("*_mat.png"))
+                        for word_file in word_files:
+                            img = Image.open(word_file)
+                            # Process each word individually with PSM 8
+                            word_pred = pytesseract.image_to_string(img, lang=CUSTOM_LANG, config=tess_word_config).strip()
+                            if word_pred:
+                                predicted_words.append(word_pred)
+                    return " ".join(predicted_words).strip()
                 
-                predicted = " ".join(predicted_words).strip()
+                def recognize_raw():
+                    if binarized_src.exists():
+                        img = Image.open(binarized_src)
+                        # Process binarized strip with PSM 7 (single text line)
+                        return pytesseract.image_to_string(img, lang=CUSTOM_LANG_RAW, config='--oem 1 --psm 7').strip()
+                    return ""
+
+                with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+                    f_mat = executor.submit(recognize_mat)
+                    f_raw = executor.submit(recognize_raw)
+                    predicted = f_mat.result()
+                    predicted_raw = f_raw.result()
+
                 all_texts.append(predicted)
-                print(f"     -> predicted: {predicted[:60] if predicted else '[empty]'} ({len(predicted_words)} words)")
+                print(f"     -> predicted (MAT): {predicted[:60] if predicted else '[empty]'}")
+                print(f"     -> predicted (RAW): {predicted_raw[:60] if predicted_raw else '[empty]'}")
 
                 split_results.append({
                     "strip_name":        strip_path.name,
                     "strip_stem":        strip_stem,
                     "predicted_text":    predicted,
+                    "predicted_text_raw": predicted_raw,
                     "cer":               0.0,
                     "wer":               0.0,
                     "strip_image":       rel_strip,
@@ -223,6 +241,7 @@ def main():
                     "strip_name":        strip_path.name,
                     "strip_stem":        strip_stem,
                     "predicted_text":    "",
+                    "predicted_text_raw": "",
                     "cer":               100.0, "wer": 100.0,
                     "strip_image":       rel_strip,       # ← still set even on error
                     "strip_image_binarized": rel_strip_binarized,
