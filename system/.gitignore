@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+work/
+*.pem
+.venv/
+venv/
+# models live outside the repo - they are large and belong on Drive
+models/
+*.pt
+*.safetensors

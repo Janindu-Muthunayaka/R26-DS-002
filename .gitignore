@@ -1,0 +1,53 @@
+# Repository root .gitignore
+#
+# This is a SHARED repo (origin: Janindu-Muthunayaka/R26-DS-002). Large research
+# artefacts must not reach it: a single `git add -A` would push gigabytes to
+# every teammate's clone, and git never forgets a blob once committed.
+#
+# The corpus, model weights and pipeline outputs live OUTSIDE this repo.
+# See system/core/config.py (SINHALA_ROOT) for where the code expects them.
+#
+# Deliberately NOT ignored: *.png / *.jpg in general, so result figures and
+# README images can still be committed. Only bulk locations are excluded.
+
+# --- corpus / dataset trees, if one is ever copied in by accident ----------
+corpus/
+Sinhala_OCR_Correction_v2/
+**/raw_pages/
+**/raw_halfpages/
+**/deskewed/
+**/newspapers/
+**/pipeline_out/
+
+# --- model weights ---------------------------------------------------------
+models/
+*.pt
+*.pth
+*.onnx
+*.safetensors
+*.tflite
+
+# --- archives and caches ---------------------------------------------------
+*.zip
+*.tar
+*.tar.gz
+*.npz
+
+# --- python ----------------------------------------------------------------
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.ipynb_checkpoints/
+.pytest_cache/
+
+# --- local run output ------------------------------------------------------
+# NOTE: do not write a bare `work/` rule here. Git on Windows matches ignore
+# patterns case-insensitively, so `work/` also matches the tracked `Work/`
+# folder and hides every team member's directory. Scope it explicitly.
+/system/work/
+/system/tools/out/
+*.log
+
+# --- the device bridge cannot delete files; things staged for removal go here
+_to_delete/
