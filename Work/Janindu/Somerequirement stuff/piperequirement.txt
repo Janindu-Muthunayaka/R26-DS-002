@@ -1,0 +1,254 @@
+# OCR Data Preprocessing Pipeline Requirements
+# These steps are critical to ensure that any new input images match the exact domain and scale of the MAT-processed training data.
+
+1. Image Loading
+   - Load the image.
+   - Convert the image to Grayscale (or process it such that it can be binarized).
+
+2. Scale Normalization (CRITICAL)
+   - The Tesseract model was fine-tuned specifically on images with a height of exactly 384 pixels.
+   - Resize the input image so its height is 384 pixels.
+   - Scale the width proportionally to maintain the original aspect ratio.
+   - Use a high-quality resampling filter like LANCZOS to prevent pixelation during upscaling.
+
+3. Binarization (Otsu's Method)
+   - Apply Otsu's thresholding (`skimage.filters.threshold_otsu`) to the resized image.
+   - Separate the foreground text (dark pixels) from the background (light pixels) into a boolean/binary array.
+
+4. Medial Axis Transform (MAT) Skeletonization
+   - Compute the 1-pixel wide skeleton of the binarized text using the Medial Axis Transform (`skimage.morphology.medial_axis`).
+
+5. Stroke Thickening (Dilation)
+   - The 1-pixel skeleton is too thin for Tesseract to reliably recognize.
+   - Dilate the skeleton using a disk footprint of radius 1 (`skimage.morphology.disk(1)`).
+   - This expands the skeleton to a uniform stroke width of approximately 3 pixels (`skimage.morphology.binary_dilation` or `dilation`).
+
+6. Final Rendering & Formatting
+   - Invert the colors so that the skeletonized text is black (0) and the background is white (255).
+   - Convert the final image back to RGB format (a 3-channel image) before passing it to Tesseract.
+
+7. Tesseract Configuration
+   - Use Page Segmentation Mode 7 (`--psm 7`) to explicitly tell Tesseract to treat the image as a single text line.
+   - Ensure you are loading the `sin_custom_best_fixed.traineddata` model checkpoint.
+   - Latest Model Path: `E:\Sliit\Research\TROCR\tesstrain\data\sin_custom\sin_custom_best_fixed.traineddata`
+
+
+this si also how it was created (the dataset)
+
+"""
+Dataset.py
+==========
+Prepares the SinOCR-Printed dataset for TrOCR fine-tuning.
+
+Sources
+-------
+  Test  images : E:\\Sliit\\Research\\TROCR\\SinOCR-printed\\data\\test\\images   (1 000 images)
+  Train images : E:\\Sliit\\Research\\TROCR\\SinOCR-printed\\data\\train\\images  (9 000 images)
+
+Destinations
+------------
+  E:\\Sliit\\Research\\TROCR\\Raw\\         <- resized originals + labels.csv
+  E:\\Sliit\\Research\\TROCR\\Mat\\         <- MAT-skeletonised + dilated images + labels.csv
+
+Resize step (applied to BOTH destinations)
+------------------------------------------
+  Every image is first rescaled to TARGET_HEIGHT = 384 px, keeping the
+  original aspect ratio (width is adjusted proportionally).
+  This ensures the MAT skeleton operates on strokes of a consistent
+  thickness, rather than on arbitrarily-sized raw images.
+
+MAT pipeline (per image, applied after resize)
+----------------------------------------------
+  1. Convert to greyscale & binarise (Otsu).
+  2. Compute medial-axis skeleton  -> 1-px skeleton.
+  3. Dilate skeleton with a disk(1) structuring element to widen strokes to ~3 px.
+  4. Save result to Mat/Images/.
+"""
+
+import os
+import csv
+import numpy as np
+from pathlib import Path
+from PIL import Image
+from skimage.morphology import medial_axis, binary_dilation, disk
+from skimage.filters import threshold_otsu
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Paths
+# ──────────────────────────────────────────────────────────────────────────────
+BASE = Path(r"E:\Sliit\Research\TROCR")
+
+SRC_TEST_IMAGES  = BASE / "SinOCR-printed" / "data" / "test"  / "images"
+SRC_TRAIN_IMAGES = BASE / "SinOCR-printed" / "data" / "train" / "images"
+SRC_TEST_GT      = BASE / "SinOCR-printed" / "data" / "test"  / "gt.csv"
+SRC_TRAIN_GT     = BASE / "SinOCR-printed" / "data" / "train" / "gt.csv"
+
+RAW_ROOT = BASE / "Raw"
+MAT_ROOT = BASE / "Mat"
+
+RAW_IMAGES = RAW_ROOT / "Images"
+MAT_IMAGES = MAT_ROOT / "Images"
+
+N_TEST  = 1_000
+N_TRAIN = 9_000
+
+TARGET_HEIGHT = 384          # px — both Raw and Mat images are saved at this height
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Helpers
+# ──────────────────────────────────────────────────────────────────────────────
+
+def resize_to_height(img: Image.Image, height: int = TARGET_HEIGHT) -> Image.Image:
+    """
+    Resize a PIL image so its height equals *height* pixels.
+    Width is scaled proportionally. Uses LANCZOS for quality downscaling.
+    """
+    original_w, original_h = img.size
+    if original_h == height:
+        return img
+    scale  = height / original_h
+    new_w  = max(1, round(original_w * scale))
+    return img.resize((new_w, height), Image.LANCZOS)
+
+
+def load_gt(csv_path: Path) -> dict[str, str]:
+    """Return {file_name (no ext): text} from a gt.csv."""
+    mapping: dict[str, str] = {}
+    with open(csv_path, encoding="utf-8", newline="") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            mapping[row["file_name"].strip()] = row["text"]
+    return mapping
+
+
+def apply_mat(resized_img: Image.Image) -> np.ndarray:
+    """
+    Apply the MAT pipeline to an already-resized PIL image.
+
+    Steps
+    -----
+    1. Convert to greyscale & Otsu-binarise  -> binary array (ink = True).
+    2. Medial-axis transform                 -> 1-px skeleton.
+    3. Dilate with disk(1)                   -> ~3-px wide strokes.
+    4. Render as white-background / black-ink uint8 RGB array.
+    """
+    gray = resized_img.convert("L")
+    arr  = np.array(gray, dtype=np.float64)
+
+    # Binarise: text pixels = True (foreground = dark ink on light background)
+    thresh = threshold_otsu(arr)
+    binary = arr < thresh
+
+    # Medial-axis skeleton (1-px)
+    skeleton = medial_axis(binary)                    # bool array, True = skeleton px
+
+    # Dilate to ~3-px width: disk(1) gives a 3×3 circular footprint
+    se         = disk(1)
+    thick_skel = binary_dilation(skeleton, footprint=se)
+
+    # Render: ink = black (0), background = white (255)
+    result_gray = np.where(thick_skel, 0, 255).astype(np.uint8)
+
+    # Convert to RGB so the output PNG matches the originals
+    result_rgb = np.stack([result_gray] * 3, axis=-1)
+    return result_rgb
+
+
+def collect_samples(
+    image_dir: Path,
+    gt_map: dict[str, str],
+    n: int,
+) -> list[tuple[Path, str]]:
+    """
+    Pick the first *n* .png files from image_dir that have a matching GT label.
+    Returns list of (image_path, label_text).
+    """
+    samples: list[tuple[Path, str]] = []
+    for img_path in sorted(image_dir.glob("*.png")):
+        stem = img_path.stem
+        if stem in gt_map:
+            samples.append((img_path, gt_map[stem]))
+        if len(samples) >= n:
+            break
+    return samples
+
+
+def write_labels(
+    label_rows: list[tuple[str, str]],
+    out_csv: Path,
+) -> None:
+    """Write (file_name, text) rows to a CSV next to the Images folder."""
+    with open(out_csv, "w", encoding="utf-8", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow(["file_name", "text"])
+        writer.writerows(label_rows)
+    print(f"  Labels written  -> {out_csv}  ({len(label_rows)} rows)")
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Main
+# ──────────────────────────────────────────────────────────────────────────────
+
+def main() -> None:
+    # Create destination directories
+    RAW_IMAGES.mkdir(parents=True, exist_ok=True)
+    MAT_IMAGES.mkdir(parents=True, exist_ok=True)
+
+    # Load ground-truth maps
+    print("Loading ground-truth CSV files …")
+    gt_test  = load_gt(SRC_TEST_GT)
+    gt_train = load_gt(SRC_TRAIN_GT)
+    print(f"  Test  GT entries : {len(gt_test)}")
+    print(f"  Train GT entries : {len(gt_train)}")
+
+    # Collect samples
+    print(f"\nCollecting {N_TEST} test images …")
+    test_samples  = collect_samples(SRC_TEST_IMAGES,  gt_test,  N_TEST)
+    print(f"  Found : {len(test_samples)}")
+
+    print(f"Collecting {N_TRAIN} train images …")
+    train_samples = collect_samples(SRC_TRAIN_IMAGES, gt_train, N_TRAIN)
+    print(f"  Found : {len(train_samples)}")
+
+    all_samples = test_samples + train_samples
+    total = len(all_samples)
+    print(f"\nTotal samples to process : {total}")
+
+    raw_label_rows: list[tuple[str, str]] = []
+    mat_label_rows: list[tuple[str, str]] = []
+
+    for idx, (src_path, label) in enumerate(all_samples, start=1):
+        fname = src_path.name          # e.g. "4d3e9dea-…-….png"
+
+        # ── Load & resize to TARGET_HEIGHT (proportional width) ─────────────
+        original_img  = Image.open(src_path).convert("RGB")
+        resized_img   = resize_to_height(original_img, TARGET_HEIGHT)
+
+        # ── RAW: save resized original ───────────────────────────────────────
+        raw_dst = RAW_IMAGES / fname
+        resized_img.save(raw_dst)
+        raw_label_rows.append((fname, label))
+
+        # ── MAT: skeletonise + dilate the resized image ──────────────────────
+        mat_arr = apply_mat(resized_img)
+        mat_dst = MAT_IMAGES / fname
+        Image.fromarray(mat_arr).save(mat_dst)
+        mat_label_rows.append((fname, label))
+
+        # Progress indicator
+        if idx % 100 == 0 or idx == total:
+            print(f"  [{idx:>5}/{total}] processed {fname}")
+
+    # Write label CSVs (outside the Images sub-folder, at the root level)
+    print("\nWriting label files …")
+    write_labels(raw_label_rows, RAW_ROOT / "labels.csv")
+    write_labels(mat_label_rows, MAT_ROOT / "labels.csv")
+
+    print("\nDone.")
+    print(f"  Raw folder : {RAW_ROOT}")
+    print(f"  Mat folder : {MAT_ROOT}")
+
+
+if __name__ == "__main__":
+    main()

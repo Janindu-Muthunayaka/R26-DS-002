@@ -1,0 +1,22 @@
+{
+  "model": "EfficientNetV2-S",
+  "num_classes": 315,
+  "image_size": 384,
+  "batch_size": 16,
+  "total_images": 91612,
+  "train_images": 73289,
+  "val_images": 18323,
+  "best_epoch": 19,
+  "best_val_loss": 0.771233,
+  "best_val_acc_pct": 99.04,
+  "epochs_ran": 20,
+  "early_stopped": false,
+  "manually_stopped": false,
+  "total_time_min": 330.96,
+  "optimizer": "AdamW",
+  "scheduler": "SequentialLR (LinearLR warmup 2ep + CosineAnnealingLR)",
+  "loss": "CrossEntropyLoss (5% Label Smoothing)",
+  "device": "cuda",
+  "gpu": "NVIDIA GeForce RTX 4050 Laptop GPU",
+  "torch_version": "2.5.1+cu121"
+}

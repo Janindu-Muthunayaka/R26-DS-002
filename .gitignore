@@ -51,3 +51,24 @@ venv/
 
 # --- the device bridge cannot delete files; things staged for removal go here
 _to_delete/
+/Work/Janindu/1_Preprocess/venv311
+/Work/Janindu/1_Preprocess/Result
+/Work/Janindu/1_Preprocess/InputImages
+/Work/Janindu/1_Preprocess/AllImages
+/Work/Janindu/1_Preprocess/Result-NonFiltered
+/Work/Janindu/1_Preprocess/Result-FilteredAllThreeMethods
+/Work/Janindu/0_Data/FontFiles
+/Work/Janindu/0_Data/FontImages
+/Work/Janindu/0_Data/SkeletonImages
+/Work/Janindu/0_Data/Model/venv
+/Work/Janindu/2_Recogniton/Information
+/Work/Janindu/2_Recogniton/InputFolder
+/Work/Janindu/2_Recogniton/OutputFolder
+/Work/Janindu/2_Recogniton/venv311
+Work/Janindu/0_Data/Model/best_model.pth
+Work/Janindu/0_Data/Model/checkpoint.pth
+/Work/Janindu/3_FrontEnd/Outputs
+/Work/Janindu/3_FrontEnd/Processes
+/Work/Janindu/3_FrontEnd/Inputs
+/Work/Janindu/0_Data
+/Work/Janindu/1_Preprocess/venvpaddle/Lib
