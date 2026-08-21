@@ -1,5 +1,5 @@
 """
-recognize_helper.py  —  Standalone helper called by wrapper_recognize.py
+title_extractor_p4.py  —  Standalone helper called by wrapper_recognize.py
 =========================================================================
 Runs inside the 2_Recogniton venv.
 Finds sentence strips produced by preprocessing, groups them by original
