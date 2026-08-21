@@ -1,0 +1,29 @@
+system/
+└── layers/
+    ├── l3_segment/
+    │   # ── Article Splitter (Stage 1 & 2) ──
+    │   # Receives an image and splits it into logical regions/lines.
+    │   ├── article_splitter_p1.py   (Layout Detection)
+    │   │      - Uses PaddleOCR PPStructureV3 to detect layout blocks.
+    │   │      - Corrects perspective / unwarps the image.
+    │   └── article_splitter_p2.py   (Crops & Lines)
+    │          - Takes layout blocks and uses CRAFT TextDetection.
+    │          - Outputs individual text-line polygon crops and binarizes them.
+    │
+    └── l4a_title/
+        # ── Title Extractor (Stage 3, 4, 5 & OCR) ──
+        # Receives pre-processed text lines, formats them, and extracts text.
+        ├── title_extractor_p1.py    (Sentence Strip Stitching)
+        │      - Resizes line crops to uniform height and stitches into strips.
+        ├── title_extractor_p2.py    (Binarization)
+        │      - Grayscale conversion, strict scaling to 384px height.
+        │      - Otsu/Adaptive binarization and noise removal.
+        ├── title_extractor_p3.py    (MAT Skeletonization)
+        │      - Medial Axis Transform and skeleton dilation.
+        ├── title_extractor_p4.py    (Recognize Helper)
+        │      - Standalone OCR script that leverages custom Tesseract models.
+        │      - Compares MAT and RAW text extraction results.
+        └── tessdata/
+               # Custom Tesseract language models
+               ├── sin_custom.traineddata   (Used for MAT text)
+               └── sin_raw.traineddata      (Used for RAW text)
