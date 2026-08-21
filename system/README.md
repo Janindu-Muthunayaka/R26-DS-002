@@ -8,10 +8,10 @@ Phone captures a newspaper page, the laptop reads it, audio comes back.
 |---|---|---|
 | L1 phone app | capture, guidance, upload | Ishara |
 | L2 select | pick usable frames (sharpness + glyph height) | Ishara |
-| L3 segment | YOLO articles + layout regions | Ishara |
-| **L4A title** | title OCR | **other member** |
+| L3 segment | YOLO articles + layout regions | Ishara + Janindu |
+| **L4A title** | title OCR | **Janindu** |
 | **L4B body** | body OCR + mT5 correction (Component 2) | **Ishara** |
-| L5 assemble | order, drop rejects, collect warnings | shared |
+| L5 generator | order, drop rejects, collect warnings | Nadee |
 | **L6 speech** | RAG + Sinhala TTS | **Bumal** |
 
 ## The rule that keeps this working
