@@ -1,0 +1,33 @@
+{
+  "corrected_text": "ශ්‍රී ලංකාවේ ආර්ථිකය...",
+  "tokens": [
+    {
+      "original": "ශ්‍රී",
+      "corrected": "ශ්‍රී",
+      "label": "CORRECT",
+      "confidence": 0.97,
+      "was_changed": false
+    },
+    {
+      "original": "ලංකාවේ",
+      "corrected": "ලංකාවේ",
+      "label": "CORRECT",
+      "confidence": 0.95,
+      "was_changed": false
+    },
+    {
+      "original": "ආරථිකය",
+      "corrected": "ආර්ථිකය",
+      "label": "ERROR",
+      "confidence": 0.45,
+      "was_changed": true
+    },
+    {
+      "original": "වර්ධනය",
+      "corrected": "වර්ධනය",
+      "label": "CORRECT",
+      "confidence": 0.91,
+      "was_changed": false
+    }
+  ]
+}
