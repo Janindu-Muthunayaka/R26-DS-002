@@ -1,8 +1,18 @@
 system/
 └── layers/
+    ├── l1_input/
+    │   # ── Data Retrieval ──
+    │   # Retrieves images sent by a phone application, along with audio and video.
+    │
+    ├── l2_selection/
+    │   # ── Quality Control ──
+    │   # Takes a burst of images and selects the best photos (least blur, most vivid).
+    │
     ├── l3_segment/
-    │   # ── Article Splitter (Stage 1 & 2) ──
-    │   # Receives an image and splits it into logical regions/lines.
+    │   # ── Article Segmenter  ──
+    │   # Takes images and uses models (YOLO+Paddle) to split them into separate
+    │   # articles (e.g., from a newspaper) or processes as a whole. For each article,
+    │   # it identifies Titles and Paragraphs using PaddleOCR and creates crops.
     │   ├── article_splitter_p1.py   (Layout Detection)
     │   │      - Uses PaddleOCR PPStructureV3 to detect layout blocks.
     │   │      - Corrects perspective / unwarps the image.
@@ -10,20 +20,31 @@ system/
     │          - Takes layout blocks and uses CRAFT TextDetection.
     │          - Outputs individual text-line polygon crops and binarizes them.
     │
-    └── l4a_title/
-        # ── Title Extractor (Stage 3, 4, 5 & OCR) ──
-        # Receives pre-processed text lines, formats them, and extracts text.
-        ├── title_extractor_p1.py    (Sentence Strip Stitching)
-        │      - Resizes line crops to uniform height and stitches into strips.
-        ├── title_extractor_p2.py    (Binarization)
-        │      - Grayscale conversion, strict scaling to 384px height.
-        │      - Otsu/Adaptive binarization and noise removal.
-        ├── title_extractor_p3.py    (MAT Skeletonization)
-        │      - Medial Axis Transform and skeleton dilation.
-        ├── title_extractor_p4.py    (Recognize Helper)
-        │      - Standalone OCR script that leverages custom Tesseract models.
-        │      - Compares MAT and RAW text extraction results.
-        └── tessdata/
-               # Custom Tesseract language models
-               ├── sin_custom.traineddata   (Used for MAT text)
-               └── sin_raw.traineddata      (Used for RAW text)
+    ├── l4a_title/
+    │   # ── Title Extractor (Stage 3, 4, 5 & OCR) ──
+    │   # Focuses on titles, using Medial Axis Transform (MAT) along with a 
+    │   # dedicated Tesseract model to ensure fonted texts are properly extracted
+    │   # and returned in text format.
+    │   ├── title_extractor_p1.py    (Sentence Strip Stitching)
+    │   │      - Resizes line crops to uniform height and stitches into strips.
+    │   ├── title_extractor_p2.py    (Binarization)
+    │   │      - Grayscale conversion, strict scaling to 384px height.
+    │   │      - Otsu/Adaptive binarization and noise removal.
+    │   ├── title_extractor_p3.py    (MAT Skeletonization)
+    │   │      - Medial Axis Transform and skeleton dilation.
+    │   ├── title_extractor_p4.py    (Recognize Helper)
+    │   │      - Standalone OCR script that leverages custom Tesseract models.
+    │   │      - Compares MAT and RAW text extraction results.
+    │   └── tessdata/
+    │          # Custom Tesseract language models
+    │          ├── sin_custom.traineddata   (Used for MAT text)
+    │          └── sin_raw.traineddata      (Used for RAW text)
+    │
+    ├── l4b_body/
+    │   # ── Body Text Extractor ──
+    │   # Focuses on extracting text from document bodies and paragraphs.
+    │
+    └── l5_assemble/
+        # ── Output Assembler ──
+        # Aggregates the Titles and Text of each article across documents,
+        # organizing them in an orderly, interactive format.
