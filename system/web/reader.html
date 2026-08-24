@@ -1,0 +1,107 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Sinhala Reader — test page</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  :root { color-scheme: light dark; }
+  body { font: 15px/1.55 system-ui, sans-serif; max-width: 900px;
+         margin: 2rem auto; padding: 0 1rem; }
+  h1 { font-size: 1.3rem; margin-bottom: .2rem; }
+  .sub { opacity: .7; margin-top: 0; }
+  fieldset { border: 1px solid #8884; border-radius: 8px; padding: 1rem;
+             margin: 1.2rem 0; }
+  legend { padding: 0 .4rem; opacity: .8; }
+  button { font: inherit; padding: .5rem 1rem; border-radius: 6px;
+           border: 1px solid #8886; background: #8881; cursor: pointer; }
+  button:disabled { opacity: .5; cursor: default; }
+  #out { white-space: pre-wrap; word-break: break-word; }
+  .sinhala { font-size: 1.15rem; line-height: 1.9; }
+  .warn { background: #f9a8; padding: .4rem .6rem; border-radius: 5px;
+          margin: .3rem 0; }
+  .meta { font-family: ui-monospace, monospace; font-size: .85rem; opacity: .75; }
+  .err { color: #c00; font-weight: 600; }
+</style>
+
+<h1>Sinhala Reader</h1>
+<p class="sub">Test page for <code>POST /capture</code>. The phone is the real
+client — this exists so the pipeline can be exercised without it.</p>
+
+<fieldset>
+  <legend>Send frames</legend>
+  <p>Pick one or more JPEGs — a burst from
+     <code>backend/inbox/</code>, or a corpus page.</p>
+  <input type="file" id="files" accept="image/*" multiple>
+  <p><button id="go" disabled>Read them</button>
+     <span id="status" class="meta"></span></p>
+</fieldset>
+
+<fieldset>
+  <legend>Result</legend>
+  <div id="warnings"></div>
+  <h3 id="title-h" hidden>Title</h3>
+  <div id="title" class="sinhala"></div>
+  <h3 id="body-h" hidden>Body</h3>
+  <div id="out" class="sinhala"></div>
+  <p id="meta" class="meta"></p>
+</fieldset>
+
+<script>
+const $ = id => document.getElementById(id);
+$('files').onchange = () => { $('go').disabled = !$('files').files.length; };
+
+$('go').onclick = async () => {
+  const files = [...$('files').files];
+  if (!files.length) return;
+  $('go').disabled = true;
+  $('status').textContent = `uploading ${files.length} file(s)…`;
+  $('warnings').innerHTML = '';
+  $('title').textContent = '';
+  $('out').textContent = '';
+  $('meta').textContent = '';
+  $('title-h').hidden = $('body-h').hidden = true;
+
+  const fd = new FormData();
+  // field name must be "frames" — FastAPI receives a list under one name,
+  // and the Android client posts under the same name.
+  for (const f of files) fd.append('frames', f, f.name);
+
+  const t0 = performance.now();
+  let r, j;
+  try {
+    r = await fetch('/capture', { method: 'POST', body: fd });
+    j = await r.json();
+  } catch (e) {
+    $('status').innerHTML = `<span class="err">request failed: ${e}</span>`;
+    $('go').disabled = false;
+    return;
+  }
+  const ms = Math.round(performance.now() - t0);
+  $('status').textContent = `${r.status} in ${ms} ms`;
+
+  for (const w of (j.warnings || [])) {
+    const d = document.createElement('div');
+    d.className = 'warn'; d.textContent = w;
+    $('warnings').appendChild(d);
+  }
+  if (j.error) {
+    const d = document.createElement('div');
+    d.className = 'warn err'; d.textContent = j.error;
+    $('warnings').appendChild(d);
+  }
+  if (j.title) { $('title-h').hidden = false; $('title').textContent = j.title; }
+  else {
+    const d = document.createElement('div');
+    d.className = 'warn';
+    d.textContent = 'No title — Layer 4A (title OCR) is another team ' +
+                    "member's layer and is still a stub. The headline is " +
+                    'located but not read.';
+    $('warnings').appendChild(d);
+  }
+  if (j.body) { $('body-h').hidden = false; $('out').textContent = j.body; }
+  $('meta').textContent = JSON.stringify(
+    { job: j.job, ok: j.ok, n_articles: j.n_articles,
+      body_chars: (j.body || '').length, audio_url: j.audio_url,
+      timings: j.timings }, null, 1);
+  $('go').disabled = false;
+};
+</script>

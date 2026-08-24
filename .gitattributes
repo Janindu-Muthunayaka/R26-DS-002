@@ -1,0 +1,13 @@
+# Git LFS - added 24 Aug 2026
+#
+# SCOPED TO system/models/ ON PURPOSE. A broad pattern such as `*.pt` would
+# sweep any teammate's future weights into LFS as well, and LFS storage and
+# bandwidth are billed to the REPOSITORY OWNER, not to whoever pushes. Only
+# the files this system actually loads are tracked here.
+#
+# Anyone cloning must run `git lfs install` once before cloning, or these
+# files arrive as 130-byte pointer text and the pipeline fails in a way that
+# looks like a corrupted model.
+system/models/**/*.safetensors filter=lfs diff=lfs merge=lfs -text
+system/models/**/*.pt          filter=lfs diff=lfs merge=lfs -text
+system/models/**/*.bin         filter=lfs diff=lfs merge=lfs -text
