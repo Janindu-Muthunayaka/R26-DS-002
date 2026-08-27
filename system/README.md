@@ -14,6 +14,21 @@ Phone captures a newspaper page, the laptop reads it, audio comes back.
 | L5 generator | order, drop rejects, collect warnings | Nadee |
 | **L6 speech** | RAG + Sinhala TTS | **Bumal** |
 
+## Two paths, one job id
+
+`POST /capture` answers *"what does this page say?"* — the reading path above.
+`POST /ask` answers *"what did that mean?"* — Component 4 (voice) routes the
+question, Component 3 (RAG) answers it. The article read by `/capture` is held
+in `core/session.py` under the job id `/capture` already returns; the phone
+sends that id back with the question.
+
+Both of those components default to OFF. With the defaults, `/capture` behaves
+exactly as it always has and `/ask` still answers "read that again" from
+session with no network at all.
+
+**`docs/INTEGRATION_CONTRACT.md` is the reference** for both endpoints, the
+service APIs, the failure table and the switches.
+
 ## The rule that keeps this working
 
 **`core/schemas.py` is the contract.** L4A writes `title`, L4B writes `body`,

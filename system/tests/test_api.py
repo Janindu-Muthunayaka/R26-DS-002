@@ -161,3 +161,36 @@ def test_health_and_pages(tmp_path):
     assert c.get('/health').json()['ok'] is True
     assert c.get('/').status_code == 200
     assert c.get('/audio/nosuchjob').status_code == 404
+
+
+# ---- too far to identify an article -------------------------------------
+def test_a_frame_too_far_to_segment_says_move_closer(tmp_path):
+    """MEASURED over 70 real captures (tools/probe_yolo.py): where the article
+    detector and the layout path both answered, they DISAGREED on 69% of
+    frames. Reading a confidently-wrong story to someone who cannot check it
+    is worse than reading nothing — and "move a little closer" is also the
+    instruction that fixes the frame, so the next capture is correct.
+    """
+    doc = Document(articles=[], warnings=[
+        'Could not identify a single article in this frame - move a little '
+        'closer and try again'], timings={'mode': 'too-far'})
+    j = _post(_client(FakePipeline(doc), tmp_path)).json()
+    assert j['ok'] is False
+    assert 'move a little closer' in j['error']
+    assert j['body'], 'the user must hear an instruction, not silence'
+    from app.server import SI_MOVE_CLOSER
+    assert j['body'] == SI_MOVE_CLOSER
+
+
+def test_a_genuinely_unreadable_frame_still_says_so(tmp_path):
+    """The two failures are different and the user's next action differs."""
+    j = _post(_client(FakePipeline(_doc(body='')), tmp_path)).json()
+    assert j['ok'] is False
+    assert 'move a little closer' not in j['error']
+
+
+def test_the_detector_is_off_in_the_phone_path_by_default():
+    from core.config import SEGMENT_MODE
+    assert SEGMENT_MODE.lower() == 'off', (
+        'the article detector disagreed with the layout crop on 69% of real '
+        'captures; it must not silently come back')

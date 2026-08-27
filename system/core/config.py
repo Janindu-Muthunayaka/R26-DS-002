@@ -239,3 +239,238 @@ MAX_ARTICLES = 8
 # ==========================================================================
 HOST, PORT = '0.0.0.0', 8000
 WORK_DIR = Path(os.getenv('SINHALA_WORK', './work')).resolve()
+
+# ==========================================================================
+# INTEGRATION  —  the other three components
+# ==========================================================================
+# Each of the other components runs as its OWN PROCESS behind HTTP. They are
+# not imported.
+#
+# This is not a style preference. The four components pin stacks that cannot
+# coexist in one interpreter:
+#
+#   this system   numpy 1.26.4, cv2 4.9.0, transformers 5.1.0, torch cu121
+#   Bumal         numpy 2.4.4,  transformers 5.7.0, torch 2.11.0, river, Ollama
+#   Nadee         langchain + chromadb + langchain-openai + sentence-transformers
+#   Janindu       its own venv311, plus a separate paddle venv
+#
+# The cv2 4.9.0 / numpy 1.26.4 pin here is NOT arbitrary. The deskew
+# reproducibility finding and the library-version result (same checkpoint,
+# CER 0.0730 vs 0.0615) were measured under it, and Chapter 4 cites them. A
+# shared virtualenv would put a reported result at risk to save a subprocess.
+#
+# Second reason, which matters on the day: a component that is down degrades
+# ONE feature instead of killing the demo.
+#
+# EVERY MODE BELOW DEFAULTS TO THE VALUE THAT LEAVES THE READING PATH EXACTLY
+# AS IT IS TODAY. Nothing in this section can change what `/capture` returns.
+
+# ---- Layer 0: voice interaction (Component 4, Bumal) ---------------------
+# 'stub' — a built-in placeholder that routes the request so the loop can be
+#          exercised end to end. It does NOT detect intent; see
+#          layers/l0_voice/voice.py.
+# 'http' — POST to VOICE_URL/interpret, running Bumal's handle_voice_command.
+VOICE_MODE      = os.getenv('SINHALA_VOICE_MODE', 'stub')
+VOICE_URL       = os.getenv('SINHALA_VOICE_URL', 'http://127.0.0.1:8101')
+VOICE_TIMEOUT_S = float(os.getenv('SINHALA_VOICE_TIMEOUT', '20'))
+
+# Bumal's personalization keeps a per-user profile in tinydb. One user here.
+VOICE_USER_ID   = os.getenv('SINHALA_USER_ID', 'user_001')
+
+# ---- Layer 6: generator / RAG (Component 3, Nadee) -----------------------
+# 'off'  — no answering service. Local intents (repeat, stop) still work; a
+#          question that needs generation gets an honest "not available".
+# 'http' — POST to RAG_URL/answer, running Nadee's run_pipeline.
+RAG_MODE      = os.getenv('SINHALA_RAG_MODE', 'off')
+RAG_URL       = os.getenv('SINHALA_RAG_URL', 'http://127.0.0.1:8102')
+RAG_TIMEOUT_S = float(os.getenv('SINHALA_RAG_TIMEOUT', '60'))
+
+# ---- Layer 4A: title OCR (Component 1, Janindu) --------------------------
+# 'stub' — layers/l4a_title/title.py returns the article unchanged, as today.
+# 'mat'  — the MAT + custom-Tesseract path already sitting in that folder.
+#
+# STAYS 'stub' UNTIL MEASURED. l4a_title/README.md asks for MAT to be verified
+# against plain Tesseract at the optimal scale first, because Sinhala dependent
+# vowel signs are a few pixels wide and skeletonisation can remove them. No
+# such measurement exists yet.
+TITLE_MODE = os.getenv('SINHALA_TITLE_MODE', 'stub')
+
+# ---- session memory ------------------------------------------------------
+# See core/session.py. Neither number is measured; both are design choices.
+SESSION_TTL_S = float(os.getenv('SINHALA_SESSION_TTL', '1800'))   # 30 min
+SESSION_MAX   = int(os.getenv('SINHALA_SESSION_MAX', '32'))
+
+# ==========================================================================
+# LAYER 4C  —  optional LLM post-editing of OCR output
+# ==========================================================================
+# 'off'   the default, and the only setting under which any CER may be quoted.
+# 'auto'  runs ONLY when core/quality.py rates the text 'poor'. Not on 'good'
+#         (nothing to gain, everything to lose) and NOT on 'unreadable' — see
+#         layers/l4c_polish/polish.py for why the worst case is the one case
+#         a language model must not be handed.
+# 'on'    every article. For demonstrating the layer, not for measuring it.
+#
+# WHY THIS DEFAULTS TO OFF AND MUST STAY OFF FOR EVALUATION.
+# Component 2's contribution is mT5 post-OCR correction, measured at
+# CER 0.1197 -> 0.0757 on 217 page-disjoint sentences. If a general-purpose
+# language model rewrites that output, the number being measured is no longer
+# the model the thesis is about. `tests/test_polish.py` asserts the eval tools
+# cannot enable it.
+POLISH_MODE = os.getenv('SINHALA_POLISH_MODE', 'off')
+
+# A repair that rewrote a quarter of the characters is not a repair. Below
+# this character-level similarity to the mT5 output, the post-edit is
+# DISCARDED and the mT5 text is used. NOT MEASURED — a deliberately
+# conservative choice, and the value that decides how much a language model is
+# allowed to invent. Loosen it only with evidence.
+POLISH_MIN_SIMILARITY = float(os.getenv('SINHALA_POLISH_MIN_SIM', '0.75'))
+
+# Length must stay in this band, for the same reason.
+POLISH_MIN_LEN_RATIO = 0.70
+POLISH_MAX_LEN_RATIO = 1.30
+
+# Cap on what is sent per article. Longer input costs more and drifts more.
+POLISH_MAX_CHARS = int(os.getenv('SINHALA_POLISH_MAX_CHARS', '4000'))
+
+# ==========================================================================
+# ARTICLE BOUNDARIES  —  which headline belongs to which body
+# ==========================================================================
+# An article is a headline plus the body under it. The close-up path already
+# isolates the body (columns, gutters, clipped-column removal, centre block).
+# These decide whether a headline can be attached to it.
+#
+# MEASURED 27 Aug 2026 on the nine captures in F:/App/backend/inbox.
+# Reproduce with: python tools/measure_headline.py
+#
+#   tallest BODY line       1.28x - 1.70x of the median line height
+#   tallest HEADLINE band   5.91x - 8.71x
+#
+# Nothing at all lands between 1.70 and 5.91. The previous value in
+# closeup.title_lines() was 1.6 — INSIDE the body range — so the tallest body
+# line of every capture was being reported as a headline. 3.0 is the middle of
+# the empty gap.
+TITLE_MIN_LINE_RATIO = 3.0
+
+# How far above the body a headline may sit, in median line heights.
+# MEASURED on the same captures: a real headline sits 36-97 px above its body,
+# while the masthead and the section strip are separated from the headline
+# below them by 186-225 px. At a median line height of ~44-53 px, 3.0 lines
+# (132-159 px) lies between those two populations.
+TITLE_MAX_GAP_LINES = 3.0
+
+# Bands closer together than this are the SAME headline line — the words of a
+# headline are far enough apart that the morphological close does not join
+# them, and a two-column headline gives two boxes at the same height. NOT a
+# measurement; it is the smallest value that merged every real headline line
+# on these captures without joining two of them.
+TITLE_ROW_JOIN_LINES = 1.0
+
+# The headline must sit above the article's OWN columns. The page number and
+# the masthead logo sit above a gutter or off to one side. A design choice.
+TITLE_MIN_X_OVERLAP = 0.50
+
+# ---- Layer 4A: reading the headline once it has been located -------------
+# MEASURED 27 Aug 2026 on the located headline regions of the nine captures
+# (`python tools/measure_headline.py --ocr`), against the headline visible in
+# the frame:
+#
+#   sin_raw    psm 11  ->  'කුරුණෑගල නගර විගණනයක් ලබා'   <- near-correct
+#   sin_raw    psm 6   ->  'අරුණමුලු ප්ගර විශිණිනියක් ලබා'
+#   sin_raw    psm 7   ->  'දදු'                          <- collapses
+#   sin_custom psm 6   ->  "'කීද්දකූළු ි් : දීතීමීන්කීක කි'"
+#   sin_custom psm 11  ->  'දදකදීද්ථීදල, එද්්ට දඉීීීීර්ද'
+#
+# sin_custom is Janindu's MAT model — it is trained on SKELETONISED glyphs and
+# is garbage on raw pixels, exactly as `l4a_title/README.md` warns. Feeding it
+# raw crops is the mistake that README exists to prevent.
+#
+# psm 11 ("sparse text") wins because a headline is a few large words with
+# wide spacing, not a uniform block (psm 6) and not one line (psm 7, which
+# collapsed to two characters).
+TITLE_TESS_LANG = os.getenv('SINHALA_TITLE_LANG', 'sin_raw')
+TITLE_TESS_PSM = int(os.getenv('SINHALA_TITLE_PSM', '11'))
+
+# Where sin_raw / sin_custom live. Janindu's models, already in the repo.
+TITLE_TESSDATA = Path(__file__).resolve().parent.parent / 'layers' / \
+    'l4a_title' / 'tessdata'
+
+# Headline crops are scaled to a TARGET BAND HEIGHT before OCR, for the same
+# reason CLOSEUP_TARGET_GLYPH exists: a fixed scale makes what Tesseract sees
+# depend on how large the headline happens to be printed.
+#
+# MEASURED 27 Aug 2026 on three located headline regions
+# (`python tools/measure_headline.py --ocr`), band heights 250-325 px:
+#
+#   native   'දිමුදු ිළ ුකී ි දු ී'                 <- COLLAPSES on one capture
+#   40 px    "'ණෑගුිල නගර සම ඔණනයක් ලබා දෙ"
+#   60 px    'ණෑගල නගර සම් ඔණනයක් ලබා දෛ'
+#   90 px    'ණෑගල නගර සම ඔණනයක් ලබා දෛ'
+#
+# Native scale FAILS on one of the three. Any downscale into 40-90 px fixes
+# it; 90 was best or tied on two of the three. Like CLOSEUP_TARGET_GLYPH this
+# is a SAFE CHOICE inside a flat region, not an argmin — three regions is not
+# a sweep. Report the collapse at native scale, not an optimum.
+TITLE_TARGET_BAND_PX = float(os.getenv('SINHALA_TITLE_TARGET_PX', '90'))
+
+# ==========================================================================
+# WHICH PATH A FRAME TAKES
+# ==========================================================================
+# Until 27 Aug 2026 the choice was `glyph_p75 >= CLOSEUP_MIN_P75` (20):
+# above it, the column/block path; below it, the YOLO article detector.
+#
+# MEASURED on the 70 real phone captures in `system/work`:
+#
+#     69%  close-up + layout  -> column/block crop
+#     29%  NOT close-up       -> YOLO
+#      3%  layout refused     -> bounding box of ALL text in the frame
+#
+# Nearly a third of real captures were going to YOLO — the path
+# `Corrections_Register.md` entry 1 documents returning one confident box over
+# the NEIGHBOURING article's headline. That is the "it reads text that is not
+# part of the article" symptom, and the median capture sits at p75 22 with a
+# quartile below 20, so this is not an edge case.
+#
+# Re-measured with the p75 gate lowered: **layout analysis succeeds on 16 of
+# those 20 frames.** The gate was refusing frames the analysis handles.
+#
+# IS IT SAFE? The p75 gate exists to keep whole newspaper pages out of a path
+# that assumes one story in full-height columns. It is not the gate doing that
+# work: with the p75 gate turned OFF entirely, **12 of 12 corpus full pages
+# are still refused** by the gutter gate ("no column gutters found"). So the
+# structural gates decide, as they should, and this one only has to exclude
+# frames with no readable text at all.
+LAYOUT_MIN_P75 = 12.0
+
+# ==========================================================================
+# THE ARTICLE DETECTOR IN THE PHONE PATH  —  measured and switched OFF
+# ==========================================================================
+# MEASURED 27 Aug 2026, `tools/probe_yolo.py` over the 70 real phone captures
+# in `system/work`, comparing the detector's most confident box against the
+# article the layout path chose:
+#
+#     51 frames where BOTH produced an answer
+#       35  (69%)  DISAGREE - a different story
+#        5  (10%)  partial
+#       11  (22%)  agree
+#      + 8 frames the detector returned nothing at all
+#      + 11 frames layout refused, so there was nothing to compare against
+#
+# `Corrections_Register.md` entry 1 recorded this on ONE frame. It is now
+# measured on seventy, and it holds: at the range the phone shoots from, the
+# detector usually finds a different story from the one the user is aiming at.
+#
+# WHICH SIDE IS WRONG? Disagreement alone does not say. But the layout crop is
+# the better-evidenced one: 0 of 57 crops span an article boundary after the
+# headline split, and two were confirmed by eye against the photograph. The
+# detector has one confident box and a 69% disagreement rate.
+#
+# SO THE PHONE PATH NO LONGER RUNS IT. When layout cannot identify an article
+# the honest reply is "move a little closer" — which is the instruction that
+# actually fixes the frame — not a confidently-read wrong story. For a blind
+# listener a wrong article is worse than no article, the same reasoning that
+# makes a wrong headline worse than none.
+#
+# The detector is NOT deleted. It is Component 1's contribution, it is
+# evaluated on the full and half page framings it was trained on, and
+# `tools/` can still use it. 'yolo' restores the old behaviour for comparison.
+SEGMENT_MODE = os.getenv('SINHALA_SEGMENT_MODE', 'off')   # off | yolo

@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Component 2 Evidence Board — Clean Version</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=Noto+Sans+Sinhala:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+:root {
+  --paper: #EEF0F3;
+  --surface: #FFFFFF;
+  --surface-2: #F7F8FA;
+  --ink: #151A21;
+  --ink-2: #5A6472;
+  --ink-3: #8A93A1;
+  --rule: #D6DAE1;
+  --rule-strong: #B6BDC8;
+  --accent: #BE2E26;
+  --accent-soft: #F3DEDC;
+  --good: #1C6E52;
+  --good-soft: #DCEBE4;
+  --warn: #96600A;
+  --warn-soft: #F3E7CE;
+  --bar-a: #2C3A4B;
+  --bar-b: #B6BDC8;
+  --shadow: 0 1px 2px rgba(20,26,34,.06), 0 8px 24px -16px rgba(20,26,34,.30);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #0E1218;
+    --surface: #161B23;
+    --surface-2: #1B222B;
+    --ink: #E7EBF1;
+    --ink-2: #9DA7B5;
+    --ink-3: #767F8C;
+    --rule: #262E39;
+    --rule-strong: #39434F;
+    --accent: #E8615A;
+    --accent-soft: #3A1F1E;
+    --good: #5FBF9B;
+    --good-soft: #16302A;
+    --warn: #D9A748;
+    --warn-soft: #332815;
+    --bar-a: #7E93AD;
+    --bar-b: #39434F;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px -16px rgba(0,0,0,.7);
+  }
+}
+
+:root[data-theme="dark"] {
+  --paper: #0E1218;
+  --surface: #161B23;
+  --surface-2: #1B222B;
+  --ink: #E7EBF1;
+  --ink-2: #9DA7B5;
+  --ink-3: #767F8C;
+  --rule: #262E39;
+  --rule-strong: #39434F;
+  --accent: #E8615A;
+  --accent-soft: #3A1F1E;
+  --good: #5FBF9B;
+  --good-soft: #16302A;
+  --warn: #D9A748;
+  --warn-soft: #332815;
+  --bar-a: #7E93AD;
+  --bar-b: #39434F;
+  --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px -16px rgba(0,0,0,.7);
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 15.5px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+.wrap { max-width: 1060px; margin: 0 auto; padding: 0 24px 96px; }
+.sin { font-family: "Noto Sans Sinhala", "Iskoola Pota", sans-serif; }
+code, .mono { font-family: "IBM Plex Mono", monospace; font-size: .86em; }
+
+/* ---------- masthead ---------- */
+header.mast {
+  border-bottom: 2px solid var(--ink);
+  padding: 56px 0 22px;
+  margin-bottom: 40px;
+}
+.kicker {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 11px; letter-spacing: .16em; text-transform: uppercase;
+  color: var(--accent); margin: 0 0 14px;
+}
+h1 {
+  font-family: "Newsreader", Georgia, serif;
+  font-weight: 500; font-size: clamp(34px, 5.4vw, 54px);
+  line-height: 1.05; letter-spacing: -.015em; margin: 0 0 16px;
+  text-wrap: balance;
+}
+.standfirst {
+  font-family: "Newsreader", Georgia, serif;
+  font-size: clamp(17px, 2.2vw, 21px); line-height: 1.5;
+  color: var(--ink-2); max-width: 62ch; margin: 0 0 20px;
+}
+.meta {
+  display: flex; flex-wrap: wrap; gap: 8px 22px;
+  font-family: "IBM Plex Mono", monospace; font-size: 11.5px;
+  color: var(--ink-3); letter-spacing: .03em;
+}
+
+/* ---------- sections ---------- */
+section { margin: 0 0 56px; }
+.eyebrow {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 11px; letter-spacing: .16em; text-transform: uppercase;
+  color: var(--ink-3); margin: 0 0 8px;
+}
+h2 {
+  font-family: "Newsreader", Georgia, serif;
+  font-weight: 500; font-size: clamp(24px, 3.2vw, 32px);
+  line-height: 1.15; margin: 0 0 6px; letter-spacing: -.01em; text-wrap: balance;
+}
+h3 {
+  font-size: 14px; font-weight: 600; margin: 26px 0 10px;
+  letter-spacing: .005em;
+}
+.lede { color: var(--ink-2); max-width: 66ch; margin: 0 0 24px; }
+p { max-width: 68ch; }
+
+/* ---------- stat strip ---------- */
+.stats {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1px; background: var(--rule); border: 1px solid var(--rule);
+  border-radius: 3px; overflow: hidden;
+}
+.stat { background: var(--surface); padding: 20px 20px 18px; }
+.stat .lab {
+  font-family: "IBM Plex Mono", monospace; font-size: 10.5px;
+  letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3);
+  margin: 0 0 10px;
+}
+.stat .big {
+  font-family: "Newsreader", Georgia, serif; font-weight: 500;
+  font-size: 34px; line-height: 1; letter-spacing: -.02em;
+  font-variant-numeric: tabular-nums; margin: 0 0 6px;
+}
+.stat .sub { font-size: 12.5px; color: var(--ink-2); margin: 0; line-height: 1.45; }
+.stat.hero .big { color: var(--accent); }
+
+/* ---------- cards / callouts ---------- */
+.card {
+  background: var(--surface); border: 1px solid var(--rule);
+  border-radius: 3px; padding: 22px 24px; box-shadow: var(--shadow);
+}
+.note {
+  border-left: 3px solid var(--accent); background: var(--surface);
+  padding: 16px 20px; border-radius: 0 3px 3px 0; margin: 22px 0;
+}
+.note.good { border-left-color: var(--good); }
+.note.warn { border-left-color: var(--warn); }
+.note p { margin: 0; max-width: 64ch; }
+.note .t {
+  font-family: "IBM Plex Mono", monospace; font-size: 10.5px;
+  letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3);
+  display: block; margin-bottom: 6px;
+}
+
+/* ---------- tables ---------- */
+.tw { overflow-x: auto; border: 1px solid var(--rule); border-radius: 3px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: 13.5px; min-width: 520px; }
+th, td { padding: 9px 14px; text-align: left; border-bottom: 1px solid var(--rule); }
+thead th {
+  font-family: "IBM Plex Mono", monospace; font-size: 10.5px;
+  letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3);
+  font-weight: 500; background: var(--surface-2); white-space: nowrap;
+}
+tbody tr:last-child td { border-bottom: 0; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; font-family: "IBM Plex Mono", monospace; font-size: 12.5px; }
+tr.hl td { background: var(--good-soft); font-weight: 500; }
+tr.dim td { color: var(--ink-2); }
+caption {
+  caption-side: bottom; text-align: left; padding: 10px 14px;
+  font-size: 12px; color: var(--ink-3); line-height: 1.5;
+}
+
+/* ---------- bar chart ---------- */
+.bars { display: flex; flex-direction: column; gap: 10px; margin: 6px 0 4px; }
+.brow { display: grid; grid-template-columns: minmax(120px, 1.4fr) 1fr auto; gap: 14px; align-items: center; }
+.brow .nm { font-size: 13px; color: var(--ink-2); }
+.brow .track { background: var(--surface-2); border: 1px solid var(--rule); height: 19px; border-radius: 2px; overflow: hidden; }
+.brow .fill { height: 100%; background: var(--bar-a); transition: width 0.6s ease; }
+.brow.win .fill { background: var(--accent); }
+.brow .v { font-family: "IBM Plex Mono", monospace; font-size: 12.5px; font-variant-numeric: tabular-nums; color: var(--ink); min-width: 52px; text-align: right; }
+
+/* paired category bars */
+.cat { display: flex; flex-direction: column; gap: 9px; }
+.crow { display: grid; grid-template-columns: minmax(112px, 1fr) 2.6fr; gap: 14px; align-items: center; }
+.cname { font-size: 12.5px; color: var(--ink-2); line-height: 1.25; }
+.cname small { display: block; color: var(--ink-3); font-family: "IBM Plex Mono", monospace; font-size: 10px; }
+.cpair { display: flex; flex-direction: column; gap: 3px; }
+.cbar { display: flex; align-items: center; gap: 8px; }
+.cbar .t { flex: 1; height: 11px; background: var(--surface-2); border: 1px solid var(--rule); border-radius: 2px; overflow: hidden; }
+.cbar .f { height: 100%; transition: width 0.6s ease; }
+.cbar .f.a { background: var(--bar-a); }
+.cbar .f.b { background: var(--accent); }
+.cbar .lv { font-family: "IBM Plex Mono", monospace; font-size: 10.5px; color: var(--ink-2); min-width: 42px; text-align: right; font-variant-numeric: tabular-nums; }
+.legend { display: flex; gap: 18px; flex-wrap: wrap; font-size: 12px; color: var(--ink-2); margin: 0 0 16px; }
+.legend span { display: inline-flex; align-items: center; gap: 7px; }
+.sw { width: 14px; height: 9px; border-radius: 2px; display: inline-block; }
+
+/* ---------- pipeline ---------- */
+.pipe { display: flex; flex-wrap: wrap; align-items: stretch; gap: 8px; }
+.step {
+  flex: 1 1 150px; background: var(--surface); border: 1px solid var(--rule);
+  border-radius: 3px; padding: 13px 14px; min-width: 140px;
+}
+.step.mine { border-color: var(--accent); background: var(--accent-soft); }
+.step .n {
+  font-family: "IBM Plex Mono", monospace; font-size: 10px; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--ink-3); display: block; margin-bottom: 5px;
+}
+.step.mine .n { color: var(--accent); }
+.step .h { font-size: 13.5px; font-weight: 600; margin: 0 0 3px; }
+.step .d { font-size: 12px; color: var(--ink-2); margin: 0; line-height: 1.4; }
+
+/* ---------- example ---------- */
+.ex { display: flex; flex-direction: column; gap: 0; border: 1px solid var(--rule); border-radius: 3px; overflow: hidden; }
+.exr { display: grid; grid-template-columns: minmax(108px, 140px) 1fr; border-bottom: 1px solid var(--rule); background: var(--surface); }
+.exr:last-child { border-bottom: 0; }
+.exr .k {
+  padding: 11px 14px; background: var(--surface-2);
+  font-family: "IBM Plex Mono", monospace; font-size: 10.5px; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--ink-3); border-right: 1px solid var(--rule);
+}
+.exr .v { padding: 11px 14px; font-size: 15px; line-height: 1.75; }
+.exr.fix .v { background: var(--good-soft); }
+mark { background: var(--accent-soft); color: var(--ink); padding: 0 3px; border-radius: 2px; }
+
+/* ---------- svg charts ---------- */
+figure { margin: 0; }
+.chart { background: var(--surface); border: 1px solid var(--rule); border-radius: 3px; padding: 16px 14px 10px; }
+figcaption { font-size: 12px; color: var(--ink-3); margin-top: 9px; line-height: 1.5; max-width: 60ch; }
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+
+/* ---------- checklist ---------- */
+ul.check { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 9px; }
+ul.check li {
+  display: grid; grid-template-columns: 22px 1fr; gap: 10px;
+  font-size: 13.5px; color: var(--ink-2); max-width: 70ch;
+}
+ul.check li b { color: var(--ink); font-weight: 600; }
+.tick { color: var(--good); font-weight: 600; }
+.open { color: var(--warn); font-weight: 600; }
+
+.pill {
+  display: inline-block; font-family: "IBM Plex Mono", monospace; font-size: 10px;
+  letter-spacing: .09em; text-transform: uppercase; padding: 2px 7px; border-radius: 2px;
+  border: 1px solid var(--rule-strong); color: var(--ink-2); vertical-align: middle;
+}
+.pill.done { background: var(--good-soft); border-color: transparent; color: var(--good); }
+.pill.todo { background: var(--warn-soft); border-color: transparent; color: var(--warn); }
+
+footer { border-top: 1px solid var(--rule); padding-top: 20px; color: var(--ink-3); font-size: 12.5px; }
+a { color: var(--accent); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+</style>
+</head>
+
+<body>
+<div class="wrap">
+
+<header class="mast">
+  <p class="kicker">R26-DS-002 · Component 2 · Supervisor Review Board</p>
+  <h1>Post-OCR Error Correction for Photographed Sinhala Newsprint</h1>
+  <p class="standfirst">Raw camera OCR of a Sinhala newspaper article is wrong in one word out of three.
+  This component takes that text and repairs it before it is spoken aloud. Every number on this page
+  is read from a stored result file, and each one names the file it came from.</p>
+  <div class="meta">
+    <span>IT22259134 · Madhusanka H.P.I</span>
+    <span>Locked test set: 217 sentence pairs / 98 photographs</span>
+    <span>Compiled August 2026</span>
+  </div>
+</header>
+
+<!-- ============ 1. HEADLINE ============ -->
+<section>
+  <p class="eyebrow">The Result</p>
+  <h2>Four numbers to lead with</h2>
+  <p class="lede">These are the canonical figures from <code>results/final_results.json</code>. Nothing on
+  this page contradicts them.</p>
+
+  <div class="stats">
+    <div class="stat hero">
+      <p class="lab">Character Error Rate</p>
+      <p class="big">−36.7%</p>
+      <p class="sub">0.1197 → 0.0757 on the locked test set</p>
+    </div>
+    <div class="stat hero">
+      <p class="lab">Word Error Rate</p>
+      <p class="big">−51.2%</p>
+      <p class="sub">0.3358 → 0.1640; one word in three becomes one word in six</p>
+    </div>
+    <div class="stat">
+      <p class="lab">Statistically Real</p>
+      <p class="big">95% CI</p>
+      <p class="sub">[−0.0615, −0.0199] by paired bootstrap, 10,000 resamples</p>
+    </div>
+    <div class="stat">
+      <p class="lab">Proposed Architecture</p>
+      <p class="big">22.5%</p>
+      <p class="sub">of error operations repaired, against 61.8% for the simpler baseline</p>
+    </div>
+  </div>
+
+  <div class="note">
+    <span class="t">The sentence to say out loud</span>
+    <p>“The correction model works and the improvement is statistically significant. The two-stage
+    architecture I proposed does <em>not</em> work, I measured exactly why, and the deployed system
+    therefore runs the simpler model. That negative result is my strongest contribution.”</p>
+  </div>
+</section>
+
+<!-- ============ 2. WHERE I SIT ============ -->
+<section>
+  <p class="eyebrow">Scope</p>
+  <h2>Where my component sits in the group system</h2>
+  <p class="lede">Four components read a printed newspaper aloud to a blind user. Only the highlighted
+  box is my research. Everything else is engineering that exists so that box receives usable text.</p>
+
+  <div class="pipe">
+    <div class="step"><span class="n">Component 1</span><p class="h">Capture &amp; OCR</p><p class="d">Phone photographs one article; Tesseract recognises it.</p></div>
+    <div class="step mine"><span class="n">Component 2 — mine</span><p class="h">Post-OCR correction</p><p class="d">Noisy text in, corrected text out. Never touches images.</p></div>
+    <div class="step"><span class="n">Component 3</span><p class="h">Retrieval &amp; answering</p><p class="d">Answers questions about what was read.</p></div>
+    <div class="step"><span class="n">Component 4</span><p class="h">Voice interface</p><p class="d">Sinhala text-to-speech and voice control.</p></div>
+  </div>
+
+  <div class="note">
+    <span class="t">Why correction is needed at all</span>
+    <p>A sighted reader skims past a garbled word without noticing. A listener cannot. Text read aloud
+    at word error rate 0.336 is not “slightly imperfect” — it breaks comprehension, and the listener has
+    no way to go back and repair it visually.</p>
+  </div>
+</section>
+
+<!-- ============ 3. DATA ============ -->
+<section>
+  <p class="eyebrow">Evidence · Dataset</p>
+  <h2>The corpus, and what it cost</h2>
+  <p class="lede">Every photograph was taken and transcribed by hand. The split was locked in a manifest
+  file before any model was trained, and the test set has never been used for training, validation or
+  threshold selection.</p>
+
+  <div class="tw">
+    <table>
+      <thead><tr><th>Stage</th><th class="num">Count</th><th>What it means</th></tr></thead>
+      <tbody>
+        <tr><td>Photographs taken</td><td class="num">232</td><td>Close-ups of single articles, three newspapers</td></tr>
+        <tr><td>With manual transcription</td><td class="num">230</td><td>Two photographs have no ground truth</td></tr>
+        <tr><td>Raw aligned sentence pairs</td><td class="num">553</td><td>Produced by character-level anchor alignment</td></tr>
+        <tr><td>Classified correctable</td><td class="num">489</td><td>88.4%; 6.5% surplus text, 3.6% truncated, 1.4% misaligned</td></tr>
+        <tr class="hl"><td>Usable working set</td><td class="num">482</td><td>3–60 words, drawn from 218 pages</td></tr>
+      </tbody>
+      <caption>Reproduced by re-running the alignment code over the 230 stored OCR outputs.
+      Source: <code>data/aligned/pairs_correctable.json</code>.</caption>
+    </table>
+  </div>
+
+  <h3>The locked split, and the check that it is fair</h3>
+  <div class="tw">
+    <table>
+      <thead><tr><th>Split</th><th class="num">Pages</th><th class="num">Pairs</th><th class="num">Raw-OCR CER</th></tr></thead>
+      <tbody>
+        <tr><td>Train</td><td class="num">87</td><td class="num">187</td><td class="num">0.1141</td></tr>
+        <tr><td>Development</td><td class="num">33</td><td class="num">78</td><td class="num">0.1210</td></tr>
+        <tr class="hl"><td>Test (locked)</td><td class="num">98</td><td class="num">217</td><td class="num">0.1197</td></tr>
+      </tbody>
+      <caption>The three baseline error rates are close, which is the evidence that the split is not
+      biased. Source: <code>data/splits/split_manifest.json</code>, seed 42, <code>LOCKED: true</code>.</caption>
+    </table>
+  </div>
+
+  <div class="note">
+    <span class="t">The methodological point she will respect</span>
+    <p>The split is at <strong>photograph</strong> level, not sentence level. Sentences from one article
+    share font, print quality, lighting and camera angle. Splitting by sentence would leak those
+    conditions into the test set and inflate the result.</p>
+  </div>
+</section>
+
+<!-- ============ 4. MAIN RESULT ============ -->
+<section>
+  <p class="eyebrow">Evidence · Results</p>
+  <h2>Five systems, one locked test set</h2>
+  <p class="lede">Everything was evaluated on the same 217 real photographed sentence pairs. Lower is
+  better; the bar shows character error rate.</p>
+
+  <div class="card">
+    <div class="bars" id="sysbars"></div>
+  </div>
+
+  <div class="tw" style="margin-top:20px">
+    <table>
+      <thead><tr><th>System</th><th>Type</th><th class="num">CER</th><th class="num">WER</th><th class="num">ΔCER</th><th class="num">ΔWER</th></tr></thead>
+      <tbody>
+        <tr><td>Raw OCR (no correction)</td><td>Baseline</td><td class="num">0.1197</td><td class="num">0.3358</td><td class="num">—</td><td class="num">—</td></tr>
+        <tr class="dim"><td>Dictionary + Edit Distance</td><td>Classical</td><td class="num">0.1193</td><td class="num">0.3187</td><td class="num">+0.3%</td><td class="num">+5.1%</td></tr>
+        <tr class="dim"><td>N-gram Spell Checker</td><td>Classical</td><td class="num">0.1432</td><td class="num">0.3517</td><td class="num">−19.7%</td><td class="num">−4.7%</td></tr>
+        <tr><td>Detector-Gated (my proposal)</td><td>Neural</td><td class="num">0.1160</td><td class="num">0.2938</td><td class="num">+3.1%</td><td class="num">+12.5%</td></tr>
+        <tr class="hl"><td>Full-Sequence mT5</td><td>Neural</td><td class="num">0.0757</td><td class="num">0.1640</td><td class="num">+36.7%</td><td class="num">+51.2%</td></tr>
+      </tbody>
+      <caption>Δ is the relative reduction against raw OCR; negative means the system made the text
+      worse. Source: <code>results/baseline_comparison.json</code> and
+      <code>results/final_results.json</code>.</caption>
+    </table>
+  </div>
+
+  <div class="note warn">
+    <span class="t">Why the spell checker makes things worse</span>
+    <p>Spell checkers assume phonetic or typing mistakes. OCR mistakes are <strong>visual</strong>. My
+    most frequent confusion is <span class="sin">ව</span> → <span class="sin">ච</span>, a pair that looks
+    almost identical but sounds nothing alike, so a lexicon has no reason to prefer it — and it replaces
+    correct rare words with common ones instead. This is the argument that a dedicated model is
+    <em>necessary</em>, not just nice to have.</p>
+  </div>
+</section>
+
+<!-- ============ 5. WHAT GETS FIXED ============ -->
+<section>
+  <p class="eyebrow">Evidence · Analysis</p>
+  <h2>What actually gets repaired</h2>
+  <p class="lede">An error rate says how much a system improves text, not <em>what</em> it improves.
+  I classified all 1,329 error operations in the test set using the Sinhala Unicode block, so every
+  error falls in exactly one category.</p>
+
+  <div class="legend">
+    <span><i class="sw" style="background:var(--accent)"></i> Full-sequence mT5</span>
+    <span><i class="sw" style="background:var(--bar-a)"></i> Detector-gated (my proposal)</span>
+  </div>
+  <div class="card"><div class="cat" id="catbars"></div></div>
+
+  <div class="grid2" style="margin-top:24px">
+    <div class="note">
+      <span class="t">Be honest about this one</span>
+      <p>27.4% of all errors are <strong>formatting junk</strong> — stray underscores and rule-line
+      fragments from photographing a page. The model removes 82.4% of those. On real Sinhala script
+      errors alone it repairs <strong>54.6%</strong>. Both numbers must be said; 54.6% is the honest
+      measure of linguistic ability.</p>
+    </div>
+    <div class="note warn">
+      <span class="t">The finding that matters most</span>
+      <p>Dependent vowel signs are the <strong>largest</strong> category (299 errors, 22.5%) and the
+      <strong>hardest</strong> to repair (50.8%). At newsprint size those marks are a few pixels. When
+      OCR loses one, the evidence is gone from the text — the model can only guess from context. The
+      ceiling here is optical, not statistical.</p>
+    </div>
+  </div>
+
+  <div class="note good" style="margin-top:4px">
+    <span class="t">Proof that more data is not the answer</span>
+    <p>Growing the corpus from 38 to 230 photographed pages moved CER from 0.0763 to 0.0757 — a change
+    well inside the confidence interval. More training text cannot restore information the camera never
+    captured.</p>
+  </div>
+</section>
+
+<!-- ============ 6. THE NEGATIVE RESULT ============ -->
+<section>
+  <p class="eyebrow">Evidence · The Negative Result</p>
+  <h2>Why my proposed architecture lost</h2>
+  <p class="lede">I designed a two-stage system: a SinBERT classifier flags the words containing errors,
+  and mT5 corrects only those spans. The safety argument was sound — text that is not flagged cannot be
+  damaged. It still lost, and I established why rather than guessing.</p>
+
+  <div class="grid2">
+    <figure>
+      <div class="chart"><svg id="ablation" viewBox="0 0 420 230" role="img" aria-label="Gated character error rate stays flat near 0.116 across all detector recall values."></svg></div>
+      <figcaption><strong>Objection killed.</strong> I swept the detector threshold so recall moved from
+      57.5% to 69.3% and re-ran the whole pipeline at every point. The line is flat. Better detection
+      does not help.</figcaption>
+    </figure>
+    <div>
+      <h3 style="margin-top:0">The reachability argument</h3>
+      <p style="font-size:14px">A gated system can only repair what it flags, so detector recall is a
+      hard ceiling on its fix rate:</p>
+      <div class="card" style="text-align:center;padding:18px 14px;font-family:'IBM Plex Mono',monospace;font-size:15px">
+        η = 0.225 ÷ 0.656 = <strong style="color:var(--accent)">0.34</strong>
+      </div>
+      <p style="font-size:14px;margin-top:14px">On the spans it <em>does</em> flag, it repairs only a
+      third of what is reachable. The full-sequence model repairs 61.8% of <em>everything</em>. So the
+      loss is in the corrector, not the detector — <strong>a perfect detector would still lose.</strong></p>
+      <p style="font-size:14px">It is also worse in <strong>all ten</strong> categories without
+      exception, which rules out an unlucky error distribution.</p>
+    </div>
+  </div>
+
+  <h3>A real test-set sentence, showing the mechanism</h3>
+  <div class="ex">
+    <div class="exr"><div class="k">Raw OCR</div><div class="v sin">අනවශ්‍ය <mark>_</mark> ආකාරයෙන් මුදල් ඉපයීමට මට අවශ්‍ය වුණේ <mark>_</mark> නැහැ. <mark>මොකද</mark></div></div>
+    <div class="exr fix"><div class="k">Full-sequence</div><div class="v sin">අනවශ්‍ය ආකාරයෙන් මුදල් ඉපයීමට මට අවශ්‍ය වුණේ නැහැ.</div></div>
+    <div class="exr"><div class="k">Detector-gated</div><div class="v sin">අනවශ්‍ය <mark>_</mark> ආකාරයෙන් මුදල් ඉපයීමට මට අවශ්‍ය වුණේ <mark>_</mark> නැහැ. <mark>මොකද</mark></div></div>
+    <div class="exr"><div class="k">Ground truth</div><div class="v sin">අනවශ්‍ය ආකාරයෙන් මුදල් ඉපයීමට මට අවශ්‍ය වුණේ නැහැ.</div></div>
+  </div>
+  <p style="font-size:13px;color:var(--ink-3);margin-top:10px">The classifier is trained to find
+  <em>mistyped words</em>. An underscore in the page margin is not a word at all, so it is never flagged,
+  never reaches the corrector, and passes straight through. The full-sequence model regenerates the
+  sentence, so the junk simply disappears.</p>
+
+  <div class="note good">
+    <span class="t">The gated system does win one thing — say so</span>
+    <p>It destroys only 21 of 3,350 already-correct words (0.6%) against 111 (3.3%) for the full-sequence
+    model — <strong>5.5× safer</strong>. Its design intent is confirmed. It just does not buy enough
+    correction to be worth it when the alternative delivered to a blind listener is raw OCR at WER 0.336.</p>
+  </div>
+</section>
+
+<!-- ============ 7. HONESTY ============ -->
+<section>
+  <p class="eyebrow">Evidence · Method</p>
+  <h2>The bug I found in my own evaluation</h2>
+  <p class="lede">This is the part to volunteer before she asks. It turned a mistake into a contribution.</p>
+
+  <div class="tw">
+    <table>
+      <thead><tr><th>Version</th><th>What the alignment stage did</th><th class="num">Raw-OCR CER</th></tr></thead>
+      <tbody>
+        <tr class="dim"><td>v1 (discarded)</td><td>Dropped pairs below a similarity threshold as “unalignable”</td><td class="num">0.0238</td></tr>
+        <tr class="hl"><td>v2 (current)</td><td>Keeps everything; reports the full distribution instead</td><td class="num">0.1197</td></tr>
+      </tbody>
+      <caption>The gate removed roughly 57% of pairs — and specifically the hardest 57%, because
+      similarity is lowest where OCR did worst. Raw OCR looked five times cleaner than it is.</caption>
+    </table>
+  </div>
+
+  <div class="note">
+    <span class="t">How to tell it</span>
+    <p>“I caught it because 0.0238 is impossible for a photographed newspaper. I threw away every v1
+    number, rebuilt the evaluation, and locked the test set. Any post-OCR benchmark can make this
+    mistake, so I report it as a finding: a paper should state what fraction of pairs its alignment
+    stage discards, and on what criterion.”</p>
+  </div>
+</section>
+
+<!-- ============ 8. CAPTURE ============ -->
+<section>
+  <p class="eyebrow">Evidence · Capture Side</p>
+  <h2>Two engineering findings that came free</h2>
+  <p class="lede">Measured on the recognition input rather than on correction. Different unit system —
+  item-level and normalised — so these numbers are never placed beside the ones above.</p>
+
+  <div class="grid2">
+    <figure>
+      <div class="chart"><svg id="ucurve" viewBox="0 0 420 230" role="img" aria-label="Character error rate against input scale forms a U-curve with its minimum at 0.40x."></svg></div>
+      <figcaption><strong>Shrinking the image beats enlarging it.</strong> The minimum sits at 0.40×.
+      A capture device should be specified by target glyph height, not megapixels — the optimum is set by
+      the diacritics, which die below about 11 px.</figcaption>
+    </figure>
+    <div>
+      <h3 style="margin-top:0">Combining several OCR passes only helps under one condition</h3>
+      <p style="font-size:14px">Voting across five recognition views improved CER from 0.1754 to
+      <strong>0.1615</strong> (+7.9%). The <em>identical</em> voting code applied to views of mixed
+      quality made it <strong>3.7% worse</strong>.</p>
+      <p style="font-size:14px">Voting assumes the systems fail independently. When the views form a
+      quality gradient, the majority is dragged toward the weak ones. <strong>Comparable quality matters
+      more than diverse configuration.</strong></p>
+      <h3>Capture and correction add up</h3>
+      <p style="font-size:14px">Cleaner input → correction gets <em>better</em>, not redundant:
+      0.0649 on native input against <strong>0.0365</strong> on consensus input, 43.8% lower.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 9. PROOF INDEX ============ -->
+<section>
+  <p class="eyebrow">If she asks “show me”</p>
+  <h2>Proof index — Claim to File</h2>
+  <p class="lede">Have these open in tabs before the meeting. Every row is a file on the machine, under
+  <code>E:\RP\corpus\Sinhala_OCR_Correction_v2</code>.</p>
+
+  <div class="tw">
+    <table>
+      <thead><tr><th>If she asks about…</th><th>Open this</th><th>It shows</th></tr></thead>
+      <tbody>
+        <tr><td>The headline numbers</td><td><code>results/final_results.json</code></td><td>CER and WER for all three systems, n = 217</td></tr>
+        <tr><td>The classical baselines</td><td><code>results/baseline_comparison.json</code></td><td>Dictionary and n-gram on the same test set</td></tr>
+        <tr><td>The locked split</td><td><code>data/splits/split_manifest.json</code></td><td>Seed 42, page lists, <code>LOCKED: true</code></td></tr>
+        <tr><td>Per-category analysis</td><td><code>results/per_category_results.json</code></td><td>All ten categories, both systems, 1,329 operations</td></tr>
+        <tr><td>The recall sweep</td><td><code>results/ablation_sweep.json</code></td><td>Nine thresholds; gated CER flat at 0.116</td></tr>
+        <tr><td>The error taxonomy</td><td><code>data/noise_model.json</code></td><td>192 substitutions, 29 deletions, 92 insertions with counts</td></tr>
+        <tr><td>Actual model output</td><td><code>results/per_sentence_results.json</code></td><td>OCR, both system outputs and truth for every test sentence</td></tr>
+        <tr><td>Capture sweep and consensus</td><td><code>results/multiview/multiview_results.json</code></td><td>Five views, per-item CER, consensus gain 7.90%</td></tr>
+        <tr><td>Detector operating point</td><td><code>models/sinbert_detector/threshold.json</code></td><td>Full precision–recall curve and the selection rule</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Two commands worth running live</h3>
+  <div class="tw">
+    <table>
+      <thead><tr><th>Command</th><th>What it proves</th></tr></thead>
+      <tbody>
+        <tr><td><code>python tools/verify_model.py --root E:\RP\corpus\Sinhala_OCR_Correction_v2 --limit 25</code></td>
+            <td>The model on this machine reproduces the stored thesis outputs string-for-string</td></tr>
+        <tr><td><code>python tools/run_pipeline.py &lt;a photograph&gt;</code></td>
+            <td>The whole reading path, photo to corrected Sinhala, in one command</td></tr>
+      </tbody>
+      <caption>Run both once tonight. A demo that fails in the room costs more than it wins.</caption>
+    </table>
+  </div>
+</section>
+
+<!-- ============ 10. STATUS ============ -->
+<section>
+  <p class="eyebrow">Closing the meeting</p>
+  <h2>Where the work stands</h2>
+
+  <div class="grid2">
+    <div>
+      <h3 style="margin-top:0">Done and measured <span class="pill done">complete</span></h3>
+      <ul class="check">
+        <li><span class="tick">✓</span><span><b>Corpus and locked split</b> — 232 photographs, manual transcription, page-disjoint, locked before modelling</span></li>
+        <li><span class="tick">✓</span><span><b>Frequency-weighted error taxonomy</b> — 192 substitution types from real photographs</span></li>
+        <li><span class="tick">✓</span><span><b>Benchmark</b> — five systems, significance tested</span></li>
+        <li><span class="tick">✓</span><span><b>Per-category analysis</b> — 1,329 operations, ten categories</span></li>
+        <li><span class="tick">✓</span><span><b>Negative architectural result</b> — with the recall-ceiling argument</span></li>
+        <li><span class="tick">✓</span><span><b>IEEE conference paper</b> — 6 pages, draft complete</span></li>
+      </ul>
+    </div>
+    <div>
+      <h3 style="margin-top:0">Remaining <span class="pill todo">before October</span></h3>
+      <ul class="check">
+        <li><span class="open">→</span><span><b>Chapter 3</b> — methodology; scaffold and definitions register already written</span></li>
+        <li><span class="open">→</span><span><b>Chapter 4</b> — results; draft exists, needs the August findings folded in</span></li>
+        <li><span class="open">→</span><span><b>Chapter 5</b> — conclusion; capture recommendation drafted</span></li>
+        <li><span class="open">→</span><span><b>Two figures to verify</b> — the upper limb of the scale sweep, and the v1 CER value</span></li>
+        <li><span class="open">→</span><span><b>Paper metadata</b> — authors, venue, Tesseract version</span></li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="note">
+    <span class="t">The one decision to ask her for</span>
+    <p>“I have two weeks of optional experiments I could run, and three unwritten chapters. My plan is to
+    stop experimenting and write. Do you agree?”</p>
+  </div>
+</section>
+
+<footer>
+  <p>Every figure on this page traces to a stored result file listed in the proof index.</p>
+</footer>
+
+</div>
+
+<script>
+(function(){
+  /* ---------- system bars ---------- */
+  var sys=[
+    {n:"N-gram spell checker",v:0.1432},
+    {n:"Raw OCR",v:0.1197},
+    {n:"Dictionary + edit dist.",v:0.1193},
+    {n:"Detector-gated (mine)",v:0.1160},
+    {n:"Full-sequence mT5",v:0.0757,win:true}
+  ];
+  var max=0.15, host=document.getElementById('sysbars');
+  if(host) {
+    sys.forEach(function(s){
+      var r=document.createElement('div');
+      r.className='brow'+(s.win?' win':'');
+      r.innerHTML='<div class="nm">'+s.n+'</div>'+
+        '<div class="track"><div class="fill" style="width:0"></div></div>'+
+        '<div class="v">'+s.v.toFixed(4)+'</div>';
+      host.appendChild(r);
+      setTimeout(function(){
+        r.querySelector('.fill').style.width=(s.v/max*100).toFixed(1)+'%';
+      }, 100);
+    });
+  }
+
+  /* ---------- category bars ---------- */
+  var cats=[
+    ["Vowel sign",299,50.8,33.1],["Consonant",275,61.8,38.2],
+    ["Mixed",267,52.4,8.6],["Noise artifact",176,92.6,5.7],
+    ["Punctuation",153,81.0,15.0],["Hal kirima",77,55.8,41.6],
+    ["Independent vowel",41,34.1,9.8],["Latin / digit",20,35.0,10.0],
+    ["Space",15,40.0,6.7],["Anusvara",6,33.3,0.0]
+  ];
+  var ch=document.getElementById('catbars');
+  if(ch) {
+    cats.forEach(function(c){
+      var r=document.createElement('div');
+      r.className='crow';
+      r.innerHTML='<div class="cname">'+c[0]+'<small>n = '+c[1]+'</small></div>'+
+        '<div class="cpair">'+
+          '<div class="cbar"><div class="t"><div class="f b" style="width:0"></div></div><div class="lv">'+c[2].toFixed(1)+'%</div></div>'+
+          '<div class="cbar"><div class="t"><div class="f a" style="width:0"></div></div><div class="lv">'+c[3].toFixed(1)+'%</div></div>'+
+        '</div>';
+      ch.appendChild(r);
+      setTimeout(function(){
+        var f=r.querySelectorAll('.f');
+        if(f[0]) f[0].style.width=c[2]+'%';
+        if(f[1]) f[1].style.width=c[3]+'%';
+      }, 100);
+    });
+  }
+
+  /* ---------- svg line charts ---------- */
+  var NS='http://www.w3.org/2000/svg';
+  function el(t,a){var e=document.createElementNS(NS,t);for(var k in a)e.setAttribute(k,a[k]);return e;}
+  function css(v, def){
+    var res = getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+    return res || def;
+  }
+
+  function lineChart(id,pts,opt){
+    var svg=document.getElementById(id); if(!svg) return;
+    svg.innerHTML='';
+    var L=48,R=14,T=16,B=40,W=420,H=230;
+    var x0=opt.xmin, x1=opt.xmax, y0=opt.ymin, y1=opt.ymax;
+    var X=function(v){return L+(v-x0)/(x1-x0)*(W-L-R)};
+    var Y=function(v){return T+(1-(v-y0)/(y1-y0))*(H-T-B)};
+    var ink=css('--ink-2', '#9DA7B5'), rule=css('--rule', '#262E39'), acc=css('--accent', '#E8615A'), sub=css('--ink-3', '#767F8C');
+
+    opt.yticks.forEach(function(t){
+      svg.appendChild(el('line',{x1:L,x2:W-R,y1:Y(t),y2:Y(t),stroke:rule,'stroke-width':1}));
+      var tx=el('text',{x:L-7,y:Y(t)+3.5,fill:sub,'font-size':9.5,'text-anchor':'end',
+        'font-family':'IBM Plex Mono, monospace'}); tx.textContent=t.toFixed(opt.ydp);
+      svg.appendChild(tx);
+    });
+    opt.xticks.forEach(function(t){
+      var tx=el('text',{x:X(t),y:H-B+16,fill:sub,'font-size':9.5,'text-anchor':'middle',
+        'font-family':'IBM Plex Mono, monospace'}); tx.textContent=opt.xfmt(t);
+      svg.appendChild(tx);
+    });
+    (opt.refs||[]).forEach(function(r){
+      svg.appendChild(el('line',{x1:L,x2:W-R,y1:Y(r.v),y2:Y(r.v),stroke:r.c||acc,
+        'stroke-width':1.3,'stroke-dasharray':'5 4'}));
+      var tx=el('text',{x:L+4,y:Y(r.v)-5,fill:r.c||acc,'font-size':9.5,
+        'font-family':'IBM Plex Mono, monospace'}); tx.textContent=r.t;
+      svg.appendChild(tx);
+    });
+    var d=pts.map(function(p,i){return (i?'L':'M')+X(p[0]).toFixed(1)+' '+Y(p[1]).toFixed(1)}).join(' ');
+    svg.appendChild(el('path',{d:d,fill:'none',stroke:ink,'stroke-width':1.8,
+      'stroke-linejoin':'round'}));
+    pts.forEach(function(p){
+      svg.appendChild(el('circle',{cx:X(p[0]),cy:Y(p[1]),r:2.6,fill:ink}));
+    });
+    if(opt.mark!=null){
+      var m=pts[opt.mark];
+      svg.appendChild(el('circle',{cx:X(m[0]),cy:Y(m[1]),r:5,fill:'none',stroke:acc,'stroke-width':2}));
+      var lb=el('text',{x:X(m[0]),y:Y(m[1])-13,fill:acc,'font-size':10,'text-anchor':'middle',
+        'font-family':'IBM Plex Mono, monospace'}); lb.textContent=opt.marktext;
+      svg.appendChild(lb);
+    }
+    var yl=el('text',{x:12,y:H/2,fill:sub,'font-size':10,'text-anchor':'middle',
+      transform:'rotate(-90 12 '+(H/2)+')','font-family':'IBM Plex Sans, sans-serif'});
+    yl.textContent=opt.ylab; svg.appendChild(yl);
+    var xl=el('text',{x:(L+W-R)/2,y:H-6,fill:sub,'font-size':10,'text-anchor':'middle',
+      'font-family':'IBM Plex Sans, sans-serif'});
+    xl.textContent=opt.xlab; svg.appendChild(xl);
+  }
+
+  function draw(){
+    lineChart('ablation',
+      [[57.5,0.11587],[59.2,0.11592],[60.8,0.11586],[62.2,0.11594],[63.4,0.11576],
+       [64.4,0.11595],[65.6,0.11614],[67.4,0.11680],[69.3,0.11680]],
+      {xmin:56,xmax:71,ymin:0.070,ymax:0.126,
+       yticks:[0.07,0.08,0.09,0.10,0.11,0.12],ydp:2,
+       xticks:[58,60,62,64,66,68,70],xfmt:function(v){return v},
+       ylab:'Character Error Rate',xlab:'Detector Recall (%)',
+       refs:[{v:0.1197,t:'raw OCR  0.1197',c:css('--ink-3', '#767F8C')},
+             {v:0.0757,t:'full-sequence mT5  0.0757',c:css('--accent', '#E8615A')}]});
+
+    lineChart('ucurve',
+      [[0.25,0.2495],[0.33,0.1815],[0.40,0.1754],[0.50,0.1817],[0.60,0.1907],
+       [1.00,0.2205],[2.00,0.3356],[3.00,0.6593]],
+      {xmin:0.15,xmax:3.15,ymin:0.10,ymax:0.70,
+       yticks:[0.1,0.2,0.3,0.4,0.5,0.6,0.7],ydp:1,
+       xticks:[0.25,0.5,1,1.5,2,2.5,3],xfmt:function(v){return v+'×'},
+       ylab:'Character Error Rate',xlab:'Scale Applied to OCR Input',
+       mark:2,marktext:'0.40×'});
+  }
+  draw();
+})();
+</script>
+</body>
+</html>

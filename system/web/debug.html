@@ -4,44 +4,159 @@
 <style>
 body{font:14px/1.5 system-ui;margin:0;background:#0f1113;color:#e6edf3}
 header{padding:12px 16px;border-bottom:1px solid #21262d}
-.pad{padding:16px}
+header .sub{color:#8b949e;font-size:12px;margin-top:3px}
+.pad{padding:16px;max-width:960px}
 .art{border:1px solid #21262d;border-radius:10px;padding:12px;margin-top:12px}
 .k{color:#8b949e;font-size:12px;text-transform:uppercase;letter-spacing:.05em}
-pre{white-space:pre-wrap;background:#0d1117;padding:10px;border-radius:8px}
-.warn{color:#d29922}.bad{color:#da3633}
+pre{white-space:pre-wrap;word-break:break-word;background:#0d1117;padding:10px;border-radius:8px}
+.si{font-size:1.1rem;line-height:1.9}
+.warn{color:#d29922}.bad{color:#da3633}.good{color:#3fb950}
 table{border-collapse:collapse;margin-top:8px}
 td,th{border:1px solid #21262d;padding:5px 9px;text-align:left}
+fieldset{border:1px solid #21262d;border-radius:10px;margin:16px 0;padding:12px}
+legend{color:#8b949e;font-size:12px;text-transform:uppercase;letter-spacing:.05em}
+button{font:inherit;padding:6px 12px;border-radius:6px;border:1px solid #30363d;
+       background:#21262d;color:#e6edf3;cursor:pointer;margin:3px 3px 3px 0}
+button:disabled{opacity:.45;cursor:default}
+button.q{background:#161b22}
+input[type=text]{font:inherit;padding:7px 9px;border-radius:6px;border:1px solid #30363d;
+       background:#0d1117;color:#e6edf3;width:min(420px,90%)}
+code{background:#161b22;padding:1px 5px;border-radius:4px}
+.job{font-family:ui-monospace,monospace}
 </style></head><body>
-<header><b>Pipeline debug</b> — upload frames, inspect every stage</header>
+<header><b>Pipeline debug</b>
+  <div class="sub">Upload frames, inspect every stage, then ask a question about
+  what was read — the whole system without a phone.</div></header>
 <div class="pad">
+
+<fieldset><legend>1 · Read a page</legend>
   <input type="file" id="f" multiple accept="image/*">
-  <button onclick="go()">Run</button>
+  <button onclick="go()" id="run">Run</button>
+  <span id="jobline" class="job"></span>
   <div id="t"></div><div id="o"></div>
+</fieldset>
+
+<fieldset><legend>2 · Ask about it</legend>
+  <p class="k" style="margin-top:0">All but the last work with every service
+     off — no network, no API key. Press <b>ඊළඟ</b> repeatedly to walk through
+     a long article.</p>
+  <div id="presets"></div>
+  <p><input type="text" id="q" placeholder="type a question in Sinhala…"
+            onkeydown="if(event.key==='Enter')ask(this.value)">
+     <button onclick="ask(document.getElementById('q').value)">Ask</button></p>
+  <div id="a"></div>
+</fieldset>
+
 </div>
 <script>
+let JOB = null;
+
+// The literal words the built-in voice stub recognises (layers/l0_voice).
+// Everything else routes to GENERATE and needs Component 3 running.
+const PRESETS = [
+  ['නැවත කියවන්න',   'read it again',      'the whole article again'],
+  ['මුල සිට කියවන්න','from the start',     'part 1'],
+  ['ඊළඟ',            'next',               'the next part — press repeatedly'],
+  ['කලින් එක',       'previous',           'the part before'],
+  ['වචන කීයද',       'how many words',     'counted from the article'],
+  ['ශීර්ෂය මොකක්ද',  "what is the headline", 'empty until Layer 4A lands'],
+  ['මොනවද මඟ හැරුණේ','what did I miss',    'the capture warnings'],
+  ['නවත්වන්න',       'stop',               'empty speakable — the phone ACTS'],
+  ['මේක සාරාංශ කරන්න','summarise this',    'the ONLY one needing Component 3'],
+];
+document.getElementById('presets').innerHTML = PRESETS.map(
+  ([si, en, note]) => `<button class="q" onclick="ask('${si}')"
+     title="${note}">${si} <span class="k">· ${en}</span></button>`).join('');
+
 async function go(){
   const fs=document.getElementById('f').files;
   if(!fs.length){alert('choose images');return}
   const fd=new FormData();
   for(const x of fs) fd.append('frames',x);
   document.getElementById('o').innerHTML='running…';
-  const r=await fetch('/capture',{method:'POST',body:fd});
-  const j=await r.json();
-  const d=j.document||{};
-  let t='<table><tr><th>stage</th><th>seconds</th></tr>';
-  for(const k in (d.timings||{})) t+=`<tr><td>${k}</td><td>${d.timings[k]}</td></tr>`;
-  document.getElementById('t').innerHTML=t+'</table>';
-  let h='';
-  (d.warnings||[]).forEach(w=>h+=`<p class="warn">⚠ ${w}</p>`);
-  (d.articles||[]).forEach((a,i)=>{
-    h+=`<div class="art"><div class="k">article ${i+1} ·
-        glyph ${a.glyph_p90?a.glyph_p90.toFixed(0)+'px':'?'} ·
-        scale ${a.ocr_scale?a.ocr_scale.toFixed(2)+'×':'?'} ·
-        ${a.verdict}</div>
-        <div class="k">title</div><pre>${a.title||'—'}</pre>
-        <div class="k">body — raw OCR</div><pre>${a.body_raw||'—'}</pre>
-        <div class="k">body — after mT5</div><pre>${a.body||'—'}</pre></div>`;
-  });
-  document.getElementById('o').innerHTML=h||'<p class="bad">no articles</p>';
+  document.getElementById('run').disabled=true;
+  try{
+    const r=await fetch('/capture',{method:'POST',body:fd});
+    const j=await r.json();
+    JOB = j.job || null;
+    document.getElementById('jobline').innerHTML =
+      JOB ? `job <b>${JOB}</b>` : '';
+
+    // /capture returns the FLAT reply the phone reads - it has carried no
+    // `document` key since 21 Aug 2026, which is why this page showed
+    // "no articles" for every upload until /document/{job} existed.
+    let d = {};
+    if (j.ok && JOB) {
+      const rd = await fetch('/document/'+JOB);
+      if (rd.ok) d = (await rd.json()).document || {};
+    }
+
+    let t='<table><tr><th>stage</th><th>seconds</th></tr>';
+    for(const k in (d.timings||j.timings||{}))
+      t+=`<tr><td>${k}</td><td>${(d.timings||j.timings)[k]}</td></tr>`;
+    document.getElementById('t').innerHTML=t+'</table>';
+
+    let h='';
+    (j.warnings||[]).forEach(w=>h+=`<p class="warn">⚠ ${w}</p>`);
+    if(j.error) h+=`<p class="bad">${j.error}</p>`;
+    (d.articles||[]).forEach((a,i)=>{
+      h+=`<div class="art"><div class="k">article ${i+1} ·
+          glyph p75 ${a.glyph_p75?a.glyph_p75.toFixed(1)+'px':'?'} ·
+          scale ${a.ocr_scale?a.ocr_scale.toFixed(2)+'×':'?'} ·
+          ${a.verdict}</div>
+          <div class="k">title (Layer 4A — stub unless TITLE_MODE is set)</div>
+          <pre class="si">${esc(a.title)||'—'}</pre>
+          <div class="k">body — raw OCR</div>
+          <pre class="si">${esc(a.body_raw)||'—'}</pre>
+          <div class="k">body — after mT5</div>
+          <pre class="si">${esc(a.body)||'—'}</pre></div>`;
+    });
+    if(!d.articles || !d.articles.length)
+      h+='<p class="bad">no articles — nothing was stored in session</p>';
+    document.getElementById('o').innerHTML=h;
+  }catch(e){
+    document.getElementById('o').innerHTML=`<p class="bad">${e}</p>`;
+  }finally{
+    document.getElementById('run').disabled=false;
+  }
+}
+
+async function ask(text){
+  if(!text || !text.trim()){alert('type a question');return}
+  if(!JOB){
+    document.getElementById('a').innerHTML =
+      '<p class="bad">read a page first — /ask needs a job id</p>';
+    return;
+  }
+  document.getElementById('a').innerHTML='asking…';
+  try{
+    const r=await fetch('/ask',{method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({job:JOB,text:text})});
+    const j=await r.json();
+    let h=`<div class="art">
+      <div class="k">asked</div><pre class="si">${esc(text)}</pre>
+      <div class="k">route / intent / ok</div>
+      <pre>${j.route||'—'} · ${j.intent||'—'} ·
+<span class="${j.ok?'good':'bad'}">ok=${j.ok}</span></pre>`;
+    // THE RULE: speak `speakable` whenever it is non-empty, whatever ok says.
+    h += `<div class="k">speakable — what the phone would say</div>
+          <pre class="si">${esc(j.speakable) ||
+             '<span class="k">(empty — for STOP that is correct: the phone acts)</span>'}</pre>`;
+    (j.warnings||[]).forEach(w=>h+=`<p class="warn">⚠ ${esc(w)}</p>`);
+    if(j.error) h+=`<p class="bad">${esc(j.error)}</p>`;
+    if((j.sources||[]).length)
+      h+=`<div class="k">retrieved sources</div><pre>${
+          esc(JSON.stringify(j.sources,null,1))}</pre>`;
+    h+=`<div class="k">timings</div><pre>${esc(JSON.stringify(j.timings||{}))}</pre></div>`;
+    document.getElementById('a').innerHTML=h;
+  }catch(e){
+    document.getElementById('a').innerHTML=`<p class="bad">${e}</p>`;
+  }
+}
+
+function esc(s){
+  return (s==null?'':String(s)).replace(/[&<>]/g,
+    c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
 }
 </script></body></html>

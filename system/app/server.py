@@ -37,11 +37,36 @@ RESPONSE SHAPE (stable — the app depends on these names)
 
 On failure: HTTP 4xx/5xx with `{"ok": false, "error": "…"}`. The phone speaks
 the error rather than failing silently, so the shape is the same either way.
+
+THE SECOND DOOR — `POST /ask`, added 27 Aug 2026
+------------------------------------------------
+`/capture` answers "what does this page say?" and forgets. That is why a
+follow-up question was impossible: nothing anywhere held the article.
+
+`/capture` now ALSO stores the Document under the job id it already returns,
+in `core/session.py` — in memory, TTL-bounded, one user. The phone keeps that
+id and posts it back:
+
+    POST /ask   {"job": "a1b2c3d4", "text": "<Sinhala question>"}
+    ->          {"ok": ..., "speakable": "...", "route": ..., "intent": ...,
+                 "answer_si": ..., "sources": [...], "warnings": [...]}
+
+    L0 voice     (Component 4, Bumal)  -> route / intent / style
+    L6 generator (Component 3, Nadee)  -> answer_si
+
+THE RULE FOR THE PHONE: speak `speakable` whenever it is non-empty, whatever
+`ok` says. `ok` records whether an answer was generated; it drives logging,
+not speech. Silence is the one unacceptable outcome for a blind user.
+
+Both components default to OFF (`core/config.py`). With both off, `/ask`
+still answers "read that again" from session, and `/capture` behaves exactly
+as it did before this endpoint existed.
 """
 import argparse
 import os
 import re
 import sys
+import time
 import uuid
 from pathlib import Path
 
@@ -59,9 +84,23 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from core.config import WORK_DIR, HOST, PORT
+from core.config import (WORK_DIR, HOST, PORT, SESSION_MAX, SESSION_TTL_S,
+                         VOICE_USER_ID)
+from core import quality
 from core.imaging import imdecode_upright
+from core.schemas import Answer, Question
+from core.session import SessionStore
+from layers.l0_voice import voice as l0
+from layers.l5_assemble.payload import article_text
+from layers.l6_generator import generate as l6gen
 from layers.l6_speech import speech as l6
+
+
+# Spoken to the user when `/ask` cannot proceed. NOT written by a native
+# speaker — have both checked before the viva.
+SI_NOTHING_READ = 'කිසිවක් තවම කියවා නොමැත. පුවත්පත දෙසට යොමු කරන්න.'
+SI_ASK_FAILED = 'පිළිතුර ලබාගැනීමට නොහැකි විය. කරුණාකර නැවත උත්සාහ කරන්න.'
+SI_MOVE_CLOSER = 'ලිපිය හඳුනාගත නොහැකි විය. ටිකක් ළං වී නැවත උත්සාහ කරන්න.'
 
 
 def _document_to_reply(doc, job):
@@ -76,18 +115,44 @@ def _document_to_reply(doc, job):
     for art in doc.articles:
         if art.title.strip():
             titles.append(art.title.strip())
-        text = (art.body or art.body_raw or '').strip()
+        text = article_text(art)          # one definition, see l5/payload.py
         if text:
             bodies.append(text)
+
+    body = '\n\n'.join(bodies)
+    warnings = list(doc.warnings)
+
+    # THE READABILITY GATE. A capture that goes wrong does not fail: Tesseract
+    # returns something, mT5 corrects that something, and the phone reads it
+    # aloud in the same confident voice it uses for real news. A sighted
+    # developer sees garbage on a screen; a blind user cannot.
+    #
+    # `fatal` separates SHATTERED from merely SHORT. A six-word news brief is
+    # a real thing a newspaper prints and is read as-is with a warning; text
+    # that is fragments, Latin, or undecodable bytes is replaced by a sentence
+    # asking for another photograph, which is the only thing that fixes it.
+    verdict, spoken, measures = quality.verdict_for_user(body)
+    if body and verdict == 'unreadable':
+        warnings.append('unreadable: ' + '; '.join(measures['reasons']))
+        body = spoken
+    elif body and verdict == 'poor':
+        warnings.append('poor quality: ' + '; '.join(measures['reasons']))
+        body = spoken + '\n\n' + body
+    elif body and verdict == 'short':
+        warnings.append('short: ' + '; '.join(measures['reasons']))
+
     return {
         'ok': bool(bodies),
         'job': job,
         'title': ' '.join(titles),
-        'body': '\n\n'.join(bodies),
-        'warnings': list(doc.warnings),
+        'body': body,
+        'warnings': warnings,
         'n_articles': len(doc.articles),
         'audio_url': None,
         'timings': doc.timings,
+        # Diagnostics. The phone ignores fields it does not read; the debug
+        # page shows them, and they are what a bug report needs.
+        'quality': measures,
     }
 
 
@@ -97,6 +162,11 @@ def build(pipeline, web_dir: Path):
                        allow_methods=['*'], allow_headers=['*'])
     WORK_DIR.mkdir(parents=True, exist_ok=True)
     app.mount('/work', StaticFiles(directory=str(WORK_DIR)), name='work')
+
+    # The system's only memory. See core/session.py for why it is in memory
+    # and why that is stated as a limitation rather than papered over.
+    sessions = SessionStore(ttl_s=SESSION_TTL_S, max_items=SESSION_MAX)
+    app.state.sessions = sessions
 
     def _page(name):
         p = web_dir / name
@@ -170,7 +240,22 @@ def build(pipeline, web_dir: Path):
             reply = _document_to_reply(doc, job)
             reply['audio_url'] = l6.speak(doc)      # None until Layer 6 lands
             if not reply['ok']:
-                reply['error'] = 'nothing could be read from these frames'
+                # A frame where no single article could be identified is a
+                # DIFFERENT failure from one where nothing was legible, and
+                # the user's next action differs too. l5 already put the
+                # instruction in warnings; speak that rather than a generic
+                # "could not read", which would send them nowhere.
+                move = next((w for w in reply['warnings']
+                             if 'move a little closer' in w), None)
+                reply['error'] = move or \
+                    'nothing could be read from these frames'
+                if move:
+                    reply['body'] = SI_MOVE_CLOSER
+            else:
+                # ONLY on success. A job with nothing in it is not worth
+                # remembering, and "read that again" on an empty article
+                # should say so rather than replay silence.
+                sessions.put(job, doc)
             return reply
         except Exception as e:
             import traceback
@@ -179,6 +264,89 @@ def build(pipeline, web_dir: Path):
                 {'ok': False, 'job': job, 'error': f'{type(e).__name__}: {e}',
                  'title': '', 'body': '', 'warnings': [], 'n_articles': 0},
                 status_code=500)
+
+    @app.post('/ask')
+    def ask(q: Question):
+        """The follow-up question. See the module docstring.
+
+        Never 500s on a component being down: a service that is unreachable
+        becomes `ok: false` plus a speakable sentence, because a stack trace
+        cannot be spoken and silence tells a blind user nothing.
+        """
+        t0 = time.time()
+        doc = sessions.get(q.job)
+        if doc is None:
+            # Miss and expiry are the same answer on purpose — the user's next
+            # action is identical either way: capture again.
+            return JSONResponse(Answer(
+                ok=False, job=q.job, route='LOCAL', intent='',
+                speakable=SI_NOTHING_READ,
+                error='no article in session for this job',
+            ).model_dump(), status_code=404)
+
+        try:
+            voice = l0.interpret(q.text, user_id=q.user_id or VOICE_USER_ID)
+            t_voice = round(time.time() - t0, 2)
+
+            t1 = time.time()
+            # The cursor is how far "next" has walked through the article. It
+            # lives in the session beside the Document so it expires with it.
+            res = l6gen.answer(doc, voice, cursor=sessions.cursor(q.job))
+            if res.get('cursor') is not None:
+                sessions.set_cursor(q.job, res['cursor'])
+            t_gen = round(time.time() - t1, 2)
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            return JSONResponse(Answer(
+                ok=False, job=q.job, speakable=SI_ASK_FAILED,
+                error=f'{type(e).__name__}: {e}',
+            ).model_dump(), status_code=500)
+
+        for w in res['warnings']:
+            print(f'[ask {q.job}] {w}')
+
+        return Answer(
+            ok=res['ok'], job=q.job, route=res['route'], intent=res['intent'],
+            speakable=res['speakable'], answer_si=res['answer_si'],
+            sources=res['sources'], warnings=res['warnings'],
+            timings={'voice': t_voice, 'generate': t_gen,
+                     'total': round(time.time() - t0, 2)},
+        ).model_dump()
+
+    @app.get('/session/{job}')
+    def session(job: str):
+        """Diagnostics. Confirms an article is held without re-running OCR."""
+        doc = sessions.get(job)
+        if doc is None:
+            return JSONResponse({'ok': False, 'job': job,
+                                 'error': 'not in session'}, status_code=404)
+        return {'ok': True, 'job': job,
+                'age_s': round(sessions.age_of(job) or 0.0, 1),
+                'n_articles': len(doc.articles),
+                'chars': sum(len(a.body or a.body_raw or '')
+                             for a in doc.articles),
+                'warnings': doc.warnings,
+                'live_jobs': len(sessions)}
+
+    @app.get('/document/{job}')
+    def document(job: str):
+        """The FULL Document for a job — every article, `body_raw` included.
+
+        Diagnostics, and the reason the debug page works again. `/capture`
+        returns the flat reply the phone reads and has done since 21 Aug 2026;
+        `web/debug.html` was still reading a `document` key that no longer
+        existed, so it had been showing "no articles" for every upload since.
+
+        Fixed here rather than by putting the Document back into `/capture`:
+        the phone does not need it, and a few extra KB on every capture over
+        WiFi is a cost paid by the one client that has no use for it.
+        """
+        doc = sessions.get(job)
+        if doc is None:
+            return JSONResponse({'ok': False, 'job': job,
+                                 'error': 'not in session'}, status_code=404)
+        return {'ok': True, 'job': job, 'document': doc.model_dump()}
 
     @app.get('/audio/{job}')
     def audio(job: str):

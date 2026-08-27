@@ -65,6 +65,14 @@ class Article(BaseModel):
     body_raw: str = ''                          # OCR output, uncorrected
     body: str = ''                              # after mT5 correction
 
+    # ---- Layer 4C writes this (optional LLM post-edit, default OFF) ----
+    # SEPARATE FIELD ON PURPOSE. `body` is the research artifact — the mT5
+    # output that Chapter 4's CER is measured on — and nothing may overwrite
+    # it. Empty unless the post-editor ran AND its output passed every guard
+    # in layers/l4c_polish. What gets SPOKEN is decided by
+    # `l5_assemble.payload.article_text()`, in one place.
+    body_polished: str = ''
+
     # ---- diagnostics, any layer may set ----
     glyph_p75: Optional[float] = None       # capture metric, whole frame
     glyph_p90: Optional[float] = None       # OCR-target metric, region crop
@@ -107,3 +115,53 @@ class CaptureResponse(BaseModel):
     body: str = ''
     warnings: List[str] = []
     n_articles: int = 0
+
+
+# ==========================================================================
+# THE SECOND DOOR  —  `POST /ask`
+# ==========================================================================
+# ADDITIVE. Nothing above this line changes shape.
+#
+# `/capture` answers "what does this page say?". It is one request, it is
+# stateless, and it is finished when the phone speaks the text.
+#
+# `/ask` answers "what did that mean?". It needs the article that was just
+# read, which is why core/session.py exists, and it is the only place
+# Components 3 and 4 appear in the flow:
+#
+#     Question ─▶ L0 voice   (Bumal)  ─▶ route / intent / style
+#              ─▶ L6 generator (Nadee) ─▶ answer_si
+#              ─▶ Answer ─▶ phone speaks `speakable` with its own TTS
+#
+# THE RULE FOR THE PHONE: speak `speakable` whenever it is non-empty,
+# whatever `ok` says. `ok` records whether an answer was actually generated —
+# it drives logging, not speech. A blind user must hear something, and
+# "the answering service is not available" is something.
+
+
+class Question(BaseModel):
+    """What the phone posts to `/ask`.
+
+    `text` is Sinhala, already transcribed. Speech-to-text runs on the phone
+    (`android.speech.SpeechRecognizer`, si-LK): it is lower latency, it sends
+    no audio over the network, and it removes a server-side model from the
+    demo's failure surface. An `audio` field can be added later without
+    changing anything else here if server-side STT is ever wanted.
+    """
+    job: str                       # the id `/capture` returned
+    text: str = ''
+    user_id: Optional[str] = None  # defaults to config.VOICE_USER_ID
+
+
+class Answer(BaseModel):
+    """What `/ask` returns. The phone reads `speakable` and nothing else."""
+    ok: bool = True                       # was an answer actually generated
+    job: str = ''
+    route: str = ''                       # GENERATE | TTS_REPLAY | LOCAL
+    intent: str = ''
+    speakable: str = ''                   # <-- the phone speaks THIS
+    answer_si: str = ''                   # the generated answer alone
+    sources: List[dict] = []              # retrieval provenance, for the log
+    warnings: List[str] = []
+    timings: dict = {}
+    error: Optional[str] = None

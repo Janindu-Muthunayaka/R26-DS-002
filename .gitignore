@@ -90,3 +90,16 @@ Work/Janindu/0_Data/Model/checkpoint.pth
 # all above and still apply.
 !/system/models/
 !/system/models/**
+
+# --- SECRETS -------------------------------------------------------------
+# API keys live in .env, which is NEVER committed. `services/.env.example`
+# shows the shape without the values.
+#
+# git never forgets a blob once committed: a key pushed here is a key that
+# has to be revoked, not deleted. Treat any key that reaches this repo, or a
+# chat window, or a screenshot, as already compromised - rotate it.
+.env
+*.env
+!*.env.example
+**/.env
+services/rag/store/
