@@ -19,7 +19,7 @@ OCR-time optimum, and on the 168-page corpus it accepts 154 pages where the
 capture app accepts 8. See core/config.py.
 """
 from core.schemas import Frame
-from core.imaging import (sharpness, glyph_p75, guidance_verdict,
+from core.imaging import (sharpness, glyph_p75, capture_verdict,
                           imread_upright)
 from core.config import BURST_KEEP, MIN_SHARPNESS, SHARP_MIN_RATIO
 
@@ -33,7 +33,7 @@ def select(paths, keep=BURST_KEEP):
         h, w = im.shape[:2]
         s = sharpness(im)
         p75 = glyph_p75(im)
-        v, note = guidance_verdict(p75)
+        v, note = capture_verdict(p75)
         frames.append(Frame(path=str(p), width=w, height=h,
                             sharpness=s, glyph_p75=p75, verdict=v, note=note))
     if not frames:

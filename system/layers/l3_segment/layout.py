@@ -110,6 +110,7 @@ BLOCK_GAP_PITCH  = 1.20   # white gap above this x pitch separates two blocks
 BLOCK_MIN_PITCH  = 1.50   # a block shorter than this x pitch is not a story
 EDGE_OPEN_PITCH  = 1.00   # text within this x pitch of an edge was cut off
 PITCH_MIN_GLYPHS = 1.20   # pitch below this x median glyph height is impossible
+COL_MAX_GLYPHS   = 90     # a band wider than this x glyph height is not a column
 
 
 # ==========================================================================
@@ -495,6 +496,33 @@ def analyse(img, min_p75=None):
     H, W = up.shape[:2]
     mask, med = glyph_mask(up)
     bands = column_bands(mask, med)
+
+    # NO GUTTER FOUND = NOT A CLOSE-UP, whatever glyph_p75 says.
+    #
+    # This is the second gate, and it exists because the first one was
+    # loosened. CLOSEUP_MIN_P75 dropped from 28 to 20 on 24 Aug 2026 so a
+    # whole-article framing (measured: glyph_p75 22) would be accepted - but
+    # corpus full pages measure 18-24 and now overlap it. Their pitch is
+    # normal, so the pitch check below does not catch them.
+    #
+    # The discriminator is physical: a newspaper column is a roughly fixed
+    # number of CHARACTERS wide, so its pixel width scales with glyph height.
+    # Measured, WIDEST band / median glyph height, on every frame to hand:
+    #     phone close-ups        27 - 59   (a column, or two merged)
+    #     corpus dinamina p14        131   (whole page, no gutter found)
+    #     corpus lankadeepa p20      272
+    # The limit sits between 59 and 131. Small sample - two corpus pages -
+    # so it is a wide gap deliberately, not a tuned edge.
+    if bands and med > 0:
+        widest = max(b[1] - b[0] for b in bands) / med
+        if widest > COL_MAX_GLYPHS:
+            return _refused(img, p75,
+                            f'no column gutters found - widest text band is '
+                            f'{widest:.0f} glyph-heights across (close-up '
+                            f'captures measure 27-59, limit {COL_MAX_GLYPHS}). '
+                            'This is a full page, not a close-up of one '
+                            "article; full-page layout is the detector's job")
+
     _lb, _rb, clip_idx = clipped_bands(bands, W)
     l_ink, r_ink = edge_ink(mask, med)
     # The verdict comes from the ink at the edge; the band test only decides

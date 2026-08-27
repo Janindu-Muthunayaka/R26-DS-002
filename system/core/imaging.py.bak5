@@ -153,40 +153,24 @@ def closeup_scale(p75, target=CLOSEUP_TARGET_GLYPH,
     return float(max(OCR_SCALE_MIN, s))
 
 
-def capture_verdict(p75, warn_below=CAPTURE_MIN_GLYPH_P75):
-    """Is this page good enough to OCR at all? Argument is glyph_p75, NOT p90.
+def capture_verdict(p75):
+    """Accept/reject a captured frame. Argument is glyph_p75, NOT p90.
 
-    DEFAULT THRESHOLD IS 25 AND MUST STAY 25. With the default this function
-    reproduces the corpus diagnostics verdict on 168 pages (165/168, 98.2%)
-    and Chapter 4 cites that number. Changing the default silently changes a
-    thesis result - it did, on 24 Aug 2026, and two tests caught it.
-
-    The phone path asks a DIFFERENT question and must not call this one with
-    the default. Use guidance_verdict() below.
+    Warns below CAPTURE_WARN_BELOW_P75 (20), not below CAPTURE_MIN_GLYPH_P75
+    (25). The two answer different questions - see core/config.py. Measured:
+    the framing that holds a whole article sits at glyph_p75 22 and reads
+    BETTER than the close one, so "closer" at 22 is advice in the wrong
+    direction, and the listener cannot see that it is wrong.
     """
     if not p75:
         return 'unknown', 'no text found'
     if p75 < CAPTURE_REJECT_BELOW_P75:
         return 'reject', (f'glyph {p75:.0f}px (need >='
-                          f'{warn_below:.0f}) — much closer')
-    if p75 < warn_below:
+                          f'{CAPTURE_WARN_BELOW_P75:.0f}) — much closer')
+    if p75 < CAPTURE_WARN_BELOW_P75:
         return 'warn', (f'glyph {p75:.0f}px (want >='
-                        f'{warn_below:.0f}) — closer')
+                        f'{CAPTURE_WARN_BELOW_P75:.0f}) — closer')
     return 'ok', ''
-
-
-def guidance_verdict(p75):
-    """Should the USER move? The phone path's question, not the page gate's.
-
-    Warns below CAPTURE_WARN_BELOW_P75 (20), not below CAPTURE_MIN_GLYPH_P75
-    (25). Measured 24 Aug 2026: the framing that holds a whole article sits at
-    glyph_p75 22 and reads BETTER than the close one (mT5 CER 0.0497 against
-    0.0570), so "closer" at 22 is advice in the wrong direction - and the
-    listener cannot see that it is wrong.
-
-    Same lesson as p75/p90: two questions, two thresholds, two names.
-    """
-    return capture_verdict(p75, warn_below=CAPTURE_WARN_BELOW_P75)
 
 
 def rescale_to_optimum(img):

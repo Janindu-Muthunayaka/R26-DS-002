@@ -40,6 +40,7 @@ the error rather than failing silently, so the shape is the same either way.
 """
 import argparse
 import os
+import re
 import sys
 import uuid
 from pathlib import Path
@@ -115,6 +116,30 @@ def build(pipeline, web_dir: Path):
         return {'ok': True, 'device': getattr(pipeline, 'dev', '?'),
                 'root': os.getenv('SINHALA_ROOT', '')}
 
+    # The phone stamps its own glyph estimate and the sharpness at the instant
+    # the shutter fired into every filename it uploads:
+    #
+    #     burst_20260826_142530_g27_s1603_1.jpg
+    #
+    # Until 26 Aug 2026 this server renamed every upload to f0/f1/f2.jpg and
+    # that pairing was destroyed on arrival - the only place the app's estimate
+    # could be compared against the metric it is supposed to predict was the
+    # phone's own storage, reachable only over USB.
+    #
+    # It matters because the estimate is NOT the same quantity as glyph_p75.
+    # Measured (Android_Capture_Guidance_Calibration.md sec 5): the app read
+    # 26-29 on captures that measured 29-34. Carrying the stamp through means
+    # every capture ever taken is a calibration point, for free.
+    #
+    # Kept as a SUFFIX so the f<i> prefix, and therefore frame order, is
+    # unchanged. Uploads without a stamp (the debug page, tests) are named
+    # exactly as before.
+    _STAMP = re.compile(r'_g(\d+)_s(\d+)_', re.I)
+
+    def _stamp_of(filename):
+        m = _STAMP.search(filename or '')
+        return f'_g{m.group(1)}_s{m.group(2)}' if m else ''
+
     @app.post('/capture')
     async def capture(frames: list[UploadFile] = File(...)):
         job = uuid.uuid4().hex[:8]
@@ -130,7 +155,7 @@ def build(pipeline, web_dir: Path):
             im = imdecode_upright(data)
             if im is None:
                 continue
-            p = sess / f'f{i}.jpg'
+            p = sess / f'f{i}{_stamp_of(f.filename)}.jpg'
             cv2.imwrite(str(p), im)
             paths.append(str(p))
 

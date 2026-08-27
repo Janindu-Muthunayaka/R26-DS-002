@@ -137,6 +137,13 @@ def main():
                          '1-based. Default 1. Use 0 for the entire crop, but '
                          'see the module docstring: a whole-crop comparison '
                          'measures coverage, not resolution.')
+    ap.add_argument('--targets', default=None,
+                    help='comma-separated TARGET GLYPH HEIGHTS in px to sweep, '
+                         'e.g. "11,13.2,15,17,19,native". Replaces the '
+                         'fixed/auto pair. Use this to find the effective '
+                         'glyph height that actually minimises CER -- 13.2 is '
+                         'inherited from a by-eye choice, not measured. '
+                         '"native" means scale 1.0 (no downscale at all).')
     ap.add_argument('--save-text', metavar='DIR', default=None,
                     help='write every OCR and corrected output to files, so '
                          'a bad CER can be read rather than guessed at')
@@ -212,7 +219,21 @@ def main():
                                                  interpolation=cv2.INTER_AREA)
                                       if abs(auto - 1) > 1e-3 else c)
                             for c in crops]))
+        modes = [('fixed', config.CLOSEUP_OCR_SCALE), ('auto', round(auto, 3))]
+        if a.targets:
+            modes = []
+            for t in a.targets.split(','):
+                t = t.strip()
+                if t.lower() == 'native':
+                    modes.append(('native', 1.0))
+                else:
+                    tv = float(t)
+                    modes.append((f'g{t}',
+                                  round(float(np.clip(tv / p75,
+                                                      config.OCR_SCALE_MIN,
+                                                      config.OCR_SCALE_MAX)), 3)))
         plans.append(dict(name=name, crops=crops, an=info, p75=p75, sharp=sh,
+                          modes=modes,
                           fixed=config.CLOSEUP_OCR_SCALE, auto=round(auto, 3)))
 
     print(f'\nreading column #{a.column} of each capture'
@@ -250,6 +271,12 @@ def main():
                   'would then be measuring COVERAGE, not\n    accuracy. Use '
                   f'--lines {int(min(bl)) - 1} and trim the ground truth to '
                   'match. ***')
+
+    if a.targets:
+        print('\nsweep — scale used for each target glyph height:')
+        for p in plans:
+            print(f'  {p["name"][:12]:12} p75 {p["p75"]:4.1f}  ' +
+                  '  '.join(f'{m}={sc:.2f}' for m, sc in p['modes']))
 
     if a.save_text:
         # Save the crop that was actually read -- in dry-run too, because
@@ -307,8 +334,7 @@ def main():
 
     rows = []
     for p in plans:
-        for mode in ('fixed', 'auto'):
-            s = p[mode]
+        for mode, s in p['modes']:
             per_frame = []
             for c in p['crops']:
                 r = cv2.resize(c, None, fx=s, fy=s,

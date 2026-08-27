@@ -85,10 +85,47 @@ def test_a_finger_touching_the_text_is_a_known_limitation():
         'news, but update the docstring in closeup.py')
 
 
-def test_closeup_trigger_matches_the_app_ready_band():
-    """The trigger is the app's own NEAR_READY value, not a new constant."""
-    assert CLOSEUP_MIN_P75 == 28.0
-    assert 0.15 <= CLOSEUP_OCR_SCALE <= 1.0
+def test_the_closeup_gate_sits_below_the_whole_article_framing():
+    """CHANGED 24 Aug 2026, deliberately, and this test changed with it.
+
+    It used to assert CLOSEUP_MIN_P75 == 28.0 because 28 was the app's
+    NEAR_READY value and tying the two together seemed principled. It was not:
+    28 is a design choice with no CER behind it, and it REFUSED the only
+    framing that holds a whole article.
+
+    Measured: the article first fits at glyph_p75 22, and reading it there
+    costs nothing - best mT5 CER 0.0497 against 0.0570 for the close, clipped
+    framing on the same 20 lines. So the gate has to sit below 22.
+
+    The test now pins the REASON rather than the number, so raising the gate
+    back above the whole-article framing fails loudly.
+    """
+    assert CLOSEUP_MIN_P75 <= 22.0, (
+        'the gate is back above the framing that holds a whole article — '
+        'the close-up path will refuse exactly the captures it should read')
+    assert CLOSEUP_MIN_P75 >= 16.0, (
+        'below this the projection method starts meeting corpus full pages '
+        '(measured p75 18-24), where it returns one column out of seven')
+
+
+def test_the_ocr_scale_is_no_longer_a_fixed_factor():
+    """CLOSEUP_OCR_SCALE is superseded and must not creep back into use.
+
+    A fixed 0.40 gives 15 px at glyph_p75 38 and 8.8 px at 22 - and 8.8 px
+    measured mT5 CER 0.2193 against 0.0760 for the same frame at 13.2 px.
+    What matters is the glyph height Tesseract ends up seeing, so the path
+    scales to a target instead.
+    """
+    from core.config import CLOSEUP_TARGET_GLYPH, CLOSEUP_MIN_GLYPH_PX
+    from core.imaging import closeup_scale
+
+    assert CLOSEUP_TARGET_GLYPH >= CLOSEUP_MIN_GLYPH_PX
+    # at every distance the path accepts, what reaches Tesseract clears the
+    # height at which diacritics disappear
+    for p75 in (CLOSEUP_MIN_P75, 22, 25, 28, 33, 38, 45):
+        assert p75 * closeup_scale(p75) >= CLOSEUP_MIN_GLYPH_PX - 1e-6, p75
+    # and the old constant would NOT have cleared it at the new framing
+    assert 22 * CLOSEUP_OCR_SCALE < CLOSEUP_MIN_GLYPH_PX
 
 
 def test_a_small_glyph_page_is_not_a_closeup():

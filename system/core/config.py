@@ -68,6 +68,22 @@ def set_root(path) -> Path:
 #   so p75 >= 25 corresponds to p90 >= ~31.4, not 22.
 CAPTURE_MIN_GLYPH_P75 = 25.0
 
+# The threshold the CAPTURE GATE actually warns on, and it is NOT 25.
+#
+# 25 above is a reproduction of the corpus diagnostics verdict on 168 pages
+# and it stays exactly as it is - Chapter 4 cites it. But it answers a
+# different question from the one the phone path asks. It asks "is this page
+# good enough to OCR at all?"; the phone path asks "should the user move?".
+#
+# Measured 24 Aug 2026: the whole-article framing sits at glyph_p75 22, and
+# reading it there is BETTER than the close framing, not worse - best mT5 CER
+# 0.0497 against 0.0570. Warning "closer" at 22 would push the user back to a
+# framing that clips a column off every capture. Telling a blind listener to
+# move in the wrong direction is worse than saying nothing.
+#
+# So: 20 is where the advice changes, and it matches CLOSEUP_MIN_P75.
+CAPTURE_WARN_BELOW_P75 = 20.0
+
 # Below this the page is not marginal, it is unusable — do not spend a
 # pipeline run on it. Adopted from the Android app's FAR_NEAR boundary
 # (Guidance.kt) so the phone and the backend agree on one set of bands.
@@ -133,14 +149,45 @@ TESS_CONFIG_PAGE  = '--oem 1 --psm 3'    # multi-column crop (close-up path)
 # the app's own READY threshold, which is what makes this principled rather
 # than a tuned constant: the shutter only fires in the READY band, so every
 # phone capture is a close-up by construction, and no corpus page reaches it.
-CLOSEUP_MIN_P75 = 28.0        # == NEAR_READY in the app's Guidance.kt
+# MEASURED 24 Aug 2026 and LOWERED from 28.0.
+# 28 was adopted from the app's NEAR_READY band, a design choice, not a CER
+# measurement - and it refused exactly the framing that holds a whole article.
+# The distance test showed the article first fits at glyph_p75 22-25, and the
+# accuracy test showed reading it there costs nothing: best mT5 CER 0.0497 at
+# p75 22 against 0.0570 at p75 38 on the same 20 lines. 20 leaves a little
+# margin below the measured 22 without reaching corpus pages (18-24 - the
+# overlap is real, which is why the pitch/glyph sanity check in
+# l3_segment/layout.py exists as a second gate).
+CLOSEUP_MIN_P75 = 20.0
 
 # Downscale applied to a close-up crop before OCR.
 # SELECTED BY EYE on a 220-character sample across scales 1.0 / 0.6 / 0.4 —
 # 0.4 read best on every word that differed. This is NOT a measured CER: there
 # is no ground truth for that page. It agrees with the capture-resolution
 # sweep's 0.40x optimum, which is corroboration, not proof.
-CLOSEUP_OCR_SCALE = 0.40
+CLOSEUP_OCR_SCALE = 0.40      # SUPERSEDED - see CLOSEUP_TARGET_GLYPH below
+
+# The close-up path now scales to a TARGET GLYPH HEIGHT, not by a fixed factor.
+#
+# WHY THE FIXED FACTOR HAD TO GO. 0.40 was chosen on a frame whose glyph_p75
+# was 33, giving Tesseract about 13 px. Applied unchanged to a glyph_p75 22
+# frame it gives 8.8 px - below the ~11 px at which diacritics disappear - and
+# measured mT5 CER 0.2193 against 0.0760 for the same frame scaled to 13.2 px.
+# A factor of 2.9, from one constant, on the framing the system now wants.
+#
+# WHY 15 AND NOT AN ARGMIN. A six-point sweep (11, 13.2, 15, 17, 19, native)
+# on two captures did NOT produce a single optimum: the wide capture was best
+# at 17 px (0.0497) and the close one at 11 px (0.0365), and the run-to-run
+# spread within one frame (0.0365-0.0936) is as large as the difference
+# between frames. What the sweep DOES show is a cliff below 11 px and a flat
+# region from 11 to 22. 15 is the middle of that flat region, safely clear of
+# the cliff. It is a SAFE CHOICE, not a measured minimum - re-measure on more
+# than one article before quoting it as one.
+CLOSEUP_TARGET_GLYPH = 15.0
+
+# Hard floor. Below this the diacritics go and no amount of correction gets
+# them back; measured 0.2193 CER at 8.8 px. Nothing may scale under it.
+CLOSEUP_MIN_GLYPH_PX = 11.0
 
 # ==========================================================================
 # CORRECTION
