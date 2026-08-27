@@ -10,11 +10,33 @@ CORRECTION_INTENT_TO_STYLE = {
 }
 
 
-def is_repeat_failure(current_intent, current_chunk_id, last_interaction):
+def _normalize(text):
+    """Lowercase + collapse whitespace, so 'Summarize this.' and
+    'summarize this' compare equal. Used only for repeat detection."""
+    if not text:
+        return ""
+    return " ".join(text.strip().lower().split())
+
+
+def is_repeat_failure(current_intent, current_chunk_id, current_sinhala_text, last_interaction):
     """
     Returns True if this looks like the user re-asking about the same
     content immediately after the last interaction (a TTS/comprehension
     failure), rather than a new request.
+
+    Two independent signals can trigger this, either is enough:
+      1. Explicit repeat intent — the user SAID "repeat"/"say that again"
+         (caught by REPEAT_INTENTS, as before).
+      2. Literal repetition — the user's raw Sinhala input this turn is the
+         same sentence as last turn's, even though they didn't use a
+         "repeat"-type phrase. The LLM has no memory of the previous turn,
+         so it will just classify this as a fresh SUMMARIZE/EXPLAIN/etc.
+         instead of REPEAT — signal (1) alone misses this case, which is
+         why literally re-asking the same question wasn't being caught.
+
+    Both signals still require the SAME chunk as last turn, since asking
+    the same style of question about a *different* chunk is a new request,
+    not a failure.
     """
     if last_interaction is None:
         return False
@@ -23,9 +45,17 @@ def is_repeat_failure(current_intent, current_chunk_id, last_interaction):
         current_chunk_id is not None
         and current_chunk_id == last_interaction.get("retrieved_chunk_id")
     )
-    is_repeat_intent = current_intent.upper() in REPEAT_INTENTS if current_intent else False
+    if not same_chunk:
+        return False
 
-    return same_chunk and is_repeat_intent
+    is_repeat_intent = bool(current_intent) and current_intent.upper() in REPEAT_INTENTS
+
+    is_same_text = (
+        bool(current_sinhala_text)
+        and _normalize(current_sinhala_text) == _normalize(last_interaction.get("sinhala_input"))
+    )
+
+    return is_repeat_intent or is_same_text
 
 
 def detect_correction_signal(current_intent, last_interaction):
