@@ -1,5 +1,5 @@
 """
-LAYER 6 — RAG + TTS.  OWNER: Bumal.
+LAYER 8B — RAG + TTS.  OWNER: Bumal.
 
 STUB — returns None so the pipeline runs end to end without audio.
 Replace the body of speak() only.

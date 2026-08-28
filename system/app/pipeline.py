@@ -20,7 +20,7 @@ from layers.l4a_title import title as l4a
 from layers.l4b_body.body import BodyReader
 from layers.l4c_polish import polish as _polish
 from layers.l5_assemble.assemble import assemble
-from layers.l6_speech import speech as l6
+from layers.l8b_speech import speech as l6
 
 
 class Pipeline:

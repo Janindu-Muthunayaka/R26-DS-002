@@ -35,7 +35,7 @@ def test_assemble_drops_rejected():
 
 def test_stubs_do_not_break_flow():
     from layers.l4a_title import title as l4a
-    from layers.l6_speech import speech as l6
+    from layers.l8b_speech import speech as l6
     a = Article(index=0, box=Box(x1=0, y1=0, x2=1, y2=1))
     assert l4a.extract(None, a) is a
     assert l6.speak(Document()) is None

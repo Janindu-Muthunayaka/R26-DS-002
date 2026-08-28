@@ -94,7 +94,7 @@ class CaptureResponse(BaseModel):
     `title`/`body`/`warnings` fields were added because the phone speaks the
     TEXT with its own TTS rather than playing server-rendered audio:
 
-      * l6_speech.speak() returns None — that layer is Bumal's and is a stub,
+      * l8b_speech.speak() returns None — that layer is Bumal's and is a stub,
         so there is no audio to send. Waiting for it would block the demo.
       * The build record section 14 argues for this anyway: on-device TTS is
         lower latency, sends far less data, and speaks better Sinhala than an

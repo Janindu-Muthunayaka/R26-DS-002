@@ -12,7 +12,7 @@ have broken against this server. Nothing in either codebase said so.
 
 It now returns JSON carrying TEXT, and the phone speaks it with its own TTS:
 
-  * `l6_speech.speak()` returns None. That layer is Bumal's and is a stub, so
+  * `l8b_speech.speak()` returns None. That layer is Bumal's and is a stub, so
     there is no audio to send. Blocking the demo on it was not acceptable.
   * The Android build record section 14 argues for text anyway — on-device TTS
     is lower latency, sends far less data, and speaks better Sinhala than an
@@ -69,7 +69,7 @@ from core.session import SessionStore
 from layers.l0_voice import voice as l0
 from layers.l5_assemble.payload import article_text
 from layers.l6_generator import generate as l6gen
-from layers.l6_speech import speech as l6
+from layers.l8b_speech import speech as l6
 
 
 # Spoken to the user when `/ask` cannot proceed, or when no single article
@@ -151,6 +151,10 @@ def build(pipeline, web_dir: Path):
 
     @app.get('/', response_class=HTMLResponse)
     def index():
+        return _page('landing.html')
+
+    @app.get('/reader', response_class=HTMLResponse)
+    def reader():
         return _page('reader.html')
 
     @app.get('/debug', response_class=HTMLResponse)
@@ -323,6 +327,15 @@ def build(pipeline, web_dir: Path):
                                  'error': 'not in session'}, status_code=404)
         return {'ok': True, 'job': job, 'document': doc.model_dump()}
 
+    @app.get('/latest')
+    def latest():
+        """Returns the most recent job data for the dashboard."""
+        jobs = sessions.jobs()
+        if not jobs:
+            return {'ok': False, 'error': 'no active jobs'}
+        doc = sessions.get(jobs[0])
+        return {'ok': True, 'job': jobs[0], 'document': doc.model_dump()}
+
     @app.get('/audio/{job}')
     def audio(job: str):
         """Reserved for Layer 6. Routed now so the phone's fallback path is
@@ -367,7 +380,7 @@ def main():
 
     import uvicorn
     kw = {'ssl_certfile': a.cert, 'ssl_keyfile': a.key} if a.cert and a.key else {}
-    uvicorn.run(app, host=a.host, port=a.port, **kw)
+    uvicorn.run(app, host=a.host, port=a.port, access_log=False, **kw)
 
 
 if __name__ == '__main__':

@@ -1,15 +1,16 @@
 system/
 └── layers/
-    ├── l1_input/
-    │   # ── Data Retrieval ──
-    │   # Retrieves images sent by a phone application, along with audio and video.
+    ├── l0_voice/
+    │   # ── Voice Interaction (Component 4) ──
+    │   # Runs before everything else in the question path: what the
+    │   # user said decides whether anything downstream runs at all.
     │
-    ├── l2_selection/
+    ├── l2_select/
     │   # ── Quality Control ──
     │   # Takes a burst of images and selects the best photos (least blur, most vivid).
     │
     ├── l3_segment/
-    │   # ── Article Segmenter  ──
+    │   # ── Article Segmenter ──
     │   # Takes images and uses models (YOLO+Paddle) to split them into separate
     │   # articles (e.g., from a newspaper) or processes as a whole. For each article,
     │   # it identifies Titles and Paragraphs using PaddleOCR and creates crops.
@@ -44,7 +45,29 @@ system/
     │   # ── Body Text Extractor ──
     │   # Focuses on extracting text from document bodies and paragraphs.
     │
-    └── l5_assemble/
-        # ── Output Assembler ──
-        # Aggregates the Titles and Text of each article across documents,
-        # organizing them in an orderly, interactive format.
+    ├── l4c_polish/
+    │   # ── LLM Post-Editing ──
+    │   # Optional component to polish/repair extracted text using an LLM.
+    │   # Off by default.
+    │
+    ├── l5_assemble/
+    │   # ── Output Assembler ──
+    │   # Aggregates the Titles and Text of each article across documents,
+    │   # organizing them in an orderly, interactive format.
+    │
+    ├── l6_generator/
+    │   # ── Generator / RAG (Component 3) ──
+    │   # Takes the Document held in session, plus Layer 0's routing dict
+    │   # and answers user questions or summarizes the content.
+    │
+    ├── l7_personalization/
+    │   # ── Personalization ──
+    │   # Future placeholder for personalization pipelines.
+    │
+    ├── l8a_listen/
+    │   # ── Listen ──
+    │   # Future placeholder for audio listening functionality.
+    │
+    └── l8b_speech/
+        # ── RAG + TTS ──
+        # Stub layer meant for handling text-to-speech outputs from generated answers.
