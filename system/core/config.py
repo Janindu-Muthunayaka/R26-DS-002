@@ -8,12 +8,14 @@ import os
 from pathlib import Path
 
 PROJECT_ROOT = Path(os.getenv(
-    'SINHALA_ROOT', r'E:/RP/corpus/Sinhala_OCR_Correction_v2')).expanduser()
+    'SINHALA_ROOT', Path(__file__).resolve().parent.parent)).expanduser()
+
 
 
 def _paths():
     global YOLO_WEIGHTS, MT5_PLAIN
     YOLO_WEIGHTS = [
+        PROJECT_ROOT/'models'/'best.pt',
         PROJECT_ROOT/'layout'/'runs'/'articles_full'/'weights'/'best.pt',
         PROJECT_ROOT/'layout'/'article_model_v1.pt',
     ]
