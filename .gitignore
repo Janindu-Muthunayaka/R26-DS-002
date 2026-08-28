@@ -90,3 +90,29 @@ Work/Janindu/0_Data/Model/checkpoint.pth
 # all above and still apply.
 !/system/models/
 !/system/models/**
+
+
+# ===========================================================================
+# SECRETS  (Ishara, 27 Aug 2026 — re-applied 28 Aug after the reset)
+# ===========================================================================
+# `origin` is shared with three teammates and GIT DOES NOT FORGET. A key
+# committed once stays in the history of every clone and every fork, and
+# deleting the file in a later commit removes it from the working tree and
+# from nothing else. Rotating the key is then the ONLY remedy.
+#
+# So: no key, token or password is ever written into a tracked file. Real
+# values live in .env, which is ignored here. services/.env.example documents
+# the SHAPE with empty values and IS tracked, so a teammate knows which
+# variables to set without ever seeing one.
+#
+# Checked with:  git check-ignore -v .env
+# (silence there means NOT ignored — that was the state this section fixes.)
+.env
+.env.*
+!.env.example
+!**/.env.example
+**/.env
+**/.env.local
+*.pem
+*.key
+secrets.json

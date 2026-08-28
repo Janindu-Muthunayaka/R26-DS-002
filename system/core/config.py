@@ -239,3 +239,159 @@ MAX_ARTICLES = 8
 # ==========================================================================
 HOST, PORT = '0.0.0.0', 8000
 WORK_DIR = Path(os.getenv('SINHALA_WORK', './work')).resolve()
+
+# ==========================================================================
+# INTEGRATION  —  the other three components
+# ==========================================================================
+# Each of the other components runs as its OWN PROCESS behind HTTP. They are
+# not imported. The four components pin stacks that cannot coexist:
+#
+#   this system   numpy 1.26.4, cv2 4.9.0, transformers 5.1.0, torch cu121
+#   Bumal         numpy 2.4.4,  transformers 5.7.0, torch 2.11.0, river, Ollama
+#   Nadee         langchain + chromadb + langchain-openai
+#   Janindu       its own venv311, plus a separate paddle venv
+#
+# The cv2 4.9.0 / numpy 1.26.4 pin here is NOT arbitrary: the deskew
+# reproducibility finding and the library-version result (same checkpoint,
+# CER 0.0730 vs 0.0615) were measured under it, and Chapter 4 cites them.
+#
+# Second reason, which matters on the day: a component that is down degrades
+# ONE feature instead of killing the demo.
+#
+# EVERY MODE BELOW DEFAULTS TO THE VALUE THAT LEAVES THE READING PATH EXACTLY
+# AS IT IS TODAY.
+
+VOICE_MODE      = os.getenv('SINHALA_VOICE_MODE', 'stub')     # stub | http
+VOICE_URL       = os.getenv('SINHALA_VOICE_URL', 'http://127.0.0.1:8101')
+VOICE_TIMEOUT_S = float(os.getenv('SINHALA_VOICE_TIMEOUT', '20'))
+VOICE_USER_ID   = os.getenv('SINHALA_USER_ID', 'user_001')
+
+RAG_MODE      = os.getenv('SINHALA_RAG_MODE', 'off')          # off | http
+RAG_URL       = os.getenv('SINHALA_RAG_URL', 'http://127.0.0.1:8102')
+RAG_TIMEOUT_S = float(os.getenv('SINHALA_RAG_TIMEOUT', '60'))
+
+# 'stub' keeps Layer 4A returning the article unchanged; 'mat' reads the
+# headline with Janindu's sin_raw model. See layers/l4a_title/title.py.
+TITLE_MODE = os.getenv('SINHALA_TITLE_MODE', 'stub')
+
+# See core/session.py. Neither number is measured; both are design choices.
+SESSION_TTL_S = float(os.getenv('SINHALA_SESSION_TTL', '1800'))   # 30 min
+SESSION_MAX   = int(os.getenv('SINHALA_SESSION_MAX', '32'))
+
+# ==========================================================================
+# LAYER 4C  —  optional LLM post-editing of OCR output
+# ==========================================================================
+# 'off'   the default, and the only setting under which any CER may be quoted.
+# 'auto'  runs ONLY when core/quality.py rates the text 'poor'. NOT on
+#         'unreadable' — see layers/l4c_polish/polish.py for why the worst
+#         case is the one a language model must not be handed.
+# 'on'    every article. For demonstrating the layer, not measuring it.
+#
+# Component 2's contribution is mT5 post-OCR correction at CER 0.1197 ->
+# 0.0757. If a general-purpose model rewrites that output, the number being
+# measured is no longer the model the thesis is about.
+POLISH_MODE = os.getenv('SINHALA_POLISH_MODE', 'off')
+
+# A repair that rewrote a quarter of the characters is not a repair. NOT
+# MEASURED — a deliberately conservative choice, and the value that decides
+# how much a language model is allowed to invent.
+POLISH_MIN_SIMILARITY = float(os.getenv('SINHALA_POLISH_MIN_SIM', '0.75'))
+POLISH_MIN_LEN_RATIO = 0.70
+POLISH_MAX_LEN_RATIO = 1.30
+POLISH_MAX_CHARS = int(os.getenv('SINHALA_POLISH_MAX_CHARS', '4000'))
+
+# ==========================================================================
+# ARTICLE BOUNDARIES  —  which headline belongs to which body
+# ==========================================================================
+# MEASURED 27 Aug 2026 on the nine captures in F:/App/backend/inbox.
+# Reproduce with: python tools/measure_headline.py
+#
+#   tallest BODY line       1.28x - 1.70x of the median line height
+#   tallest HEADLINE band   5.91x - 8.71x
+#
+# Nothing at all lands between 1.70 and 5.91. The previous value in
+# closeup.title_lines() was 1.6 — INSIDE the body range — so the tallest body
+# line of every capture was being reported as a headline. 3.0 is the middle of
+# the empty gap.
+TITLE_MIN_LINE_RATIO = 3.0
+
+# How far above the body a headline may sit, in median line heights. MEASURED:
+# a real headline sits 36-97 px above its body, while the masthead and the
+# section strip are 186-225 px above what follows them.
+TITLE_MAX_GAP_LINES = 3.0
+
+# Bands closer than this are the SAME headline line. NOT a measurement; the
+# smallest value that merged every real headline line without joining two.
+TITLE_ROW_JOIN_LINES = 1.0
+
+# The headline must sit above the article's OWN columns. A design choice.
+TITLE_MIN_X_OVERLAP = 0.50
+
+# ---- Layer 4A: reading the headline once it has been located -------------
+# MEASURED 27 Aug 2026 on the located regions (tools/measure_headline.py --ocr):
+#
+#   sin_raw    psm 11  ->  'කුරුණෑගල නගර විගණනයක් ලබා'   <- near-correct
+#   sin_raw    psm 6   ->  'අරුණමුලු ප්ගර විශිණිනියක් ලබා'
+#   sin_raw    psm 7   ->  'දදු'                          <- collapses
+#   sin_custom psm 11  ->  'දදකදීද්ථීදල, එද්්ට දඉීීීීර්ද'
+#
+# sin_custom is Janindu's MAT model — trained on SKELETONISED glyphs and
+# garbage on raw pixels, exactly as l4a_title/README.md warns.
+TITLE_TESS_LANG = os.getenv('SINHALA_TITLE_LANG', 'sin_raw')
+TITLE_TESS_PSM = int(os.getenv('SINHALA_TITLE_PSM', '11'))
+TITLE_TESSDATA = Path(__file__).resolve().parent.parent / 'layers' / \
+    'l4a_title' / 'tessdata'
+
+# Headline crops are scaled to a TARGET BAND HEIGHT, for the same reason
+# CLOSEUP_TARGET_GLYPH exists. MEASURED on three regions of 250-325 px:
+#
+#   native   'දිමුදු ිළ ුකී ි දු ී'   <- COLLAPSES on one capture
+#   40 px    "'ණෑගුිල නගර සම ඔණනයක් ලබා දෙ"
+#   60 px    'ණෑගල නගර සම් ඔණනයක් ලබා දෛ'
+#   90 px    'ණෑගල නගර සම ඔණනයක් ලබා දෛ'
+#
+# A SAFE CHOICE inside a flat region, not an argmin — three regions is not a
+# sweep. Report the collapse at native scale, not an optimum.
+TITLE_TARGET_BAND_PX = float(os.getenv('SINHALA_TITLE_TARGET_PX', '90'))
+
+# ==========================================================================
+# WHICH PATH A FRAME TAKES
+# ==========================================================================
+# MEASURED on the 70 real phone captures in system/work:
+#
+#     69%  close-up + layout  -> column/block crop
+#     29%  NOT close-up       -> YOLO
+#      3%  layout refused     -> bounding box of ALL text in the frame
+#
+# Nearly a third of real captures were going to YOLO — the path
+# Corrections_Register.md entry 1 documents returning one confident box over
+# the NEIGHBOURING article's headline. Re-measured with the p75 gate lowered,
+# layout analysis succeeds on 16 of those 20 frames.
+#
+# IS IT SAFE? With the p75 gate turned OFF entirely, 12 of 12 corpus full
+# pages are STILL refused by the gutter gate. The structural gates decide.
+LAYOUT_MIN_P75 = 12.0
+
+# ==========================================================================
+# THE ARTICLE DETECTOR IN THE PHONE PATH  —  measured and switched OFF
+# ==========================================================================
+# MEASURED 27 Aug 2026, tools/probe_yolo.py over the 70 real captures:
+#
+#     51 frames where BOTH produced an answer
+#       35  (69%)  DISAGREE - a different story
+#        5  (10%)  partial
+#       11  (22%)  agree
+#      + 8 frames the detector returned nothing
+#      + 11 frames layout refused, nothing to compare against
+#
+# Entry 1 recorded this on ONE frame. It is now measured on seventy.
+#
+# WHICH SIDE IS WRONG? The layout crop is the better-evidenced one: 0 of 57
+# crops span an article boundary after the headline split, and two were
+# confirmed by eye. The detector has one confident box and a 69% disagreement
+# rate, at a range it was never trained for.
+#
+# SO THE PHONE PATH NO LONGER RUNS IT. A wrong article read confidently to
+# someone who cannot check it is worse than no article. 'yolo' restores the
+# old behaviour for comparison.
+SEGMENT_MODE = os.getenv('SINHALA_SEGMENT_MODE', 'off')   # off | yolo

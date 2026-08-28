@@ -1,6 +1,16 @@
 <!DOCTYPE html><html><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Pipeline debug</title>
+<!--
+  Upload frames, inspect every stage, then ask questions of the article the
+  server is holding — the whole loop the phone does, from a laptop.
+
+  IT READ THE WRONG THING FOR SIX DAYS. This page used `j.document` from
+  /capture. /capture stopped returning the full Document on 21 Aug, so `d`
+  was {} and the page showed "no articles" for every capture, including ones
+  that worked. Nothing failed; it just quietly displayed nothing. It now
+  fetches GET /document/{job}, which exists for this page.
+-->
 <style>
 body{font:14px/1.5 system-ui;margin:0;background:#0f1113;color:#e6edf3}
 header{padding:12px 16px;border-bottom:1px solid #21262d}
@@ -8,40 +18,135 @@ header{padding:12px 16px;border-bottom:1px solid #21262d}
 .art{border:1px solid #21262d;border-radius:10px;padding:12px;margin-top:12px}
 .k{color:#8b949e;font-size:12px;text-transform:uppercase;letter-spacing:.05em}
 pre{white-space:pre-wrap;background:#0d1117;padding:10px;border-radius:8px}
-.warn{color:#d29922}.bad{color:#da3633}
+.warn{color:#d29922}.bad{color:#da3633}.ok{color:#3fb950}
 table{border-collapse:collapse;margin-top:8px}
 td,th{border:1px solid #21262d;padding:5px 9px;text-align:left}
+button{background:#21262d;color:#e6edf3;border:1px solid #30363d;
+  border-radius:7px;padding:6px 11px;margin:3px 3px 0 0;cursor:pointer;
+  font:13px system-ui}
+button:hover{background:#30363d}
+#ask{margin-top:22px;border-top:1px solid #21262d;padding-top:14px}
+#q{width:60%;background:#0d1117;color:#e6edf3;border:1px solid #30363d;
+  border-radius:7px;padding:7px 9px;font:14px system-ui}
+.muted{color:#8b949e}
 </style></head><body>
-<header><b>Pipeline debug</b> — upload frames, inspect every stage</header>
+<header><b>Pipeline debug</b> — upload frames, inspect every stage, then ask</header>
 <div class="pad">
   <input type="file" id="f" multiple accept="image/*">
   <button onclick="go()">Run</button>
+  <span id="job" class="muted"></span>
   <div id="t"></div><div id="o"></div>
+
+  <div id="ask" style="display:none">
+    <div class="k">ask about this article</div>
+    <!-- The nine the phone routes locally. They work with no API key, no
+         network and no RAG service running: the most common follow-ups
+         cannot break on the day of the viva, because they never leave the
+         reader. Anything typed in the box that is NOT one of these goes to
+         Component 3. -->
+    <div>
+      <button onclick="ask('නැවත කියවන්න')">නැවත කියවන්න · repeat</button>
+      <button onclick="ask('මුල සිට කියවන්න')">මුල සිට · from the start</button>
+      <button onclick="ask('ඊළඟ කොටස')">ඊළඟ · next</button>
+      <button onclick="ask('කලින් කොටස')">කලින් · previous</button>
+      <button onclick="ask('ශීර්ෂය කුමක්ද')">ශීර්ෂය · title</button>
+      <button onclick="ask('වචන කීයද')">වචන කීයද · length</button>
+      <button onclick="ask('මොනවා මඟ හැරුණාද')">මඟ හැරුණ · warnings</button>
+      <button onclick="ask('නවත්වන්න')">නවත්වන්න · stop</button>
+      <button onclick="ask('මේ ලිපිය ගැන කියන්න')">ගැන කියන්න · summarise (RAG)</button>
+    </div>
+    <p><input id="q" placeholder="…or type any Sinhala question and press Enter"
+        onkeydown="if(event.key==='Enter')ask(this.value)">
+      <button onclick="ask(document.getElementById('q').value)">Ask</button></p>
+    <div id="a"></div>
+  </div>
 </div>
 <script>
+let JOB = null;
+const esc = s => String(s == null ? '' : s)
+  .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
 async function go(){
-  const fs=document.getElementById('f').files;
-  if(!fs.length){alert('choose images');return}
-  const fd=new FormData();
-  for(const x of fs) fd.append('frames',x);
-  document.getElementById('o').innerHTML='running…';
-  const r=await fetch('/capture',{method:'POST',body:fd});
-  const j=await r.json();
-  const d=j.document||{};
-  let t='<table><tr><th>stage</th><th>seconds</th></tr>';
-  for(const k in (d.timings||{})) t+=`<tr><td>${k}</td><td>${d.timings[k]}</td></tr>`;
-  document.getElementById('t').innerHTML=t+'</table>';
-  let h='';
-  (d.warnings||[]).forEach(w=>h+=`<p class="warn">⚠ ${w}</p>`);
-  (d.articles||[]).forEach((a,i)=>{
-    h+=`<div class="art"><div class="k">article ${i+1} ·
-        glyph ${a.glyph_p90?a.glyph_p90.toFixed(0)+'px':'?'} ·
-        scale ${a.ocr_scale?a.ocr_scale.toFixed(2)+'×':'?'} ·
-        ${a.verdict}</div>
-        <div class="k">title</div><pre>${a.title||'—'}</pre>
-        <div class="k">body — raw OCR</div><pre>${a.body_raw||'—'}</pre>
-        <div class="k">body — after mT5</div><pre>${a.body||'—'}</pre></div>`;
+  const fs = document.getElementById('f').files;
+  if(!fs.length){ alert('choose images'); return }
+  const fd = new FormData();
+  for(const x of fs) fd.append('frames', x);
+  document.getElementById('o').innerHTML = 'running…';
+  document.getElementById('t').innerHTML = '';
+  document.getElementById('ask').style.display = 'none';
+
+  const r = await fetch('/capture', {method:'POST', body:fd});
+  const j = await r.json();
+  JOB = j.job || null;
+  document.getElementById('job').textContent = JOB ? ' job ' + JOB : '';
+
+  // What the PHONE would say, before anything is unpacked. If this and the
+  // article dump below disagree, the bug is in the reply, not the pipeline.
+  let h = '<div class="art"><div class="k">what the phone speaks</div>'
+        + `<pre>${esc(j.title)}\n\n${esc(j.body)}</pre>`
+        + `<p class="${j.ok ? 'ok' : 'bad'}">ok: ${j.ok}`
+        + (j.error ? ' — ' + esc(j.error) : '') + '</p>';
+  if(j.quality) h += '<div class="k">readability gate</div><pre>'
+        + esc(JSON.stringify(j.quality)) + '</pre>';
+  h += '</div>';
+  document.getElementById('o').innerHTML = h;
+
+  if(!JOB) return;
+  // The full Document, from the endpoint that exists for this page.
+  const d = await (await fetch('/document/' + JOB)).json()
+              .then(x => x.document || {}).catch(() => ({}));
+
+  let t = '<table><tr><th>stage</th><th>seconds</th></tr>';
+  for(const k in (d.timings || {}))
+    t += `<tr><td>${esc(k)}</td><td>${esc(d.timings[k])}</td></tr>`;
+  document.getElementById('t').innerHTML = t + '</table>';
+
+  (d.warnings || j.warnings || []).forEach(w =>
+    h += `<p class="warn">⚠ ${esc(w)}</p>`);
+  (d.articles || []).forEach((a, i) => {
+    h += `<div class="art"><div class="k">article ${i+1} ·
+        glyph ${a.glyph_p90 ? a.glyph_p90.toFixed(0)+'px' : '?'} ·
+        scale ${a.ocr_scale ? a.ocr_scale.toFixed(2)+'×' : '?'} ·
+        ${esc(a.verdict)}</div>
+        <div class="k">title</div><pre>${esc(a.title) || '—'}</pre>
+        <div class="k">body — raw OCR</div><pre>${esc(a.body_raw) || '—'}</pre>
+        <div class="k">body — after mT5</div><pre>${esc(a.body) || '—'}</pre>`;
+    // Layer 4C only appears when SINHALA_POLISH_MODE is on AND all four
+    // guards passed. Absent is the normal case, and is not a failure.
+    if(a.body_polished)
+      h += `<div class="k">body — after 4C polish</div>
+            <pre>${esc(a.body_polished)}</pre>`;
+    h += '</div>';
   });
-  document.getElementById('o').innerHTML=h||'<p class="bad">no articles</p>';
+  if(!(d.articles || []).length) h += '<p class="bad">no articles</p>';
+  document.getElementById('o').innerHTML = h;
+  document.getElementById('ask').style.display = 'block';
+}
+
+async function ask(text){
+  if(!JOB){ alert('capture something first'); return }
+  if(!text || !text.trim()) return;
+  document.getElementById('a').innerHTML = 'asking…';
+  const r = await fetch('/ask', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({job: JOB, text: text})});
+  const j = await r.json();
+
+  // `speakable` is the ONLY field the phone reads, and it reads it whatever
+  // `ok` says — a blind user must hear something, and "the answering service
+  // is not available" is something. So both are shown, separately.
+  let h = `<div class="art"><div class="k">spoken · route ${esc(j.route)}
+      · intent ${esc(j.intent)}</div>
+      <pre>${esc(j.speakable) || '(silence — this is a bug unless intent is STOP)'}</pre>
+      <p class="${j.ok ? 'ok' : 'bad'}">ok: ${j.ok}`
+      + (j.error ? ' — ' + esc(j.error) : '') + '</p>';
+  // Every warning here is load-bearing: "voice routing: stub" means
+  // Component 4 did not run, "rag: ..." means Component 3 did not.
+  (j.warnings || []).forEach(w => h += `<p class="warn">⚠ ${esc(w)}</p>`);
+  if((j.sources || []).length)
+    h += '<div class="k">retrieved</div><pre>'
+       + esc(JSON.stringify(j.sources, null, 1)) + '</pre>';
+  if(j.timings) h += '<p class="muted">' + esc(JSON.stringify(j.timings)) + '</p>';
+  document.getElementById('a').innerHTML = h + '</div>';
 }
 </script></body></html>

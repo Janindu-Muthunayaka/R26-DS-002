@@ -6,19 +6,15 @@ Nothing here implements algorithm logic — that belongs in the layers.
 import time, cv2
 from pathlib import Path
 
-from core.config import (YOLO_WEIGHTS, MT5_PLAIN, MAX_ARTICLES, YOLO_CONF,
-                         POLISH_MODE, LAYOUT_MIN_P75, SEGMENT_MODE)
+from core.config import (YOLO_WEIGHTS, MT5_PLAIN, MAX_ARTICLES, YOLO_CONF)
 from core.imaging import imread_upright
 from layers.l3_segment.closeup import analyse as closeup_analyse
-from layers.l3_segment.closeup import headline_for_block as _headline_for_block
-from layers.l3_segment.closeup import text_lines as closeup_text_lines
 from layers.l3_segment import layout as _layout
 from core.schemas import Document, Article, Box, Region
 from layers.l2_select.select import select
 from layers.l3_segment.segment import Segmenter
 from layers.l4a_title import title as l4a
 from layers.l4b_body.body import BodyReader
-from layers.l4c_polish import polish as _polish
 from layers.l5_assemble.assemble import assemble
 from layers.l6_speech import speech as l6
 
@@ -77,7 +73,7 @@ class Pipeline:
         # one article. Running YOLO there does not fail safely — it returned a
         # confident box over the NEIGHBOURING article. See l3_segment/closeup.
         t0 = time.time()
-        extra_warnings = []          # also used by Layer 4C, further down
+        extra_warnings = []
         info = closeup_analyse(ref)
 
         # LAYOUT, then the old bbox as a fallback.
@@ -93,17 +89,8 @@ class Pipeline:
         # to be rotated by the same angle before it is used - cropping an
         # un-rotated frame with them is off by H*tan(angle) at the extremes,
         # about 40 px on these captures. Deskewing helps the OCR anyway.
-        # LAYOUT FIRST, YOLO ONLY IF LAYOUT REFUSES.
-        #
-        # The old gate was `is_closeup` (glyph_p75 >= 20), and it sent 29% of
-        # real captures to the article detector — the path that returned a
-        # confident box over the neighbouring article's headline. Measured:
-        # layout analysis succeeds on 16 of those 20 frames, and corpus full
-        # pages are still refused by the gutter gate with the p75 gate off.
-        # See core/config.py, LAYOUT_MIN_P75.
-        lay = _layout.analyse(ref, min_p75=LAYOUT_MIN_P75)
-        single_article = bool(lay.get('applicable')) or info['is_closeup']
-        if lay.get('applicable'):
+        lay = _layout.analyse(ref) if info['is_closeup'] else {}
+        if info['is_closeup'] and lay.get('applicable'):
             ang = lay['deskew_deg']
             if abs(ang) > 0.05:
                 imgs = [_layout.deskew(i, ang)[0] for i in imgs]
@@ -112,36 +99,17 @@ class Pipeline:
             x1, y1, x2, y2 = lay['crop']
             extra_warnings += _layout.warnings_for(lay)
         elif info['is_closeup']:
-            # Layout refused but the frame is close. The only thing left is
-            # the bounding box of ALL text in the frame, which is NOT an
-            # article — it is whatever the camera happened to see. Measured at
-            # 3% of real captures. It is a fallback, and the warning says so.
             x1, y1, x2, y2 = info['bbox']
-            extra_warnings.append(
-                'could not find the article boundaries in this frame; '
-                'read the text that was visible')
 
-        if single_article:
+        if info['is_closeup']:
             box = Box(x1=x1, y1=y1, x2=x2, y2=y2)
             regions = [Region(box=box, label='text')]
-            # THE HEADLINE THAT BELONGS TO THIS BODY.
-            #
-            # An article is a headline plus the body under it. Until 27 Aug
-            # 2026 only the body was read, and the headline — the part a
-            # listener uses to decide whether to keep listening — was dropped.
-            #
-            # `headline_for_block` attaches one only when it can tell which
-            # band is the headline, and REFUSES otherwise: these pages carry a
-            # masthead, a page number and a section strip above the headline,
-            # all of them headline-sized, and reading those aloud as the
-            # headline would be worse than saying nothing.
-            title_box = None
-            if lay.get('applicable'):
-                _lines, _med = closeup_text_lines(ref)
-                title_box = _headline_for_block(
-                    ref, lay['block'], (lay['crop'][0], lay['crop'][2]), _med)
-            if title_box:
-                tx1, ty1, tx2, ty2 = title_box
+            # The headline is LOCATED but not read: title OCR is Layer 4A and
+            # belongs to another team member. Emitting the region means their
+            # layer works the moment it is delivered, and means the headline is
+            # visibly pending rather than silently dropped.
+            if info.get('title_bbox'):
+                tx1, ty1, tx2, ty2 = info['title_bbox']
                 regions.insert(0, Region(
                     box=Box(x1=tx1, y1=ty1, x2=tx2, y2=ty2), label='title'))
             note = (f"close-up: {info['n_lines']} text lines, "
@@ -155,44 +123,24 @@ class Pipeline:
                           f"frame centre ({lay['lines_in_block']:.0f} lines, "
                           f"pitch {lay['pitch']:.0f}px, "
                           f"deskew {lay['deskew_deg']:+.2f} deg)")
-            if title_box:
-                note += '; headline located and attached to this article'
-            elif info.get('n_title_lines'):
-                note += ('; headline bands were found but none could be '
-                         'attached to this article with confidence')
+            if info.get('n_title_lines'):
+                note += (f"; {info['n_title_lines']} headline lines located "
+                         f"(title OCR is Layer 4A, not yet delivered)")
             arts = [Article(index=0, box=box, regions=regions,
                             glyph_p75=info['glyph_p75'], verdict='ok',
                             note=note)]
             t['segment'] = round(time.time() - t0, 2)
             t['mode'] = 'closeup'
-        elif SEGMENT_MODE.lower() == 'yolo':
+        else:
             arts = self.seg.run(ref, conf=conf, max_articles=max_articles)
             t['segment'] = round(time.time() - t0, 2)
-            t['mode'] = 'yolo'
-        else:
-            # TOO FAR TO IDENTIFY AN ARTICLE.
-            #
-            # Measured over 70 real captures (tools/probe_yolo.py): where the
-            # detector and the layout path both answered, they disagreed on
-            # 69% of frames, and the layout crop is the better-evidenced side.
-            # Reading a confidently-wrong story to someone who cannot check it
-            # is worse than reading nothing.
-            #
-            # "Move a little closer" is also the instruction that fixes the
-            # frame. See core/config.py, SEGMENT_MODE.
-            t['segment'] = round(time.time() - t0, 2)
-            t['mode'] = 'too-far'
-            return Document(
-                warnings=['Could not identify a single article in this frame '
-                          '- move a little closer and try again'],
-                timings=t)
 
         t0 = time.time()
         arts = [l4a.extract(ref, a) for a in arts]
         t['title'] = round(time.time() - t0, 2)
 
         t0 = time.time()
-        if single_article:
+        if info['is_closeup']:
             arts = [self.body.read_page(imgs, a) for a in arts]
         else:
             arts = [self.body.read(imgs, a) for a in arts]
@@ -205,24 +153,6 @@ class Pipeline:
         else:
             for a in arts:
                 a.body = a.body_raw
-
-        # LAYER 4C — optional LLM post-edit. OFF unless SINHALA_POLISH_MODE
-        # says otherwise, and it writes to `body_polished`, never to `body`:
-        # `body` is the mT5 output Chapter 4's CER is measured on.
-        #
-        # Every article it touches carries a warning all the way to the phone,
-        # including when a guard REJECTED the rewrite, so a transcript can
-        # never be read as unassisted output and a rejection is never silent.
-        if POLISH_MODE.lower() != 'off':
-            t0 = time.time()
-            for a in arts:
-                res = _polish.polish(a.body or a.body_raw)
-                if res['applied']:
-                    a.body_polished = res['text']
-                if res['applied'] or 'REJECTED' in res['reason']:
-                    extra_warnings.append(f"Article {a.index + 1}: "
-                                          f"{res['reason']}")
-            t['polish'] = round(time.time() - t0, 2)
 
         doc = assemble(arts, [f.path for f in frames], t)
         # Sentences the listener can act on ("part of this article is off the

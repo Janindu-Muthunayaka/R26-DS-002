@@ -21,7 +21,8 @@ fastapi = pytest.importorskip('fastapi')
 from fastapi.testclient import TestClient      # noqa: E402
 
 from core.schemas import Article, Box, Document, Region   # noqa: E402
-from app.server import build, _document_to_reply          # noqa: E402
+from app.server import (build, _document_to_reply,        # noqa: E402
+                        SI_MOVE_CLOSER)
 
 # every field MainActivity reads, by name
 PHONE_FIELDS = ('ok', 'job', 'title', 'body', 'warnings', 'n_articles',
@@ -161,3 +162,54 @@ def test_health_and_pages(tmp_path):
     assert c.get('/health').json()['ok'] is True
     assert c.get('/').status_code == 200
     assert c.get('/audio/nosuchjob').status_code == 404
+
+
+# ---- the two failures that must not sound alike -------------------------
+# A frame with no article in it and a frame with nothing legible in it are
+# different problems with different fixes, and the user cannot see either one.
+# One says "move closer"; the other says "take the photograph again". Before
+# these, both came back as "nothing could be read", which sends nobody
+# anywhere.
+def test_no_single_article_asks_the_user_to_move_closer(tmp_path):
+    doc = Document(articles=[], timings={},
+                   warnings=['Could not identify a single article in this '
+                             'frame - move a little closer and try again'])
+    j = _post(_client(FakePipeline(doc), tmp_path)).json()
+    assert j['ok'] is False
+    assert j['body'] == SI_MOVE_CLOSER, (
+        'the instruction that fixes the frame must be the thing spoken')
+    assert 'closer' in j['error']
+
+
+def test_shattered_text_is_replaced_not_read_aloud(tmp_path):
+    """The failure mode that matters most. A bad capture does not error:
+    Tesseract returns something, the corrector corrects that something, and
+    the phone reads it out in the same confident voice it uses for real news.
+    A sighted developer sees garbage on a screen. A blind user cannot."""
+    junk = 'ක් ල් ම් xz qw ර් ට් 39 ## ණ් ව් ඝ් zz ය් ද් ට් ර් ක් ම් ල්'
+    j = _post(_client(FakePipeline(_doc(body=junk)), tmp_path)).json()
+    assert junk not in j['body'], 'shattered OCR was spoken as if it were news'
+    assert j['body'].strip(), 'and something must still be said'
+    assert any(w.startswith('unreadable') for w in j['warnings'])
+
+
+def test_a_short_news_brief_is_still_read(tmp_path):
+    """The other side of the same gate. Newspapers print six-word briefs;
+    short is not the same as broken, and refusing to read one would be a
+    regression dressed as a safety check."""
+    brief = 'නගර සභාව අද රැස්විය.'
+    j = _post(_client(FakePipeline(_doc(body=brief)), tmp_path)).json()
+    assert brief in j['body']
+    assert j['ok'] is True
+
+
+def test_the_yolo_segmenter_is_off_by_measurement(tmp_path):
+    """Not a preference. Measured on 70 real captures with tools/probe_yolo.py:
+    of 51 frames comparable against the column-projection layout, 35 (69%)
+    picked a DIFFERENT story, 5 partially agreed, 11 agreed. A detector that
+    disagrees with the layout on two thirds of frames cannot choose what is
+    read aloud to someone who cannot check it, so the fallback refuses and
+    asks for a closer frame instead. If this is ever turned back on, it should
+    be because the number changed."""
+    from core.config import SEGMENT_MODE
+    assert SEGMENT_MODE == 'off'
