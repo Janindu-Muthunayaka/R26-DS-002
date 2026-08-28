@@ -65,7 +65,7 @@ def stop_all(*_):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--root', default=os.getenv(
-        'SINHALA_ROOT', r'E:/RP/corpus/Sinhala_OCR_Correction_v2'))
+        'SINHALA_ROOT', str(_SYSTEM)))
     ap.add_argument('--port', type=int, default=8000)
     ap.add_argument('--rag-port', type=int, default=8102)
     ap.add_argument('--voice-port', type=int, default=8101)
