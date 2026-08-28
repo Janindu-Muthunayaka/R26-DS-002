@@ -1,86 +1,186 @@
 # personalization/diagnostic.py
-# Step 2 — Diagnostic repeat-failure check + correction-signal detection
+# Evidence detection — pure logic, no ML.
+#
+# Answers one question: did the user give REAL evidence about their preferred
+# communication style this turn? Only evidence produced here may train the
+# online model (see style_model.py).
+#
+# WHY THE GROUNDING LAYER EXISTS
+# Llama 3.2:1b is a very small model and emits spurious personalization_flags
+# on most inputs. Measured on real output:
+#     "Simplify"                        -> {'speed': 'fast'}
+#     "Step by step"                    -> {'speed': 'fast'}
+#     "Give me the full details"        -> {'language_style': 'simple'}   (!)
+#     "Can you explain this a little more?" -> {'language_style': 'simple'} (!)
+# The last two are plainly wrong and were poisoning the training data with
+# "Simple" labels on requests for MORE detail. So a flag is now accepted as
+# evidence only if the translated sentence lexically supports it.
+#
+# NOTE: the repeat-failure check was removed from this build. It depended on
+# retrieved_chunk_id, a Component 3 concern not yet available.
 
-REPEAT_INTENTS = {"REPEAT", "REPEAT_AUDIO", "EXPLAIN_AGAIN"}
+import re
 
-# Explicit user requests that directly imply the PREVIOUS style guess was wrong
-CORRECTION_INTENT_TO_STYLE = {
+# ── Explicit intents that state the desired style ────────────────────────
+# The LLM invents its own intent names, so synonyms are listed here.
+# Everything is upper-cased and space/hyphen -> underscore before lookup.
+DIRECT_STYLE_INTENTS = {
+    # -> Simple
     "SIMPLIFY": "Simple",
+    "SIMPLE": "Simple",
+    "MAKE_SIMPLE": "Simple",
+    "MAKE_SIMPLER": "Simple",
+    "SUMMARIZE": "Simple",
+    "SHORTEN": "Simple",
+    "BRIEF": "Simple",
+    # -> Detailed
     "ELABORATE": "Detailed",
+    "MORE_DETAILS": "Detailed",
+    "MORE_DETAIL": "Detailed",
+    "GIVE_DETAILS": "Detailed",
+    "FULL_DETAILS": "Detailed",
+    "DETAIL": "Detailed",
+    "DETAILED": "Detailed",
+    "EXPAND": "Detailed",
+    "EXPLAIN_MORE": "Detailed",
+    # -> StepByStep
+    "STEP_BY_STEP": "StepByStep",
+    "STEPBYSTEP": "StepByStep",
+    "STEPS": "StepByStep",
+    "ONE_BY_ONE": "StepByStep",
+    "WALK_THROUGH": "StepByStep",
+}
+
+# ── Explicit flags that state the desired style ──────────────────────────
+FLAG_STYLE_HINTS = {
+    ("language_style", "simple"): "Simple",
+    ("language_style", "technical"): "Detailed",
+    ("detail_level", "brief"): "Simple",
+    ("detail_level", "detailed"): "Detailed",
+    ("detail_level", "step_by_step"): "StepByStep",
+}
+
+# ── Lexical grounding: words in the English translation that genuinely
+#    indicate each style. Used both to corroborate/reject a flag and as a
+#    direct evidence source when the flag is missing or untrustworthy.
+STYLE_KEYWORDS = {
+    "Simple": [
+        "simple", "simply", "simpler", "simplify", "easy", "easier",
+        "plain", "basic", "brief", "briefly", "short", "shorter",
+        "summary", "summarize", "summarise", "concise", "quick",
+    ],
+    "Detailed": [
+        "detail", "details", "detailed", "elaborate", "more", "full",
+        "fully", "thorough", "in-depth", "深", "deeper", "expand",
+        "comprehensive", "longer", "complete", "everything", "technical",
+    ],
+    "StepByStep": [
+        "step", "steps", "stepwise", "one by one", "sequentially",
+        "in order", "numbered", "walk me through", "stages",
+    ],
 }
 
 
-def _normalize(text):
-    """Lowercase + collapse whitespace, so 'Summarize this.' and
-    'summarize this' compare equal. Used only for repeat detection."""
-    if not text:
+def _normalize_intent(intent):
+    if not intent:
         return ""
-    return " ".join(text.strip().lower().split())
+    return re.sub(r"[\s\-]+", "_", str(intent).strip().upper())
 
 
-def is_repeat_failure(current_intent, current_chunk_id, current_sinhala_text, last_interaction):
+def _keyword_scores(english_text):
+    """Counts style-indicating keywords in the translated sentence."""
+    if not english_text:
+        return {}
+    text = str(english_text).lower()
+    scores = {}
+    for style, words in STYLE_KEYWORDS.items():
+        hits = 0
+        for w in words:
+            if " " in w:
+                if w in text:
+                    hits += 1
+            elif re.search(rf"\b{re.escape(w)}\b", text):
+                hits += 1
+        if hits:
+            scores[style] = hits
+    return scores
+
+
+def style_from_intent(intent):
+    """The style the user explicitly asked for via intent, or None."""
+    return DIRECT_STYLE_INTENTS.get(_normalize_intent(intent))
+
+
+def style_from_keywords(english_text):
+    """The style indicated by the words of the sentence itself, or None.
+    Ties (a sentence containing both 'simple' and 'more') return None so we
+    don't guess — the model handles it instead."""
+    scores = _keyword_scores(english_text)
+    if not scores:
+        return None
+    best = max(scores.values())
+    winners = [s for s, n in scores.items() if n == best]
+    return winners[0] if len(winners) == 1 else None
+
+
+def style_from_flags(personalization_flags, english_text=None):
     """
-    Returns True if this looks like the user re-asking about the same
-    content immediately after the last interaction (a TTS/comprehension
-    failure), rather than a new request.
+    The style the user signalled via personalization_flags — but only if the
+    sentence corroborates it.
 
-    Two independent signals can trigger this, either is enough:
-      1. Explicit repeat intent — the user SAID "repeat"/"say that again"
-         (caught by REPEAT_INTENTS, as before).
-      2. Literal repetition — the user's raw Sinhala input this turn is the
-         same sentence as last turn's, even though they didn't use a
-         "repeat"-type phrase. The LLM has no memory of the previous turn,
-         so it will just classify this as a fresh SUMMARIZE/EXPLAIN/etc.
-         instead of REPEAT — signal (1) alone misses this case, which is
-         why literally re-asking the same question wasn't being caught.
+    'speed' is deliberately unmapped: it is a TTS playback property, not a
+    communication-style signal.
 
-    Both signals still require the SAME chunk as last turn, since asking
-    the same style of question about a *different* chunk is a new request,
-    not a failure.
+    Grounding rules:
+      - no keywords found in the sentence at all -> reject the flag
+        (the LLM emitted it without textual support)
+      - keywords point at a DIFFERENT style than the flag -> trust the
+        keywords, not the flag
+      - keywords agree, or are ambiguous -> accept the flag
     """
-    if last_interaction is None:
-        return False
+    if not personalization_flags:
+        return None
 
-    same_chunk = (
-        current_chunk_id is not None
-        and current_chunk_id == last_interaction.get("retrieved_chunk_id")
-    )
-    if not same_chunk:
-        return False
+    flag_style = None
+    for key in ("language_style", "detail_level"):
+        value = personalization_flags.get(key)
+        if value:
+            hint = FLAG_STYLE_HINTS.get((key, str(value).strip().lower()))
+            if hint:
+                flag_style = hint
+                break
 
-    is_repeat_intent = bool(current_intent) and current_intent.upper() in REPEAT_INTENTS
+    if flag_style is None:
+        return None
 
-    is_same_text = (
-        bool(current_sinhala_text)
-        and _normalize(current_sinhala_text) == _normalize(last_interaction.get("sinhala_input"))
-    )
+    if english_text is None:
+        return flag_style
 
-    return is_repeat_intent or is_same_text
+    scores = _keyword_scores(english_text)
+    if not scores:
+        return None                      # unsupported flag -> reject
+
+    if flag_style in scores:
+        return flag_style                # corroborated
+
+    keyword_style = style_from_keywords(english_text)
+    return keyword_style                 # contradicted -> trust the text
 
 
 def detect_correction_signal(current_intent, last_interaction):
     """
-    Returns the corrected style class (str) if this turn's intent implies
-    the PREVIOUS turn's predicted style was wrong, otherwise returns None.
-
-    Only fires if:
-      - the current intent is an explicit complexity request (SIMPLIFY/ELABORATE)
-      - there IS a previous interaction with a style_class already set
-      - the previous style_class differs from what's now being requested
-        (no point "correcting" a guess that was already right)
+    Returns the corrected style if THIS turn's intent implies the PREVIOUS
+    turn's style was wrong, else None.
     """
     if last_interaction is None:
         return None
 
-    if not current_intent:
-        return None
-
-    corrected_style = CORRECTION_INTENT_TO_STYLE.get(current_intent.upper())
-    if corrected_style is None:
+    requested_style = style_from_intent(current_intent)
+    if requested_style is None:
         return None
 
     previous_style = last_interaction.get("style_class")
-    if previous_style is None or previous_style == corrected_style:
+    if previous_style is None or previous_style == requested_style:
         return None
 
-    return corrected_style
+    return requested_style

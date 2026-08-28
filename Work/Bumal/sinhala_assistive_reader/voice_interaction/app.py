@@ -1,18 +1,15 @@
 """
 app.py — Sinhala Assistive Reader: Component 4 Live Pipeline
 
-This is the ONE entry point for Component 4. Run this file directly to see
-the whole personalization pipeline work turn-by-turn, live:
+Run this to watch the whole personalization pipeline work turn-by-turn:
 
-    Sinhala input  -->  Translation + Intent Detection  -->
-    Personalization (correction check, style prediction)  -->
-    Final personalized prompt (what gets handed to Component 3 / RAG)
-
-Every stage is printed as it completes, so you can watch the decision
-being made in real time — this is what you run for your panel demo.
+    Sinhala input -> Translation + Intent -> Personalization -> Prompt
 
 Usage:
     python app.py
+
+For the side-by-side 3-user comparison table used in the viva, run
+compare_users.py instead.
 """
 
 import sys
@@ -24,31 +21,17 @@ colorama_init(autoreset=True)
 
 from data.test_samples import test_samples
 from personalization.main_flow import handle_voice_command
+from personalization.style_model import get_user_summary
 
-DEFAULT_USER_ID = "user_001"
-DEFAULT_CHUNK_ID = "chunk_article_1"
-
-# Three fixed demo users so the panel can watch the SAME sentence get a
-# DIFFERENT personalized outcome depending on who's "speaking" — this only
-# works because style_model.py now keeps one online model per user_id
-# instead of one shared model for everyone.
-DEMO_USERS = {
-    "1": ("user_001", "Student"),
-    "2": ("user_002", "Elderly"),
-    "3": ("user_003", "Professional"),
-}
-
-# Small pause between stage reveals so the flow reads as "live" rather than
-# a wall of text dumped all at once. Set to 0 to disable.
-STAGE_DELAY_SEC = 0.5
+DEMO_USERS = ["user_001", "user_002", "user_003"]
+STAGE_DELAY_SEC = 0.4
 
 
 def _header(text, color=Fore.CYAN):
-    width = 64
     print()
-    print(color + "─" * width)
+    print(color + "─" * 64)
     print(color + f" {text}")
-    print(color + "─" * width + Style.RESET_ALL)
+    print(color + "─" * 64 + Style.RESET_ALL)
 
 
 def _kv(label, value, color=Fore.WHITE):
@@ -61,9 +44,6 @@ def _pause():
 
 
 def display_result(result, turn_number):
-    """Prints all four stages of a single handle_voice_command() result,
-    one section at a time. Pure presentation — no pipeline logic here."""
-
     stt = result["stt_stage"]
     intent_stage = result["intent_stage"]
     pers = result["personalization_stage"]
@@ -73,12 +53,10 @@ def display_result(result, turn_number):
     print(Fore.YELLOW + Style.BRIGHT + f"║  TURN {turn_number}" + " " * (55 - len(str(turn_number))) + "║")
     print(Fore.YELLOW + Style.BRIGHT + f"╚{'═'*62}╝")
 
-    # Stage 1 — STT
     _header("STAGE 1 — Speech-to-Text (Sinhala)", Fore.MAGENTA)
     _kv("Sinhala input:", stt["sinhala_input"])
     _pause()
 
-    # Stage 2 — Translation + Intent Detection
     _header("STAGE 2 — Translation + Intent Detection", Fore.BLUE)
     _kv("English translation:", intent_stage["english_translation"])
     _kv("Detected intent:", intent_stage["intent"])
@@ -87,25 +65,32 @@ def display_result(result, turn_number):
     _kv("LLM intent time:", f"{intent_stage['llm_time_sec']}s")
     _pause()
 
-    # Stage 3 — Personalization
     _header("STAGE 3 — Personalization", Fore.GREEN)
-    if pers["repeat_failure"]:
-        _kv("Repeat failure:", "True  → routing to TTS_REPLAY (ML bypassed)", Fore.LIGHTRED_EX)
+    if pers["is_system_command"]:
+        _kv("System command:", f"{pers['command']}  → bypasses personalization",
+            Fore.LIGHTCYAN_EX)
+        _kv("Model trained?", "No — commands carry no style signal")
     else:
-        _kv("Repeat failure:", "False")
+        _kv("Style class:", pers["style_class"])
+        _kv("Decided by:", pers["style_source"])
         _kv("Correction applied:", pers["correction_applied"])
-        _kv("Predicted style:", pers["style_class"])
-        _kv("Style source:", pers["style_source"])
+        _kv("Model trained?",
+            "Yes — real user evidence" if pers["learned"]
+            else "No — this was a prediction, not evidence",
+            Fore.LIGHTGREEN_EX if pers["learned"] else Fore.LIGHTBLACK_EX)
+        prof = pers["user_profile"]
+        _kv("Confirmed signals:", prof["n_confirmed"])
+        _kv("Learned preference:", prof["dominant_preference"] or "(none yet)")
+        _kv("Profile weights:", prof["history_weights"])
     _pause()
 
-    # Stage 4 — Final prompt to Component 3
     _header("STAGE 4 — Final Prompt → Component 3 (RAG)", Fore.CYAN)
     print(Fore.CYAN + json.dumps(final, indent=2, ensure_ascii=False))
     print()
 
 
-def run_turn(sinhala_text, user_id, retrieved_chunk_id, turn_number):
-    result = handle_voice_command(sinhala_text, user_id, retrieved_chunk_id=retrieved_chunk_id)
+def run_turn(sinhala_text, user_id, turn_number):
+    result = handle_voice_command(sinhala_text, user_id)
     display_result(result, turn_number)
     return result
 
@@ -122,51 +107,49 @@ def choose_mode():
 
 
 def choose_user():
-    print(Fore.CYAN + Style.BRIGHT + "\nChoose a demo user")
+    print(Fore.CYAN + Style.BRIGHT + "\nChoose a user")
     print(Fore.CYAN + "=" * 64)
-    for key, (uid, persona) in DEMO_USERS.items():
-        print(f"  {key}) {uid} — {persona} persona")
-    print("  4) Custom user ID")
+    for i, uid in enumerate(DEMO_USERS, 1):
+        summary = get_user_summary(uid)
+        pref = summary["dominant_preference"] or "no history yet"
+        print(f"  {i}) {uid}  —  {summary['n_confirmed']} confirmed signals, {pref}")
+    print(f"  {len(DEMO_USERS) + 1}) Custom user ID")
     print(Fore.CYAN + "=" * 64)
-    choice = input("Choose a user [1-4]: ").strip()
+    choice = input(f"Choose a user [1-{len(DEMO_USERS) + 1}]: ").strip()
 
-    if choice in DEMO_USERS:
-        return DEMO_USERS[choice][0]
-    if choice == "4":
-        return input("Enter custom user ID: ").strip() or DEFAULT_USER_ID
+    if choice.isdigit():
+        idx = int(choice)
+        if 1 <= idx <= len(DEMO_USERS):
+            return DEMO_USERS[idx - 1]
+        if idx == len(DEMO_USERS) + 1:
+            return input("Enter custom user ID: ").strip() or DEMO_USERS[0]
+    return DEMO_USERS[0]
 
-    return DEFAULT_USER_ID
 
-
-def voice_loop(user_id, chunk_id):
+def voice_loop(user_id):
     try:
         from stt.google_stt_live import listen_and_transcribe
     except ImportError as e:
-        print(Fore.RED + f"\nCouldn't load the voice input module ({e}).")
-        print(Fore.RED + "Make sure SpeechRecognition and PyAudio are installed "
-                          "(see stt/google_stt_live.py for the PyAudio note on Windows).")
-        print(Fore.YELLOW + "Falling back to typed input instead.\n")
-        typed_loop(user_id, chunk_id)
+        print(Fore.RED + f"\nCouldn't load voice input ({e}).")
+        print(Fore.RED + "Install SpeechRecognition and PyAudio, or use mode 2.")
+        print(Fore.YELLOW + "Falling back to typed input.\n")
+        typed_loop(user_id)
         return
 
-    print(Fore.LIGHTBLACK_EX +
-          "\nPress Enter, then speak one command in Sinhala. Type 'q' + Enter to quit.\n")
+    print(Fore.LIGHTBLACK_EX + "\nPress Enter, then speak one Sinhala command. Type 'q' to quit.\n")
     turn = 0
     while True:
-        cmd = input(Fore.WHITE + Style.BRIGHT + "[Enter to speak, or 'q' to quit]: " + Style.RESET_ALL)
+        cmd = input(Fore.WHITE + Style.BRIGHT + "[Enter to speak, 'q' to quit]: " + Style.RESET_ALL)
         if cmd.strip().lower() == "q":
             break
-
-        print(Fore.MAGENTA + "  Listening...")
         sinhala_text = listen_and_transcribe()
         if not sinhala_text:
             continue
-
         turn += 1
-        run_turn(sinhala_text, user_id, chunk_id, turn)
+        run_turn(sinhala_text, user_id, turn)
 
 
-def typed_loop(user_id, chunk_id):
+def typed_loop(user_id):
     print(Fore.LIGHTBLACK_EX + "Type a Sinhala sentence and press Enter. Type 'quit' to stop.\n")
     turn = 0
     while True:
@@ -176,36 +159,29 @@ def typed_loop(user_id, chunk_id):
         if not sinhala_text:
             continue
         turn += 1
-        run_turn(sinhala_text, user_id, chunk_id, turn)
+        run_turn(sinhala_text, user_id, turn)
 
 
-def test_sample_loop(user_id, chunk_id):
-    turn = 0
-    for sample in test_samples:
-        turn += 1
-        input(Fore.LIGHTBLACK_EX + f"\n[Press Enter to send test sample '{sample['id']}': "
-                                    f"{sample['stt_output']}]")
-        run_turn(sample["stt_output"], user_id, chunk_id, turn)
+def test_sample_loop(user_id):
+    for turn, sample in enumerate(test_samples, 1):
+        input(Fore.LIGHTBLACK_EX + f"\n[Enter to send '{sample['id']}': {sample['stt_output']}]")
+        run_turn(sample["stt_output"], user_id, turn)
     print(Fore.YELLOW + "\nAll test samples processed.")
 
 
 def main():
     mode = choose_mode()
     user_id = choose_user()
-    chunk_id = input(f"\nCurrent chunk ID [{DEFAULT_CHUNK_ID}]: ").strip() or DEFAULT_CHUNK_ID
-
-    print(Fore.LIGHTBLACK_EX +
-          f"\nActive user: {user_id}"
-          "\n(chunk ID represents the article chunk currently loaded — keeping it "
-          "the same across turns is what lets REPEAT and correction detection work. "
-          "Switch users from the start menu to compare personalization across users.)")
+    print(Fore.LIGHTBLACK_EX + f"\nActive user: {user_id}"
+          "\n(Each user has an independent learned profile. Switch users from "
+          "the start menu to compare, or run compare_users.py for a table.)\n")
 
     if mode == "1":
-        voice_loop(user_id, chunk_id)
+        voice_loop(user_id)
     elif mode == "3":
-        test_sample_loop(user_id, chunk_id)
+        test_sample_loop(user_id)
     else:
-        typed_loop(user_id, chunk_id)
+        typed_loop(user_id)
 
 
 if __name__ == "__main__":

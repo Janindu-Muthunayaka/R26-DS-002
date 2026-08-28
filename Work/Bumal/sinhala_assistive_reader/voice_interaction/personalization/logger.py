@@ -15,7 +15,7 @@ db = TinyDB(DB_PATH)
 interaction_logs = db.table("interaction_logs")
 
 
-def log_interaction(user_id, result, retrieved_chunk_id=None, style_class=None):
+def log_interaction(user_id, result, style_class=None):
     """
     Takes the dict returned by detect_intent_approach1() and appends a full
     record to interaction_logs. Returns the record (including its timestamp,
@@ -28,7 +28,10 @@ def log_interaction(user_id, result, retrieved_chunk_id=None, style_class=None):
         "english_translation": result.get("english_translation"),
         "intent": result.get("intent"),
         "personalization_flags": result.get("personalization_flags", {}),
-        "retrieved_chunk_id": retrieved_chunk_id,
+        # Placeholder — Component 3 will populate this once integrated.
+        # No longer supplied by the user; the reader knows which chunk is
+        # loaded, the user should never have to say so.
+        "retrieved_chunk_id": None,
         "style_class": style_class,
         "corrected": False   # flips to True if Step 4 later relabels this record
     }
