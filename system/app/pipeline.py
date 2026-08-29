@@ -40,8 +40,11 @@ class Pipeline:
         if use_layout:
             try:
                 from paddleocr import LayoutDetection
-                layout = LayoutDetection(model_name='PP-DocLayout-L',
-                                         device='cpu', enable_mkldnn=False)
+                # Determine device for PaddleOCR
+                dev_str = 'gpu:0' if torch.cuda.is_available() else 'cpu'
+                layout = LayoutDetection(model_name='PP-DocLayout_plus-L',
+                                         threshold=0.20,
+                                         device=dev_str, enable_mkldnn=False)
             except Exception as e:
                 if verbose:
                     print('PP-DocLayout unavailable, using fallback:', e)
@@ -101,49 +104,70 @@ class Pipeline:
         # layout analysis succeeds on 16 of those 20 frames, and corpus full
         # pages are still refused by the gutter gate with the p75 gate off.
         # See core/config.py, LAYOUT_MIN_P75.
-        lay = _layout.analyse(ref, min_p75=LAYOUT_MIN_P75)
-        single_article = bool(lay.get('applicable')) or info['is_closeup']
-        if lay.get('applicable'):
-            ang = lay['deskew_deg']
-            if abs(ang) > 0.05:
-                imgs = [_layout.deskew(i, ang)[0] for i in imgs]
-                ref = lay['upright']
-                info = closeup_analyse(ref)   # title bbox in the same frame
-            x1, y1, x2, y2 = lay['crop']
-            extra_warnings += _layout.warnings_for(lay)
-        elif info['is_closeup']:
-            # Layout refused but the frame is close. The only thing left is
-            # the bounding box of ALL text in the frame, which is NOT an
-            # article — it is whatever the camera happened to see. Measured at
-            # 3% of real captures. It is a fallback, and the warning says so.
-            x1, y1, x2, y2 = info['bbox']
-            extra_warnings.append(
-                'could not find the article boundaries in this frame; '
-                'read the text that was visible')
+        # Run the PaddleOCR-based Segmenter first on the full frame
+        t0 = time.time()
+        arts = self.seg.run(ref, conf=conf, max_articles=max_articles)
+        
+        # If the segmenter detected more than 1 separate article, we are NOT in a closeup.
+        # Otherwise (0 or 1 articles), we treat it as a closeup/single article.
+        single_article = (len(arts) <= 1)
 
         if single_article:
-            box = Box(x1=x1, y1=y1, x2=x2, y2=y2)
-            regions = [Region(box=box, label='text')]
-            # THE HEADLINE THAT BELONGS TO THIS BODY.
-            #
-            # An article is a headline plus the body under it. Until 27 Aug
-            # 2026 only the body was read, and the headline — the part a
-            # listener uses to decide whether to keep listening — was dropped.
-            #
-            # `headline_for_block` attaches one only when it can tell which
-            # band is the headline, and REFUSES otherwise: these pages carry a
-            # masthead, a page number and a section strip above the headline,
-            # all of them headline-sized, and reading those aloud as the
-            # headline would be worse than saying nothing.
-            title_box = None
+            lay = _layout.analyse(ref, min_p75=0)
             if lay.get('applicable'):
-                _lines, _med = closeup_text_lines(ref)
-                title_box = _headline_for_block(
-                    ref, lay['block'], (lay['crop'][0], lay['crop'][2]), _med)
-            if title_box:
-                tx1, ty1, tx2, ty2 = title_box
-                regions.insert(0, Region(
-                    box=Box(x1=tx1, y1=ty1, x2=tx2, y2=ty2), label='title'))
+                ang = lay['deskew_deg']
+                if abs(ang) > 0.05:
+                    imgs = [_layout.deskew(i, ang)[0] for i in imgs]
+                    ref = lay['upright']
+                    info = closeup_analyse(ref)   # title bbox in the same frame
+                x1, y1, x2, y2 = lay['crop']
+                extra_warnings += _layout.warnings_for(lay)
+            else:
+                # Layout refused but the frame is close. The only thing left is
+                # the bounding box of ALL text in the frame, which is NOT an
+                # article — it is whatever the camera happened to see.
+                x1, y1, x2, y2 = info['bbox']
+                extra_warnings.append(
+                    'could not find the article boundaries in this frame; '
+                    'read the text that was visible')
+
+            box = Box(x1=x1, y1=y1, x2=x2, y2=y2)
+            
+            # Use Paddle OCR (Segmenter) to detect titles and bodies within this block
+            try:
+                from layers.l3_segment.geometry import order_columns
+                crop = ref[int(y1):int(y2), int(x1):int(x2)]
+                if crop.size > 0:
+                    body_by_art, title_by_art = self.seg._regions(crop, [[0, 0, x2-x1, y2-y1]])
+                    regions = ([Region(box=Box(x1=r_[0]+x1, y1=r_[1]+y1, x2=r_[2]+x1, y2=r_[3]+y1), label='title') 
+                               for r_ in title_by_art.get(0, [])] +
+                              [Region(box=Box(x1=r_[0]+x1, y1=r_[1]+y1, x2=r_[2]+x1, y2=r_[3]+y1), label='text') 
+                               for r_ in order_columns(body_by_art.get(0, []))])
+                else:
+                    regions = []
+            except Exception as e:
+                print(f"PaddleOCR failed in closeup, fallback: {e}")
+                regions = []
+                
+            if not regions:
+                title_box = None
+                if lay.get('applicable'):
+                    _lines, _med = closeup_text_lines(ref)
+                    try:
+                        title_box = _headline_for_block(ref, lay['block'], (lay['crop'][0], lay['crop'][2]), _med)
+                    except Exception:
+                        pass
+                if title_box:
+                    tx1, ty1, tx2, ty2 = title_box
+                    regions = [
+                        Region(box=Box(x1=tx1, y1=ty1, x2=tx2, y2=ty2), label='title'),
+                        Region(box=box, label='text')
+                    ]
+                else:
+                    regions = [Region(box=box, label='text')]
+                
+            title_box = next((r.box for r in regions if r.label == 'title'), None)
+
             note = (f"close-up: {info['n_lines']} text lines, "
                     f"crop {info['bbox_frac']:.0%} of frame")
             if lay.get('applicable'):
@@ -165,27 +189,32 @@ class Pipeline:
                             note=note)]
             t['segment'] = round(time.time() - t0, 2)
             t['mode'] = 'closeup'
-        elif SEGMENT_MODE.lower() == 'yolo':
-            arts = self.seg.run(ref, conf=conf, max_articles=max_articles)
-            t['segment'] = round(time.time() - t0, 2)
-            t['mode'] = 'yolo'
         else:
-            # TOO FAR TO IDENTIFY AN ARTICLE.
-            #
-            # Measured over 70 real captures (tools/probe_yolo.py): where the
-            # detector and the layout path both answered, they disagreed on
-            # 69% of frames, and the layout crop is the better-evidenced side.
-            # Reading a confidently-wrong story to someone who cannot check it
-            # is worse than reading nothing.
-            #
-            # "Move a little closer" is also the instruction that fixes the
-            # frame. See core/config.py, SEGMENT_MODE.
+            # We already computed `arts` from the layout segmenter, so just store timings
             t['segment'] = round(time.time() - t0, 2)
-            t['mode'] = 'too-far'
-            return Document(
-                warnings=['Could not identify a single article in this frame '
-                          '- move a little closer and try again'],
-                timings=t)
+            t['mode'] = 'layout'
+
+        # SAVE CROPS FOR FRONTEND
+        # We save the cropped image pieces directly into the job directory.
+        job_dir = Path(paths[0]).parent if 'paths' in locals() else Path(image_paths[0]).parent
+        for art in arts:
+            # Crop the main article block
+            abox = art.box
+            ax1, ay1, ax2, ay2 = int(abox.x1), int(abox.y1), int(abox.x2), int(abox.y2)
+            art_crop = ref[max(0, ay1):ay2, max(0, ax1):ax2]
+            art_path = job_dir / f"art_{art.index}.png"
+            if art_crop.size > 0:
+                cv2.imwrite(str(art_path), art_crop)
+                art.crop_path = str(art_path.name) # Just store the filename so the frontend can append it to the job URL
+
+            # Crop each sub-region (title / text)
+            for r_idx, r in enumerate(art.regions):
+                rx1, ry1, rx2, ry2 = int(r.box.x1), int(r.box.y1), int(r.box.x2), int(r.box.y2)
+                r_crop = ref[max(0, ry1):ry2, max(0, rx1):rx2]
+                r_path = job_dir / f"art_{art.index}_{r.label}_{r_idx}.png"
+                if r_crop.size > 0:
+                    cv2.imwrite(str(r_path), r_crop)
+                    r.crop_path = str(r_path.name)
 
         t0 = time.time()
         arts = [l4a.extract(ref, a) for a in arts]

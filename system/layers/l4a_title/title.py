@@ -47,15 +47,10 @@ from core.schemas import Article
 MAX_REGION_PX = 4000 * 1500
 
 
-def read_title_region(img, box, band_h: float = 0.0) -> tuple:
-    """OCR one headline region. Returns (text, reason). Never raises.
+from .title_extractor import extract_and_stitch_title, binarize_strip
 
-    `band_h` is the measured height of the headline's own text band. When it
-    is known the crop is scaled so Tesseract sees TITLE_TARGET_BAND_PX — the
-    same rule the body path uses, and for the same measured reason: at native
-    scale the OCR COLLAPSED on one of three captures ('දිමුදු ිළ ුකී ි දු ී'),
-    and any downscale into 40-90 px recovered it.
-    """
+def read_title_region(img, box, band_h: float = 0.0) -> tuple:
+    """OCR one headline region using CRAFT text detection and Tesseract."""
     x0, y0, x1, y1 = (int(v) for v in box)
     h, w = img.shape[:2]
     x0, y0 = max(0, x0 - 8), max(0, y0 - 8)
@@ -68,13 +63,21 @@ def read_title_region(img, box, band_h: float = 0.0) -> tuple:
     if crop.shape[0] * crop.shape[1] > MAX_REGION_PX:
         return '', 'region too large to be a headline'
 
-    # Capped at 1.0 for the same reason OCR_SCALE_MAX is: upscaling cannot
-    # restore detail that was never captured.
-    if band_h and band_h > 0:
-        s = min(1.0, TITLE_TARGET_BAND_PX / float(band_h))
-        if s < 0.999:
-            crop = cv2.resize(crop, None, fx=s, fy=s,
-                              interpolation=cv2.INTER_AREA)
+    # Stage 3: CRAFT Line Extraction + Stitching
+    try:
+        stitched_strip = extract_and_stitch_title(crop)
+    except Exception as e:
+        return '', f'CRAFT extraction failed: {e}'
+        
+    if stitched_strip is None:
+        return '', 'CRAFT could not extract/stitch any text lines'
+
+    # Stage 4: Binarization + Morphological Smoothing (MAT)
+    try:
+        # Assuming light background for now, fallback logic could be added if needed
+        _, binarized_bgr = binarize_strip(stitched_strip, is_dark_bg=False)
+    except Exception as e:
+        return '', f'Binarization failed: {e}'
 
     if not TITLE_TESSDATA.is_dir():
         return '', f'tessdata not found at {TITLE_TESSDATA}'
@@ -83,13 +86,14 @@ def read_title_region(img, box, band_h: float = 0.0) -> tuple:
     try:
         with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as t:
             tmp = t.name
-        cv2.imwrite(tmp, crop)
+        cv2.imwrite(tmp, binarized_bgr)
         env = dict(os.environ)
         env['TESSDATA_PREFIX'] = str(TITLE_TESSDATA)
+        # Use PSM 13 (raw line) as the image is now a single horizontal strip
         r = subprocess.run(
             ['tesseract', tmp, 'stdout', '--oem', '1',
-             '--psm', str(TITLE_TESS_PSM), '-l', TITLE_TESS_LANG],
-            capture_output=True, text=True, env=env, timeout=30)
+             '--psm', '13', '-l', 'sin_raw'],
+            capture_output=True, encoding='utf-8', env=env, timeout=30)
         if r.returncode != 0:
             return '', f'tesseract failed: {(r.stderr or "").strip()[:120]}'
         return ' '.join(r.stdout.split()), ''

@@ -160,7 +160,7 @@ TESS_CONFIG_PAGE  = '--oem 1 --psm 3'    # multi-column crop (close-up path)
 # margin below the measured 22 without reaching corpus pages (18-24 - the
 # overlap is real, which is why the pitch/glyph sanity check in
 # l3_segment/layout.py exists as a second gate).
-CLOSEUP_MIN_P75 = 20.0
+CLOSEUP_MIN_P75 = 28.0
 
 # Downscale applied to a close-up crop before OCR.
 # SELECTED BY EYE on a 220-character sample across scales 1.0 / 0.6 / 0.4 —
@@ -274,7 +274,7 @@ RAG_TIMEOUT_S = float(os.getenv('SINHALA_RAG_TIMEOUT', '60'))
 
 # 'stub' keeps Layer 4A returning the article unchanged; 'mat' reads the
 # headline with Janindu's sin_raw model. See layers/l4a_title/title.py.
-TITLE_MODE = os.getenv('SINHALA_TITLE_MODE', 'stub')
+TITLE_MODE = os.getenv('SINHALA_TITLE_MODE', 'mat')
 
 # See core/session.py. Neither number is measured; both are design choices.
 SESSION_TTL_S = float(os.getenv('SINHALA_SESSION_TTL', '1800'))   # 30 min

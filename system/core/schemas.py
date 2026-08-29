@@ -49,6 +49,7 @@ class Region(BaseModel):
     """A labelled sub-area inside an article (from layout detection)."""
     box: Box
     label: Literal['title', 'text', 'image', 'other'] = 'text'
+    crop_path: Optional[str] = None
 
 
 class Article(BaseModel):
@@ -56,6 +57,7 @@ class Article(BaseModel):
     index: int                                  # reading order, 0-based
     box: Box
     regions: List[Region] = []
+    crop_path: Optional[str] = None
 
     # ---- Layer 4A writes these (OTHER MEMBER) ----
     title_raw: str = ''
