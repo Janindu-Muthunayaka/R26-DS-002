@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sinhala Assistive Reader — Research Pipeline Dashboard</title>
+  <!-- Tailwind CSS & Heroicons -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: { 50: '#eef2ff', 500: '#6366f1', 600: '#4f46e5', 700: '#4338ca', 900: '#1e1b4b' },
+            surface: { 800: '#181b20', 900: '#0f1115', 950: '#090a0d' }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+Sinhala:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+    body { font-family: 'Inter', 'Noto Sans Sinhala', sans-serif; }
+    .mono { font-family: 'JetBrains Mono', monospace; }
+    .sinhala { font-family: 'Noto Sans Sinhala', sans-serif; }
+    .diff-del { background-color: rgba(239, 68, 68, 0.2); color: #f87171; text-decoration: line-through; padding: 1px 4px; border-radius: 4px; }
+    .diff-ins { background-color: rgba(34, 197, 94, 0.2); color: #4ade80; font-weight: 600; padding: 1px 4px; border-radius: 4px; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #0f1115; }
+    ::-webkit-scrollbar-thumb { background: #2d333b; border-radius: 4px; }
+  </style>
+</head>
+<body class="bg-surface-950 text-gray-200 min-h-screen flex flex-col">
+
+  <!-- ================= TOP NAVIGATION BAR ================= -->
+  <header class="bg-surface-900 border-b border-gray-800 sticky top-0 z-50 px-6 py-3.5 flex flex-wrap items-center justify-between gap-4">
+    <div class="flex items-center space-x-3">
+      <div class="w-9 h-9 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-bold shadow-lg shadow-indigo-500/30">
+        SR
+      </div>
+      <div>
+        <h1 class="text-base font-bold text-white tracking-tight flex items-center gap-2">
+          Sinhala Assistive Reader
+          <span class="text-xs px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 font-medium">R26-DS-002</span>
+        </h1>
+        <p class="text-xs text-gray-400">Multi-Stage Assistive Reading & Grounded Conversational AI</p>
+      </div>
+    </div>
+
+    <!-- Live Services Status Badges -->
+    <div class="flex items-center gap-2 text-xs font-mono">
+      <div id="status-main" class="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-gray-800/80 border border-gray-700">
+        <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+        <span class="text-gray-300">Server :8000</span>
+      </div>
+      <div id="status-voice" class="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-gray-800/80 border border-gray-700">
+        <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+        <span class="text-gray-300">Voice :8101</span>
+      </div>
+      <div id="status-rag" class="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-gray-800/80 border border-gray-700">
+        <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+        <span class="text-gray-300">RAG :8102</span>
+      </div>
+      <button id="btnSync" onclick="toggleLiveSync()" class="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-950/80 border border-emerald-700/60 text-emerald-300 hover:bg-emerald-900/80 transition" title="Auto-detect phone captures">
+        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+        <span>📱 Phone Sync: ON</span>
+      </button>
+      <button onclick="checkHealth()" class="p-1 text-gray-400 hover:text-white rounded hover:bg-gray-800 transition" title="Refresh Health">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- ================= MAIN CONTENT ================= -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 space-y-6">
+
+    <!-- UPLOAD & CAPTURE CONTROLS -->
+    <div class="bg-surface-900 border border-gray-800 rounded-xl p-5 shadow-sm">
+      <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div>
+          <h2 class="text-sm font-semibold text-white uppercase tracking-wider text-gray-400">Step 1: Document Capture & Frame Ingestion</h2>
+          <p class="text-xs text-gray-400 mt-0.5">Upload single photo or burst frames (f0, f1, f2) to execute the end-to-end pipeline.</p>
+        </div>
+        <div class="flex flex-wrap items-center gap-3 w-full md:w-auto">
+          <input type="file" id="fileInput" multiple accept="image/*" class="hidden" onchange="handleFileSelect(this.files)">
+          <button onclick="document.getElementById('fileInput').click()" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-200 border border-gray-700 rounded-lg text-xs font-medium flex items-center gap-2 transition">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+            Choose Frame(s)
+          </button>
+          <button id="btnRun" onclick="runCapture()" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-lg text-xs font-semibold flex items-center gap-2 shadow-md shadow-indigo-600/20 transition">
+            <span>Process Article</span>
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+          </button>
+        </div>
+      </div>
+      <div id="fileList" class="mt-3 text-xs text-gray-400 font-mono">No frames selected</div>
+    </div>
+
+    <!-- LATENCY & PIPELINE STAGE TIMINGS BAR -->
+    <div id="timingContainer" class="hidden bg-surface-900 border border-gray-800 rounded-xl p-4">
+      <div class="flex items-center justify-between text-xs mb-2">
+        <span class="font-semibold text-gray-300">Pipeline Execution Latency</span>
+        <span id="totalTime" class="font-mono text-indigo-400 font-bold">Total: --</span>
+      </div>
+      <div class="grid grid-cols-2 sm:grid-cols-5 gap-2 text-center text-xs font-mono">
+        <div class="bg-gray-800/50 p-2 rounded border border-gray-700/50">
+          <div class="text-gray-400 text-[10px] uppercase">L2 Select</div>
+          <div id="timeSelect" class="text-white font-bold">--</div>
+        </div>
+        <div class="bg-gray-800/50 p-2 rounded border border-gray-700/50">
+          <div class="text-gray-400 text-[10px] uppercase">L3 Layout & Deskew</div>
+          <div id="timeSegment" class="text-white font-bold">--</div>
+        </div>
+        <div class="bg-gray-800/50 p-2 rounded border border-gray-700/50">
+          <div class="text-gray-400 text-[10px] uppercase">L4A Title OCR</div>
+          <div id="timeTitle" class="text-white font-bold">--</div>
+        </div>
+        <div class="bg-gray-800/50 p-2 rounded border border-gray-700/50">
+          <div class="text-gray-400 text-[10px] uppercase">L4B Tesseract</div>
+          <div id="timeOcr" class="text-white font-bold">--</div>
+        </div>
+        <div class="bg-gray-800/50 p-2 rounded border border-gray-700/50">
+          <div class="text-gray-400 text-[10px] uppercase">L4B mT5 Correct</div>
+          <div id="timeCorrect" class="text-white font-bold">--</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MAIN TWO-COLUMN PIPELINE VIEW -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+      <!-- LEFT COLUMN: Image & Layout Analysis (5 Cols) -->
+      <div class="lg:col-span-5 space-y-6">
+
+        <!-- Visual Canvas with Bounding Boxes -->
+        <div class="bg-surface-900 border border-gray-800 rounded-xl overflow-hidden shadow-sm">
+          <div class="px-4 py-3 border-b border-gray-800 flex items-center justify-between">
+            <h3 class="text-xs font-semibold uppercase tracking-wider text-gray-300 flex items-center gap-2">
+              <svg class="w-4 h-4 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+              Layout & Segmentation
+            </h3>
+            <span id="badgeVerdict" class="text-[10px] font-mono px-2 py-0.5 rounded bg-gray-800 text-gray-400 border border-gray-700">Awaiting Capture</span>
+          </div>
+
+          <div class="p-4 flex flex-col items-center justify-center bg-black/40 min-h-[300px] relative">
+            <div id="canvasPlaceholder" class="text-center text-gray-500 py-16">
+              <svg class="w-12 h-12 mx-auto mb-2 opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+              <p class="text-xs">No image loaded yet</p>
+            </div>
+            <canvas id="layoutCanvas" class="hidden max-w-full h-auto rounded border border-gray-800 shadow-md"></canvas>
+          </div>
+
+          <!-- Quality & Deskew Metrics -->
+          <div class="p-4 bg-surface-800/40 border-t border-gray-800 grid grid-cols-2 gap-3 text-xs">
+            <div>
+              <span class="text-gray-500 block text-[10px] uppercase font-mono">Glyph Height (p75)</span>
+              <span id="metricGlyph" class="font-mono font-semibold text-gray-200">--</span>
+            </div>
+            <div>
+              <span class="text-gray-500 block text-[10px] uppercase font-mono">Laplacian Focus</span>
+              <span id="metricSharp" class="font-mono font-semibold text-gray-200">--</span>
+            </div>
+            <div class="col-span-2">
+              <span class="text-gray-500 block text-[10px] uppercase font-mono">Layout Analysis Info</span>
+              <p id="metricNote" class="text-[11px] text-gray-300 mt-0.5 leading-relaxed">--</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Component 1: Title OCR Box -->
+        <div class="bg-surface-900 border border-gray-800 rounded-xl p-4 shadow-sm">
+          <div class="flex items-center justify-between pb-2 mb-2 border-b border-gray-800">
+            <h3 class="text-xs font-semibold uppercase tracking-wider text-cyan-400 flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full bg-cyan-400"></span>
+              Component 1 — Headline Extraction
+            </h3>
+            <span class="text-[10px] font-mono text-gray-400">sin_raw (PSM 11)</span>
+          </div>
+          <div id="txtTitle" class="sinhala text-sm text-gray-100 font-semibold min-h-[36px] p-2.5 rounded bg-gray-950/60 border border-gray-800/80">
+            (Headline will appear here)
+          </div>
+        </div>
+
+      </div>
+
+      <!-- RIGHT COLUMN: OCR vs mT5 Error Correction (7 Cols) -->
+      <div class="lg:col-span-7 space-y-6">
+
+        <!-- Component 2: Post-OCR Correction Card -->
+        <div class="bg-surface-900 border border-gray-800 rounded-xl shadow-sm overflow-hidden flex flex-col h-full">
+          <div class="px-5 py-3.5 border-b border-gray-800 flex flex-wrap items-center justify-between gap-2">
+            <h3 class="text-xs font-semibold uppercase tracking-wider text-emerald-400 flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+              Component 2 — Post-OCR Sequence Correction (mT5-Small)
+            </h3>
+            <!-- Tab switcher -->
+            <div class="flex rounded-lg bg-gray-950 p-1 border border-gray-800 text-xs font-medium">
+              <button id="tabDiff" onclick="setOcrTab('diff')" class="px-3 py-1 rounded bg-indigo-600 text-white shadow-sm transition">Visual Diff</button>
+              <button id="tabSide" onclick="setOcrTab('side')" class="px-3 py-1 rounded text-gray-400 hover:text-white transition">Side-by-Side</button>
+              <button id="tabFinal" onclick="setOcrTab('final')" class="px-3 py-1 rounded text-gray-400 hover:text-white transition">Corrected Only</button>
+            </div>
+          </div>
+
+          <div class="p-5 flex-1 space-y-4">
+            
+            <!-- DIFF VIEW -->
+            <div id="viewDiff" class="space-y-2">
+              <div class="flex items-center justify-between text-xs text-gray-400">
+                <span>Word-level Correction Comparison (<span class="text-emerald-400 font-semibold">Green: Corrected</span>, <span class="text-rose-400 line-through">Red: Raw OCR error</span>)</span>
+              </div>
+              <div id="ocrDiffContainer" class="sinhala text-sm leading-relaxed p-4 rounded-xl bg-gray-950/80 border border-gray-800/80 min-h-[220px] max-h-[380px] overflow-y-auto whitespace-pre-wrap">
+                (Upload an article to see live post-OCR correction diff)
+              </div>
+            </div>
+
+            <!-- SIDE BY SIDE VIEW -->
+            <div id="viewSide" class="hidden grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <span class="text-[11px] font-mono text-rose-400 uppercase block mb-1">Raw Tesseract OCR Output</span>
+                <div id="txtRawOcr" class="sinhala text-xs leading-relaxed p-3.5 rounded-lg bg-gray-950 border border-gray-800 text-gray-300 min-h-[220px] max-h-[380px] overflow-y-auto whitespace-pre-wrap">--</div>
+              </div>
+              <div>
+                <span class="text-[11px] font-mono text-emerald-400 uppercase block mb-1">mT5 Corrected Output</span>
+                <div id="txtCorrectedOcr" class="sinhala text-xs leading-relaxed p-3.5 rounded-lg bg-gray-950 border border-gray-800 text-gray-100 min-h-[220px] max-h-[380px] overflow-y-auto whitespace-pre-wrap">--</div>
+              </div>
+            </div>
+
+            <!-- FINAL CORRECTED ONLY VIEW -->
+            <div id="viewFinal" class="hidden">
+              <span class="text-[11px] font-mono text-emerald-400 uppercase block mb-1">Spoken Article Text</span>
+              <div id="txtFinalBody" class="sinhala text-sm leading-relaxed p-4 rounded-xl bg-gray-950 border border-gray-800 text-gray-100 min-h-[220px] max-h-[380px] overflow-y-auto whitespace-pre-wrap">--</div>
+            </div>
+
+          </div>
+
+          <!-- Quality Warnings footer -->
+          <div id="warningsBox" class="hidden px-5 py-3 bg-amber-500/10 border-t border-amber-500/20 text-xs text-amber-300 font-mono">
+            <span class="font-bold">Diagnostics:</span> <span id="warningsText"></span>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- ================= BOTTOM PANEL: CONVERSATIONAL QA (VOICE & RAG) ================= -->
+    <div class="bg-surface-900 border border-gray-800 rounded-xl p-5 shadow-sm space-y-4">
+      <div class="flex flex-wrap items-center justify-between gap-2 border-b border-gray-800 pb-3">
+        <div>
+          <h2 class="text-sm font-semibold text-white uppercase tracking-wider flex items-center gap-2">
+            <svg class="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 100-6 3 3 0 000 6z"/></svg>
+            Components 3 & 4 — Conversational Follow-Up, Personalization & Grounded RAG
+          </h2>
+          <p class="text-xs text-gray-400 mt-0.5">Voice intent classification, per-user adaptive online learning (River), and grounded semantic retrieval (GPT-5.4-mini).</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <div id="jobTag" class="text-xs font-mono text-gray-400 bg-gray-950 px-2.5 py-1 rounded border border-gray-800">Job: None</div>
+          <button onclick="runVivaDemo()" class="px-3 py-1 bg-purple-950/80 hover:bg-purple-900 border border-purple-700/60 text-purple-200 text-xs font-medium rounded-md shadow transition flex items-center gap-1.5" title="Demonstrate online learning across 3 distinct users">
+            <span>🧪 3-User Viva Demo</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- User Profile & Online Learning State Bar -->
+      <div class="bg-gray-950/70 p-3 rounded-lg border border-gray-800/80 flex flex-wrap items-center justify-between gap-3 text-xs">
+        <div class="flex items-center gap-2">
+          <span class="text-gray-400 font-medium">👤 Active User:</span>
+          <select id="selUser" onchange="onUserChange()" class="bg-gray-900 border border-gray-700 rounded px-2.5 py-1 text-gray-200 font-mono text-xs focus:outline-none focus:border-indigo-500">
+            <option value="user_001">user_001 (Learns Simple)</option>
+            <option value="user_002">user_002 (Learns Detailed)</option>
+            <option value="user_003">user_003 (Learns StepByStep)</option>
+            <option value="user_custom">user_custom (Fresh State)</option>
+          </select>
+        </div>
+        <div class="flex items-center gap-3 font-mono text-[11px]">
+          <div class="flex items-center gap-1">
+            <span class="text-gray-500">Preference:</span>
+            <span id="profDominant" class="px-2 py-0.5 rounded bg-indigo-950 text-indigo-300 border border-indigo-800 font-semibold">--</span>
+          </div>
+          <div class="flex items-center gap-1.5 text-gray-400">
+            <span>Weights:</span>
+            <span id="profSimple" class="text-emerald-400">S: 0%</span>
+            <span class="text-gray-600">|</span>
+            <span id="profDetailed" class="text-blue-400">D: 0%</span>
+            <span class="text-gray-600">|</span>
+            <span id="profStep" class="text-amber-400">Steps: 0%</span>
+          </div>
+          <div class="flex items-center gap-1">
+            <span class="text-gray-500">Confirmed Signals:</span>
+            <span id="profNConf" class="text-gray-300 font-bold">0</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Preset Quick Voice Intents -->
+      <div class="flex flex-wrap items-center gap-2 text-xs">
+        <span class="text-gray-500 font-mono text-[11px] uppercase mr-1">Quick Commands:</span>
+        <button onclick="askQuestion('මේක සාරාංශ කරන්න')" class="px-2.5 py-1 rounded bg-purple-900/40 hover:bg-purple-800/60 border border-purple-700/50 text-purple-200 transition">✨ සාරාංශ කරන්න (Summarize → Simple)</button>
+        <button onclick="askQuestion('තවදුරටත් විස්තර කරන්න')" class="px-2.5 py-1 rounded bg-purple-900/40 hover:bg-purple-800/60 border border-purple-700/50 text-purple-200 transition">🔍 විස්තර කරන්න (Elaborate → Detailed)</button>
+        <button onclick="askQuestion('පියවරෙන් පියවර කියන්න')" class="px-2.5 py-1 rounded bg-purple-900/40 hover:bg-purple-800/60 border border-purple-700/50 text-purple-200 transition">🔢 පියවරෙන් පියවර (StepByStep)</button>
+        <button onclick="askQuestion('මෙහි ඇත්තේ කුමක්ද')" class="px-2.5 py-1 rounded bg-indigo-900/40 hover:bg-indigo-800/60 border border-indigo-700/50 text-indigo-200 transition">❓ කුමක්ද (Neutral Query)</button>
+        <button onclick="askQuestion('වචන කීයද')" class="px-2.5 py-1 rounded bg-gray-800 hover:bg-gray-700 border border-gray-700 text-gray-300 transition">වචන කීයද (Length)</button>
+        <button onclick="askQuestion('ශීර්ෂය මොකක්ද')" class="px-2.5 py-1 rounded bg-gray-800 hover:bg-gray-700 border border-gray-700 text-gray-300 transition">ශීර්ෂය (Title)</button>
+        <button onclick="askQuestion('නවත්වන්න')" class="px-2.5 py-1 rounded bg-rose-950/60 hover:bg-rose-900/80 border border-rose-800/50 text-rose-300 transition">🛑 නවත්වන්න (Stop)</button>
+        <button onclick="askQuestion('නැවත කියවන්න')" class="px-2.5 py-1 rounded bg-gray-800 hover:bg-gray-700 border border-gray-700 text-gray-300 transition">නැවත (Repeat)</button>
+      </div>
+
+      <!-- Freeform Question Input -->
+      <div class="flex gap-2">
+        <input type="text" id="inpQuestion" placeholder="Type a Sinhala question (e.g., 'මේ ලිපියෙන් කියවෙන්නේ කුමක් ගැනද?')..." 
+               class="sinhala flex-1 bg-gray-950 border border-gray-700 rounded-lg px-4 py-2.5 text-sm text-gray-100 placeholder-gray-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+               onkeydown="if(event.key==='Enter') askQuestion(this.value)">
+        <button id="btnAsk" onclick="askQuestion(document.getElementById('inpQuestion').value)" class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold shadow-md transition flex items-center gap-1.5">
+          <span>Ask</span>
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+        </button>
+      </div>
+
+      <!-- QA Response Display Box -->
+      <div id="qaResultContainer" class="hidden grid grid-cols-1 md:grid-cols-12 gap-4 pt-2">
+        
+        <!-- Voice Metadata (4 Cols) -->
+        <div class="md:col-span-4 bg-gray-950/60 p-4 rounded-xl border border-gray-800 space-y-2 text-xs">
+          <span class="text-gray-400 font-mono uppercase text-[10px] block">Component 4: Voice Intent & Style</span>
+          <div class="flex items-center gap-2">
+            <span class="text-gray-500">Route:</span>
+            <span id="qaRoute" class="font-mono font-bold text-white bg-gray-800 px-2 py-0.5 rounded">--</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="text-gray-500">Intent:</span>
+            <span id="qaIntent" class="font-mono font-bold text-purple-400 bg-purple-950/50 px-2 py-0.5 rounded border border-purple-800/40">--</span>
+          </div>
+          <div id="qaTranslationRow">
+            <span class="text-gray-500 block">English Translation:</span>
+            <span id="qaTranslation" class="font-mono text-gray-300 text-[11px]">--</span>
+          </div>
+          <div>
+            <span class="text-gray-500 block">Style / Personalization:</span>
+            <span id="qaStyle" class="text-gray-300 font-medium">Standard</span>
+          </div>
+        </div>
+
+        <!-- Generated Answer & Sources (8 Cols) -->
+        <div class="md:col-span-8 bg-gray-950/80 p-4 rounded-xl border border-gray-800 space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="text-gray-400 font-mono uppercase text-[10px]">Component 3: Grounded Answer</span>
+            <button onclick="speakAnswer()" class="text-xs text-indigo-400 hover:text-indigo-300 flex items-center gap-1">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/></svg>
+              Listen
+            </button>
+          </div>
+          <div id="qaAnswer" class="sinhala text-sm font-medium text-gray-100 leading-relaxed bg-surface-900/60 p-3.5 rounded-lg border border-gray-800">
+            --
+          </div>
+
+          <!-- Retrieved RAG Chunks / Sources -->
+          <div id="qaSourcesContainer" class="hidden space-y-1.5 pt-2 border-t border-gray-800/80">
+            <span class="text-[10px] font-mono text-gray-500 uppercase">Retrieved Vector Evidence:</span>
+            <div id="qaSourcesList" class="space-y-1 text-xs text-gray-400"></div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- ================= JAVASCRIPT APP LOGIC ================= -->
+  <script>
+    let currentJob = null;
+    let currentDoc = null;
+    let selectedFiles = [];
+    let activeTab = 'diff';
+
+    // On Load
+    document.addEventListener('DOMContentLoaded', () => {
+      checkHealth();
+      setInterval(checkHealth, 5000);
+    });
+
+    // Check Microservices Health via consolidated backend endpoint
+    async function checkHealth() {
+      try {
+        const r = await fetch('/health/all');
+        const data = await r.json();
+        setHealthBadge('status-main', data.server, 'Server :8000 (Ready)');
+        setHealthBadge('status-voice', data.voice, data.voice ? 'Voice :8101 (Ready)' : 'Voice :8101 (Down)');
+        setHealthBadge('status-rag', data.rag, data.rag ? 'RAG :8102 (Ready)' : 'RAG :8102 (Down)');
+      } catch (e) {
+        setHealthBadge('status-main', false, 'Server :8000 (Down)');
+        setHealthBadge('status-voice', false, 'Voice :8101 (Down)');
+        setHealthBadge('status-rag', false, 'RAG :8102 (Down)');
+      }
+    }
+
+    function setHealthBadge(id, isOk, text) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.innerHTML = `
+        <span class="w-2 h-2 rounded-full ${isOk ? 'bg-emerald-400' : 'bg-rose-500'}"></span>
+        <span class="${isOk ? 'text-gray-200' : 'text-rose-400'}">${text}</span>
+      `;
+    }
+
+    // Handle File Selection
+    function handleFileSelect(files) {
+      selectedFiles = Array.from(files);
+      const listEl = document.getElementById('fileList');
+      if (!selectedFiles.length) {
+        listEl.textContent = 'No frames selected';
+        return;
+      }
+      listEl.textContent = `Selected: ${selectedFiles.map(f => f.name).join(', ')}`;
+    }
+
+    // Run Capture Pipeline
+    async function runCapture() {
+      if (!selectedFiles.length) {
+        alert('Please choose at least one image frame to process.');
+        return;
+      }
+
+      const btn = document.getElementById('btnRun');
+      btn.disabled = true;
+      btn.innerHTML = `<svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Processing...`;
+
+      const formData = new FormData();
+      selectedFiles.forEach(f => formData.append('frames', f));
+
+      try {
+        const res = await fetch('/capture', { method: 'POST', body: formData });
+        const data = await res.json();
+        currentJob = data.job;
+
+        document.getElementById('jobTag').textContent = `Job: ${currentJob}`;
+
+        // Update Timings
+        renderTimings(data.timings);
+
+        // Fetch Full Document for detailed inspect
+        if (currentJob) {
+          const docRes = await fetch(`/document/${currentJob}`);
+          const docData = await docRes.json();
+          if (docData.ok && docData.document) {
+            currentDoc = docData.document;
+            renderDocument(data, currentDoc);
+          } else {
+            renderDocument(data, null);
+          }
+        }
+      } catch (err) {
+        alert('Pipeline execution failed: ' + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<span>Process Article</span><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>`;
+      }
+    }
+
+    // Render Full Document Analysis
+    function renderDocument(reply, doc) {
+      // 1. Headline
+      const titleEl = document.getElementById('txtTitle');
+      titleEl.textContent = reply.title || (doc && doc.articles && doc.articles[0] && doc.articles[0].title) || '(No headline located in this frame)';
+
+      // 2. Body Texts
+      const rawText = doc && doc.articles && doc.articles[0] ? doc.articles[0].body_raw : '';
+      const correctedText = reply.body || (doc && doc.articles && doc.articles[0] ? doc.articles[0].body : '');
+
+      document.getElementById('txtRawOcr').textContent = rawText || '(Empty raw OCR)';
+      document.getElementById('txtCorrectedOcr').textContent = correctedText || '(Empty corrected text)';
+      document.getElementById('txtFinalBody').textContent = correctedText || '(Empty)';
+
+      // 3. Diff Rendering
+      renderWordDiff(rawText, correctedText);
+
+      // 4. Metrics & Verdict
+      const art = (doc && doc.articles && doc.articles[0]) || {};
+      document.getElementById('metricGlyph').textContent = art.glyph_p75 ? `${art.glyph_p75.toFixed(1)} px` : '--';
+      document.getElementById('metricSharp').textContent = reply.quality && reply.quality.sharpness ? reply.quality.sharpness.toFixed(0) : '--';
+      document.getElementById('metricNote').textContent = art.note || 'Analysis completed';
+
+      const verdictEl = document.getElementById('badgeVerdict');
+      if (reply.ok) {
+        verdictEl.className = 'text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800';
+        verdictEl.textContent = 'Capture OK';
+      } else {
+        verdictEl.className = 'text-[10px] font-mono px-2 py-0.5 rounded bg-rose-950 text-rose-300 border border-rose-800';
+        verdictEl.textContent = 'Refused / Marginal';
+      }
+
+      // 5. Warnings
+      const warnBox = document.getElementById('warningsBox');
+      const warnText = document.getElementById('warningsText');
+      if (reply.warnings && reply.warnings.length) {
+        warnBox.classList.remove('hidden');
+        warnText.textContent = reply.warnings.join(' | ');
+      } else {
+        warnBox.classList.add('hidden');
+      }
+
+      // 6. Draw Image Canvas with Bounding Boxes
+      if (currentJob) {
+        drawCanvasOverlay(`/frame/${currentJob}`, art);
+      }
+    }
+
+    // Draw Overlay on Canvas
+    function drawCanvasOverlay(imgUrl, article) {
+      const canvas = document.getElementById('layoutCanvas');
+      const placeholder = document.getElementById('canvasPlaceholder');
+      const ctx = canvas.getContext('2d');
+      const img = new Image();
+
+      img.onload = () => {
+        placeholder.classList.add('hidden');
+        canvas.classList.remove('hidden');
+
+        canvas.width = img.width;
+        canvas.height = img.height;
+
+        // Draw the background image
+        ctx.drawImage(img, 0, 0);
+
+        let drewAny = false;
+
+        // Draw regions (Headline vs Body)
+        if (article && article.regions && article.regions.length) {
+          article.regions.forEach(r => {
+            const b = r.box;
+            if (!b) return;
+            const w = b.x2 - b.x1;
+            const h = b.y2 - b.y1;
+            drewAny = true;
+
+            if (r.label === 'title') {
+              ctx.strokeStyle = '#06b6d4'; // Cyan
+              ctx.lineWidth = Math.max(4, img.width / 300);
+              ctx.strokeRect(b.x1, b.y1, w, h);
+              ctx.fillStyle = 'rgba(6, 182, 212, 0.15)';
+              ctx.fillRect(b.x1, b.y1, w, h);
+              ctx.fillStyle = '#06b6d4';
+              ctx.font = `bold ${Math.max(18, img.width / 40)}px sans-serif`;
+              ctx.fillText('HEADLINE (Title)', b.x1 + 8, Math.max(30, b.y1 - 10));
+            } else {
+              ctx.strokeStyle = '#10b981'; // Emerald Green
+              ctx.lineWidth = Math.max(4, img.width / 300);
+              ctx.strokeRect(b.x1, b.y1, w, h);
+              ctx.fillStyle = 'rgba(16, 185, 129, 0.12)';
+              ctx.fillRect(b.x1, b.y1, w, h);
+              ctx.fillStyle = '#10b981';
+              ctx.font = `bold ${Math.max(18, img.width / 40)}px sans-serif`;
+              ctx.fillText('BODY COLUMN', b.x1 + 8, Math.max(30, b.y1 - 10));
+            }
+          });
+        }
+
+        // If no sub-regions, draw main article bounding box
+        if (!drewAny && article && article.box) {
+          const b = article.box;
+          const w = b.x2 - b.x1;
+          const h = b.y2 - b.y1;
+          ctx.strokeStyle = '#10b981';
+          ctx.lineWidth = Math.max(4, img.width / 300);
+          ctx.strokeRect(b.x1, b.y1, w, h);
+          ctx.fillStyle = 'rgba(16, 185, 129, 0.12)';
+          ctx.fillRect(b.x1, b.y1, w, h);
+          ctx.fillStyle = '#10b981';
+          ctx.font = `bold ${Math.max(18, img.width / 40)}px sans-serif`;
+          ctx.fillText('READ REGION', b.x1 + 8, Math.max(30, b.y1 - 10));
+        }
+      };
+
+      img.onerror = () => {
+        placeholder.classList.remove('hidden');
+        canvas.classList.add('hidden');
+      };
+
+      img.src = imgUrl;
+    }
+
+    // Word-Level Diff Generator
+    function renderWordDiff(raw, corrected) {
+      const container = document.getElementById('ocrDiffContainer');
+      if (!raw && !corrected) {
+        container.innerHTML = '<span class="text-gray-500">No text to diff</span>';
+        return;
+      }
+
+      const rawWords = (raw || '').split(/\s+/);
+      const corWords = (corrected || '').split(/\s+/);
+
+      let html = '';
+      const maxLen = Math.max(rawWords.length, corWords.length);
+
+      for (let i = 0; i < maxLen; i++) {
+        const rw = rawWords[i] || '';
+        const cw = corWords[i] || '';
+
+        if (rw === cw) {
+          html += `<span>${cw}</span> `;
+        } else {
+          if (rw) html += `<span class="diff-del">${rw}</span> `;
+          if (cw) html += `<span class="diff-ins">${cw}</span> `;
+        }
+      }
+      container.innerHTML = html;
+    }
+
+    // Tab switcher
+    function setOcrTab(tab) {
+      activeTab = tab;
+      document.getElementById('viewDiff').classList.toggle('hidden', tab !== 'diff');
+      document.getElementById('viewSide').classList.toggle('hidden', tab !== 'side');
+      document.getElementById('viewFinal').classList.toggle('hidden', tab !== 'final');
+
+      document.getElementById('tabDiff').className = tab === 'diff' ? 'px-3 py-1 rounded bg-indigo-600 text-white shadow-sm transition' : 'px-3 py-1 rounded text-gray-400 hover:text-white transition';
+      document.getElementById('tabSide').className = tab === 'side' ? 'px-3 py-1 rounded bg-indigo-600 text-white shadow-sm transition' : 'px-3 py-1 rounded text-gray-400 hover:text-white transition';
+      document.getElementById('tabFinal').className = tab === 'final' ? 'px-3 py-1 rounded bg-indigo-600 text-white shadow-sm transition' : 'px-3 py-1 rounded text-gray-400 hover:text-white transition';
+    }
+
+    // Render Execution Timings
+    function renderTimings(t) {
+      if (!t) return;
+      document.getElementById('timingContainer').classList.remove('hidden');
+      document.getElementById('totalTime').textContent = `Total: ${t.total ? t.total.toFixed(2) : '--'}s`;
+      document.getElementById('timeSelect').textContent = `${t.select ? t.select.toFixed(2) : '0.00'}s`;
+      document.getElementById('timeSegment').textContent = `${t.segment ? t.segment.toFixed(2) : '0.00'}s`;
+      document.getElementById('timeTitle').textContent = `${t.title ? t.title.toFixed(2) : '0.00'}s`;
+      document.getElementById('timeOcr').textContent = `${t.ocr ? t.ocr.toFixed(2) : '0.00'}s`;
+      document.getElementById('timeCorrect').textContent = `${t.correct ? t.correct.toFixed(2) : '0.00'}s`;
+    }
+
+    // Ask Question to Conversational Pipeline
+    async function askQuestion(text) {
+      if (!text || !text.trim()) return;
+      if (!currentJob) {
+        alert('Please process an article capture first.');
+        return;
+      }
+
+      const activeUser = document.getElementById('selUser').value;
+      const btn = document.getElementById('btnAsk');
+      btn.disabled = true;
+      btn.innerHTML = `<svg class="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>`;
+
+      try {
+        const res = await fetch('/ask', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ job: currentJob, text: text.trim(), user_id: activeUser })
+        });
+        const data = await res.json();
+
+        // Render QA Box
+        const qaContainer = document.getElementById('qaResultContainer');
+        qaContainer.classList.remove('hidden');
+
+        document.getElementById('qaRoute').textContent = data.route || 'LOCAL';
+        document.getElementById('qaIntent').textContent = data.intent || 'ASK';
+        document.getElementById('qaTranslation').textContent = data.english_translation || '--';
+        document.getElementById('qaStyle').textContent = data.style_class ? `${data.style_class}` : 'Standard';
+        document.getElementById('qaAnswer').textContent = data.speakable || data.answer_si || '(No answer)';
+
+        if (data.user_profile) {
+          renderUserProfile(data.user_profile);
+        } else {
+          fetchUserProfile(activeUser);
+        }
+
+        // Sources list
+        const sourcesList = document.getElementById('qaSourcesList');
+        const sourcesBox = document.getElementById('qaSourcesContainer');
+        if (data.sources && data.sources.length) {
+          sourcesBox.classList.remove('hidden');
+          sourcesList.innerHTML = data.sources.map((s, i) => `
+            <div class="p-1.5 rounded bg-gray-900 border border-gray-800 flex justify-between items-center text-[11px]">
+              <span class="text-gray-300">Chunk #${i+1} (${s.source_type || 'read'})</span>
+              <span class="font-mono text-purple-400">Score: ${s.score ? s.score.toFixed(3) : 'anchor'}</span>
+            </div>
+          `).join('');
+        } else {
+          sourcesBox.classList.add('hidden');
+        }
+
+      } catch (err) {
+        alert('Ask failed: ' + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<span>Ask</span><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>`;
+      }
+    }
+
+    // User Switcher & Online Learning Profile Logic
+    async function onUserChange() {
+      const activeUser = document.getElementById('selUser').value;
+      await fetchUserProfile(activeUser);
+    }
+
+    async function fetchUserProfile(userId) {
+      try {
+        const res = await fetch(`http://127.0.0.1:8101/user/${userId}`);
+        const data = await res.json();
+        if (data.ok && data.summary) {
+          renderUserProfile(data.summary);
+        }
+      } catch (e) {
+        // quiet
+      }
+    }
+
+    function renderUserProfile(prof) {
+      if (!prof) return;
+      document.getElementById('profDominant').textContent = prof.dominant_preference || 'None (Cold Start)';
+      document.getElementById('profNConf').textContent = prof.n_confirmed || 0;
+      const hw = prof.history_weights || {};
+      const tot = (hw.Simple || 0) + (hw.Detailed || 0) + (hw.StepByStep || 0) || 1.0;
+      const sPct = Math.round(((hw.Simple || 0) / tot) * 100);
+      const dPct = Math.round(((hw.Detailed || 0) / tot) * 100);
+      const stPct = Math.round(((hw.StepByStep || 0) / tot) * 100);
+      document.getElementById('profSimple').textContent = `S: ${sPct}%`;
+      document.getElementById('profDetailed').textContent = `D: ${dPct}%`;
+      document.getElementById('profStep').textContent = `Steps: ${stPct}%`;
+    }
+
+    // Viva 3-User Comparison Demo Modal
+    async function runVivaDemo() {
+      const modal = document.getElementById('vivaModal');
+      const content = document.getElementById('vivaModalContent');
+      modal.classList.remove('hidden');
+      content.innerHTML = `
+        <div class="flex items-center justify-center p-12 space-y-3">
+          <div class="text-center space-y-2">
+            <svg class="animate-spin h-8 w-8 text-purple-500 mx-auto" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+            <p class="text-sm font-semibold text-gray-200">Running 3-User Adaptive Learning Simulation...</p>
+            <p class="text-xs text-gray-500">1. Teaching User 1 (Simple), User 2 (Detailed), User 3 (Step-by-Step)<br>2. Asking all 3 users the identical neutral query "මෙහි ඇත්තේ කුමක්ද"</p>
+          </div>
+        </div>
+      `;
+
+      try {
+        const res = await fetch('http://127.0.0.1:8101/demo/compare', { method: 'POST' });
+        const data = await res.json();
+        if (!data.ok) throw new Error('Simulation failed');
+
+        let html = `
+          <div class="space-y-4">
+            <div class="bg-purple-950/40 p-3 rounded-lg border border-purple-800/40">
+              <span class="text-xs font-semibold text-purple-300">Neutral Evaluation Query:</span>
+              <p class="sinhala text-sm text-white font-medium mt-0.5">"${data.neutral_query}" (What is in this?)</p>
+              <p class="text-[11px] text-gray-400 mt-1">Notice how the same input generates 3 completely different personalized outputs tailored to each user's online model:</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+        `;
+
+        for (const [uid, udata] of Object.entries(data.comparison)) {
+          const badgeClass = udata.predicted_style === 'Simple' ? 'bg-emerald-950 text-emerald-300 border-emerald-700' :
+                             udata.predicted_style === 'Detailed' ? 'bg-blue-950 text-blue-300 border-blue-700' :
+                             'bg-amber-950 text-amber-300 border-amber-700';
+
+          html += `
+            <div class="bg-gray-900/90 p-3.5 rounded-xl border border-gray-800 space-y-2">
+              <div class="flex items-center justify-between">
+                <span class="font-mono text-xs text-gray-400 font-bold">${uid}</span>
+                <span class="px-2 py-0.5 rounded text-[10px] font-bold border ${badgeClass}">${udata.predicted_style}</span>
+              </div>
+              <div class="text-[11px] text-gray-500 font-mono">
+                Source: <span class="text-gray-300">${udata.style_source}</span>
+              </div>
+              <div class="p-2 rounded bg-gray-950 border border-gray-800/80 text-xs text-gray-200">
+                <span class="text-[10px] uppercase text-gray-500 block">Prompt Modifier Injected:</span>
+                "${udata.prompt_modifier}"
+              </div>
+              <div class="text-[10px] text-gray-400 font-mono pt-1">
+                Confirmed Evidence: <span class="text-purple-300 font-bold">${udata.profile.n_confirmed}</span>
+              </div>
+            </div>
+          `;
+        }
+
+        html += `
+            </div>
+            <div class="text-right pt-2">
+              <button onclick="closeVivaModal()" class="px-4 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-200 rounded-lg text-xs font-semibold">Close</button>
+            </div>
+          </div>
+        `;
+        content.innerHTML = html;
+        fetchUserProfile(document.getElementById('selUser').value);
+
+      } catch (err) {
+        content.innerHTML = `<div class="p-6 text-center text-rose-400 text-sm">Demo error: ${err.message}<br><button onclick="closeVivaModal()" class="mt-4 px-4 py-1.5 bg-gray-800 text-white rounded text-xs">Close</button></div>`;
+      }
+    }
+
+    function closeVivaModal() {
+      document.getElementById('vivaModal').classList.add('hidden');
+    }
+
+    // Web Speech API browser TTS fallback
+    function speakAnswer() {
+      const text = document.getElementById('qaAnswer').textContent;
+      if (!text || text === '--') return;
+      if ('speechSynthesis' in window) {
+        const utter = new SpeechSynthesisUtterance(text);
+        utter.lang = 'si-LK';
+        window.speechSynthesis.speak(utter);
+      }
+    }
+
+    // Live Phone Sync Functionality
+    let liveSync = true;
+    let lastSyncedJob = null;
+
+    function toggleLiveSync() {
+      liveSync = !liveSync;
+      const btn = document.getElementById('btnSync');
+      if (liveSync) {
+        btn.className = 'flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-950/80 border border-emerald-700/60 text-emerald-300 hover:bg-emerald-900/80 transition';
+        btn.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span><span>📱 Phone Sync: ON</span>`;
+      } else {
+        btn.className = 'flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-gray-800/80 border border-gray-700 text-gray-400 hover:bg-gray-800 transition';
+        btn.innerHTML = `<span class="w-2 h-2 rounded-full bg-gray-500"></span><span>📱 Phone Sync: OFF</span>`;
+      }
+    }
+
+    // Auto-Poll for Phone Captures every 1.5s
+    setInterval(async () => {
+      if (!liveSync) return;
+      try {
+        const res = await fetch('/latest');
+        const data = await res.json();
+        if (data.ok && data.job && data.job !== lastSyncedJob) {
+          lastSyncedJob = data.job;
+          currentJob = data.job;
+          document.getElementById('jobTag').textContent = `Job: ${currentJob} (📱 Live Phone Capture)`;
+          
+          if (data.document && data.document.timings) {
+            renderTimings(data.document.timings);
+          } else if (data.reply && data.reply.timings) {
+            renderTimings(data.reply.timings);
+          }
+
+          renderDocument(data.reply, data.document);
+        }
+      } catch (e) {
+        // quiet polling
+      }
+    }, 1500);
+
+    // Initial Profile Fetch
+    onUserChange();
+
+  </script>
+
+  <!-- ================= VIVA 3-USER COMPARISON DEMO MODAL ================= -->
+  <div id="vivaModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-surface-900 border border-gray-700 rounded-2xl max-w-3xl w-full p-6 shadow-2xl space-y-4">
+      <div class="flex items-center justify-between border-b border-gray-800 pb-3">
+        <div class="flex items-center gap-2">
+          <span class="text-xl">🧪</span>
+          <h3 class="text-base font-bold text-white">Component 4: 3-User Adaptive Learning Viva Demonstration</h3>
+        </div>
+        <button onclick="closeVivaModal()" class="text-gray-400 hover:text-white p-1 rounded-lg">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div id="vivaModalContent" class="py-2">
+        <!-- Dynamically injected -->
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>

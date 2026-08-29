@@ -8,3 +8,9 @@ venv/
 models/
 *.pt
 *.safetensors
+
+# EXCEPTION: re-include system/models/ so Git LFS can track the copies there.
+# See the root .gitignore for the full explanation. The directory is negated
+# before its contents because git will not descend into an excluded directory.
+!/models/
+!/models/**

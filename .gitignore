@@ -72,3 +72,47 @@ Work/Janindu/0_Data/Model/checkpoint.pth
 /Work/Janindu/3_FrontEnd/Inputs
 /Work/Janindu/0_Data
 /Work/Janindu/1_Preprocess/venvpaddle/Lib
+
+# ---------------------------------------------------------------------------
+# EXCEPTION: the model copies this system loads, tracked with Git LFS
+# Added 24 Aug 2026 (Ishara).
+#
+# Everything above deliberately excludes every model file. These two lines
+# re-include ONE location: system/models/, which holds the copies pushed to
+# GitHub via LFS.
+#
+# The directory itself has to be negated FIRST. Git cannot re-include a file
+# whose parent directory is excluded, so `!/system/models/` is what lets git
+# descend into it at all; `!/system/models/**` then re-includes the contents
+# past the *.pt / *.safetensors rules above.
+#
+# Nothing here affects Work/Janindu/ or any other member's rules - those are
+# all above and still apply.
+!/system/models/
+!/system/models/**
+
+
+# ===========================================================================
+# SECRETS  (Ishara, 27 Aug 2026 — re-applied 28 Aug after the reset)
+# ===========================================================================
+# `origin` is shared with three teammates and GIT DOES NOT FORGET. A key
+# committed once stays in the history of every clone and every fork, and
+# deleting the file in a later commit removes it from the working tree and
+# from nothing else. Rotating the key is then the ONLY remedy.
+#
+# So: no key, token or password is ever written into a tracked file. Real
+# values live in .env, which is ignored here. services/.env.example documents
+# the SHAPE with empty values and IS tracked, so a teammate knows which
+# variables to set without ever seeing one.
+#
+# Checked with:  git check-ignore -v .env
+# (silence there means NOT ignored — that was the state this section fixes.)
+.env
+.env.*
+!.env.example
+!**/.env.example
+**/.env
+**/.env.local
+*.pem
+*.key
+secrets.json
