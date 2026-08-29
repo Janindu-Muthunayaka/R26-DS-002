@@ -151,7 +151,11 @@ def build(pipeline, web_dir: Path):
 
     @app.get('/', response_class=HTMLResponse)
     def index():
-        return _page('reader.html')
+        return _page('dashboard.html') if (web_dir / 'dashboard.html').exists() else _page('reader.html')
+
+    @app.get('/dashboard', response_class=HTMLResponse)
+    def dashboard():
+        return _page('dashboard.html')
 
     @app.get('/debug', response_class=HTMLResponse)
     def debug():
@@ -161,6 +165,39 @@ def build(pipeline, web_dir: Path):
     def health():
         return {'ok': True, 'device': getattr(pipeline, 'dev', '?'),
                 'root': os.getenv('SINHALA_ROOT', '')}
+
+    @app.get('/health/all')
+    def health_all():
+        """Returns consolidated health of all 3 microservices (Main, Voice :8101, RAG :8102) without browser CORS issues."""
+        import urllib.request
+        voice_ok, rag_ok = False, False
+        try:
+            with urllib.request.urlopen('http://127.0.0.1:8101/health', timeout=1.5) as r:
+                voice_ok = (r.status == 200)
+        except Exception:
+            pass
+        try:
+            with urllib.request.urlopen('http://127.0.0.1:8102/health', timeout=1.5) as r:
+                rag_ok = (r.status == 200)
+        except Exception:
+            pass
+        return {
+            'server': True,
+            'voice': voice_ok,
+            'rag': rag_ok,
+            'device': getattr(pipeline, 'dev', '?')
+        }
+
+    @app.get('/frame/{job}')
+    def get_frame(job: str):
+        """Returns the captured JPEG frame for this job."""
+        sess = WORK_DIR / job
+        if not sess.exists():
+            return JSONResponse({'error': 'no such job'}, status_code=404)
+        files = sorted(sess.glob('f*.jpg')) or sorted(sess.glob('*.jpg'))
+        if files:
+            return FileResponse(str(files[0]))
+        return JSONResponse({'error': 'no frame found'}, status_code=404)
 
     # The phone stamps its own glyph estimate and the sharpness at the instant
     # the shutter fired into every filename it uploads:
@@ -285,6 +322,9 @@ def build(pipeline, web_dir: Path):
         return Answer(
             ok=res['ok'], job=q.job, route=res['route'], intent=res['intent'],
             speakable=res['speakable'], answer_si=res['answer_si'],
+            english_translation=voice.get('english_translation', ''),
+            style_class=voice.get('style_class', ''),
+            user_profile=voice.get('user_profile'),
             sources=res['sources'], warnings=res['warnings'],
             timings={'voice': t_voice, 'generate': t_gen,
                      'total': round(time.time() - t0, 2)},
@@ -322,6 +362,24 @@ def build(pipeline, web_dir: Path):
             return JSONResponse({'ok': False, 'job': job,
                                  'error': 'not in session'}, status_code=404)
         return {'ok': True, 'job': job, 'document': doc.model_dump()}
+
+    @app.get('/latest')
+    def latest():
+        """Returns the most recent job id and summary, enabling real-time dashboard sync with phone captures."""
+        jobs = sessions.jobs()
+        if not jobs:
+            return {'ok': False, 'job': None, 'message': 'no captures in session'}
+        latest_job = jobs[0]
+        doc = sessions.get(latest_job)
+        if doc is None:
+            return {'ok': False, 'job': latest_job, 'message': 'session expired'}
+        return {
+            'ok': True,
+            'job': latest_job,
+            'age_s': round(sessions.age_of(latest_job) or 0.0, 1),
+            'document': doc.model_dump(),
+            'reply': _document_to_reply(doc, latest_job)
+        }
 
     @app.get('/audio/{job}')
     def audio(job: str):

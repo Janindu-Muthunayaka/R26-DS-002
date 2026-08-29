@@ -40,11 +40,27 @@ import tempfile
 
 import cv2
 
+import numpy as np
+
 from core.config import (TITLE_MODE, TITLE_TARGET_BAND_PX, TITLE_TESS_LANG,
                          TITLE_TESS_PSM, TITLE_TESSDATA)
 from core.schemas import Article
 
 MAX_REGION_PX = 4000 * 1500
+
+
+def _enhance_headline_crop(crop):
+    """Enhance headline crop contrast and preserve colored ink (e.g. red/maroon/brown headlines)."""
+    if crop.ndim == 3:
+        lab = cv2.cvtColor(crop, cv2.COLOR_BGR2LAB)
+        l, _, _ = cv2.split(lab)
+        clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8, 8))
+        cl = clahe.apply(l)
+        min_ch = np.min(crop, axis=2)
+        gray = cv2.min(cl, min_ch)
+    else:
+        gray = crop
+    return cv2.normalize(gray, None, 0, 255, cv2.NORM_MINMAX)
 
 
 def read_title_region(img, box, band_h: float = 0.0) -> tuple:
@@ -68,6 +84,9 @@ def read_title_region(img, box, band_h: float = 0.0) -> tuple:
     if crop.shape[0] * crop.shape[1] > MAX_REGION_PX:
         return '', 'region too large to be a headline'
 
+    # Color & contrast adaptive enhancement (recovers red/brown headline ink)
+    crop = _enhance_headline_crop(crop)
+
     # Capped at 1.0 for the same reason OCR_SCALE_MAX is: upscaling cannot
     # restore detail that was never captured.
     if band_h and band_h > 0:
@@ -89,7 +108,8 @@ def read_title_region(img, box, band_h: float = 0.0) -> tuple:
         r = subprocess.run(
             ['tesseract', tmp, 'stdout', '--oem', '1',
              '--psm', str(TITLE_TESS_PSM), '-l', TITLE_TESS_LANG],
-            capture_output=True, text=True, env=env, timeout=30)
+            capture_output=True, text=True, encoding='utf-8', errors='replace',
+            env=env, timeout=30)
         if r.returncode != 0:
             return '', f'tesseract failed: {(r.stderr or "").strip()[:120]}'
         return ' '.join(r.stdout.split()), ''

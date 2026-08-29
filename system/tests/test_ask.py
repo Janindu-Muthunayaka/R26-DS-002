@@ -32,10 +32,10 @@ from core.schemas import Article, Box, Document, Region   # noqa: E402
 from app.server import build                              # noqa: E402
 
 
-# Twelve DISTINCT sentences. An earlier version repeated one sentence, so
-# parts 0 and 1 came back byte-identical and the cursor test passed whether
-# or not the cursor had actually moved. Distinct text is what makes the
-# assertion mean anything.
+@pytest.fixture(autouse=True)
+def isolate_ask_tests(monkeypatch):
+    monkeypatch.setattr('layers.l0_voice.voice.VOICE_MODE', 'stub')
+    monkeypatch.setattr('layers.l6_generator.generate.RAG_MODE', 'off')
 LONG = ' '.join(
     f'කුරුණෑගල නගර සභාව අද පැවති {i} වන රැස්වීමේදී නව තීරණයක් ගත් බව '
     f'සභාපතිවරයා පැවසීය.'

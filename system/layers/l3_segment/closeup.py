@@ -114,23 +114,13 @@ def _merge_rows(bands, join_gap):
     return [tuple(r) for r in rows]
 
 
-def headline_bands(img, med_line_h, min_ratio=TITLE_MIN_LINE_RATIO):
+def headline_bands(img, med_line_h, min_ratio=None):
     """Every headline-sized band in the frame, at any height.
 
-    THE THRESHOLD IS MEASURED, 27 Aug 2026, on the nine captures in
-    F:/App/backend/inbox (tools/measure_headline.py reproduces it):
-
-        tallest BODY line      1.28x - 1.70x of the median line height
-        tallest HEADLINE band  5.91x - 8.71x
-
-    Nothing lands between 1.70 and 5.91. The old value here was **1.6**, which
-    sits INSIDE the body range — so the tallest body line of every capture was
-    being reported as a headline. 3.0 is the middle of the empty gap.
-
-    Unlike the previous version this does NOT restrict the search to above the
-    body: the next article's headline below the block is exactly what article
-    isolation has to see.
+    Thresholded against the median line height, rejecting large photos/illustrations.
     """
+    if min_ratio is None:
+        min_ratio = TITLE_MIN_LINE_RATIO
     if med_line_h <= 0:
         return []
     g = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY) if img.ndim == 3 else img
@@ -142,8 +132,9 @@ def headline_bands(img, med_line_h, min_ratio=TITLE_MIN_LINE_RATIO):
     out = []
     for x, y, w, h in (cv2.boundingRect(c) for c in cs):
         if (h >= med_line_h * min_ratio
-                and h < H * 0.25              # not a page-tall blob
-                and w > W * 0.15):            # a headline spans some width
+                and h < H * 0.20
+                and h < 350                   # reject photographs and large illustrations
+                and w > W * 0.12):            # a headline spans some width
             out.append((y, y + h, x, x + w))
     return sorted(out)
 

@@ -146,10 +146,13 @@ class Answer(BaseModel):
     """What `/ask` returns. The phone reads `speakable` and nothing else."""
     ok: bool = True                       # was an answer actually generated
     job: str = ''
-    route: str = ''                       # GENERATE | TTS_REPLAY | LOCAL
+    route: str = ''                       # GENERATE | TTS_REPLAY | LOCAL | SYSTEM_COMMAND
     intent: str = ''
     speakable: str = ''                   # <-- the phone speaks THIS
     answer_si: str = ''                   # the generated answer alone
+    english_translation: str = ''
+    style_class: str = ''
+    user_profile: Optional[dict] = None
     sources: List[dict] = []              # retrieval provenance, for the log
     warnings: List[str] = []
     timings: dict = {}

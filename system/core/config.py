@@ -7,6 +7,9 @@ that is stated rather than implied.
 import os
 from pathlib import Path
 
+from core.env import load as _load_env
+_load_env()
+
 PROJECT_ROOT = Path(os.getenv(
     'SINHALA_ROOT', Path(__file__).resolve().parent.parent)).expanduser()
 
@@ -311,10 +314,8 @@ POLISH_MAX_CHARS = int(os.getenv('SINHALA_POLISH_MAX_CHARS', '4000'))
 #   tallest BODY line       1.28x - 1.70x of the median line height
 #   tallest HEADLINE band   5.91x - 8.71x
 #
-# Nothing at all lands between 1.70 and 5.91. The previous value in
-# closeup.title_lines() was 1.6 — INSIDE the body range — so the tallest body
-# line of every capture was being reported as a headline. 3.0 is the middle of
-# the empty gap.
+# MEASURED 27 Aug 2026 on the nine captures in F:/App/backend/inbox.
+# Reproduce with: python tools/measure_headline.py
 TITLE_MIN_LINE_RATIO = 3.0
 
 # How far above the body a headline may sit, in median line heights. MEASURED:
