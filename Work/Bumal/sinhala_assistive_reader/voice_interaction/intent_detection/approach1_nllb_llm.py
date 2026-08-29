@@ -57,6 +57,8 @@ You must return ONLY a valid JSON object with exactly two keys:
    - "EXPLAIN" — user wants something explained
    - "SIMPLIFY" — user wants simpler language
    - "ELABORATE" — user wants more detail
+   - "STEP_BY_STEP" — user wants it broken into ordered steps
+     (e.g. "explain step by step", "one by one", "walk me through it")
    - "REPHRASE" — user wants it said differently
    - "IDENTIFY_CONTENT" — user wants to know what something is
    - "READ_ALOUD" — user wants text read out
@@ -69,7 +71,7 @@ You must return ONLY a valid JSON object with exactly two keys:
 2. "personalization_flags": A JSON object extracting HOW the user wants it done.
    Look for mentions of:
    - "speed": "fast" or "slow"
-   - "detail_level": "brief" or "detailed"  
+   - "detail_level": "brief", "detailed", or "step_by_step"  
    - "language_style": "simple" or "technical"
    If none are mentioned, return empty object {}.
 

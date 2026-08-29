@@ -28,8 +28,12 @@ import sys
 from pathlib import Path
 
 _HERE = Path(__file__).resolve().parent
+_REPO = _HERE.parent.parent
+_SYSTEM = _REPO / 'system'
 if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
+if str(_SYSTEM) not in sys.path:
+    sys.path.insert(0, str(_SYSTEM))
 
 from fastapi import FastAPI                              # noqa: E402
 from fastapi.responses import JSONResponse               # noqa: E402
