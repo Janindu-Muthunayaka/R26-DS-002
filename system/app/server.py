@@ -59,6 +59,7 @@ from fastapi import FastAPI, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi.concurrency import run_in_threadpool
 
 from core.config import (WORK_DIR, HOST, PORT, SESSION_MAX, SESSION_TTL_S,
                          VOICE_USER_ID)
@@ -218,7 +219,7 @@ def build(pipeline, web_dir: Path):
         try:
             doc = Document()
             sessions.put(job, doc)
-            doc = pipeline.run(paths, doc=doc)
+            doc = await run_in_threadpool(pipeline.run, paths, doc=doc)
             reply = _document_to_reply(doc, job)
             reply['audio_url'] = l6.speak(doc)      # None until Layer 6 lands
             if not reply['ok']:

@@ -99,6 +99,13 @@ def article_text(article) -> str:
             or (article.body_raw or '').strip())
 
 
+def article_title(article) -> str:
+    """The title to use, preferring the polished output."""
+    return ((article.title_polished or '').strip()
+            or (article.title or '').strip()
+            or (article.title_raw or '').strip())
+
+
 def rag_payload(document: Document, with_tokens: bool = True) -> dict:
     """Flatten a Document into what Component 3 consumes."""
     bodies, raws, articles = [], [], []
@@ -111,7 +118,7 @@ def rag_payload(document: Document, with_tokens: bool = True) -> dict:
             raws.append(raw)
         articles.append({
             'index': art.index,
-            'title': (art.title or '').strip(),
+            'title': article_title(art),
             'body': body,
             'polished': bool((art.body_polished or '').strip()),
             'glyph_p75': art.glyph_p75,

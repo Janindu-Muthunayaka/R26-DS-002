@@ -3,6 +3,9 @@
 
 <head>
     <meta charset="UTF-8">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
     <title>System Pipeline — Layer Flow</title>
     <style>
         :root {
@@ -656,7 +659,12 @@
 
                 <div class="col2 node-col">
                     <div class="vline"></div>
-                    <div class="node2 h-single"><span id="data-segment">segment</span></div>
+                    <div class="node2 h-long" style="flex-direction: column; justify-content: flex-start; padding-top: 10px;">
+                        <div id="data-segment-log" style="width: 100%; min-height: 70px; max-height: 100px; overflow-y: auto; text-align: left; background: var(--bg); padding: 8px; border-radius: 6px; border: 1px solid var(--card-border); margin-bottom: 8px; font-family: monospace; font-size: 10.5px; color: var(--ink-soft); display: none;">
+                            Waiting for L3...
+                        </div>
+                        <div id="data-segment" style="width: 100%; display: flex; flex-direction: column; gap: 5px;">segment</div>
+                    </div>
                 </div>
 
                 <div class="col2 split-col">
@@ -891,12 +899,30 @@
                     }
                     updateData('select', selectHtml, true);
 
+                    // Progress Log
+                    const logEl = document.getElementById('data-segment-log');
+                    if (logEl) {
+                        const logs = doc.progress_log || [];
+                        if (logs.length > 0) {
+                            logEl.style.display = 'block';
+                            logEl.innerHTML = logs.join('<br>');
+                            logEl.scrollTop = logEl.scrollHeight;
+                            logEl.style.color = 'var(--ink)';
+                        } else {
+                            logEl.style.display = 'none';
+                        }
+                    }
+
                     // Segment: Show first frame with overlaid segment boxes, and all article/region crops
                     const mode = doc.timings.mode || 'layout';
                     const segTime = doc.timings.segment ? doc.timings.segment + 's' : '';
-                    let segHtml = `<div style="margin-bottom: 4px;">Mode: ${mode}\n${segTime}</div>`;
+                    let segHtml = ``;
 
-                    if (frames.length > 0) {
+                    if (doc.timings.mode) {
+                        segHtml += `<div style="margin-bottom: 4px; font-size: 11px; color: var(--ink-soft); width: 100%; text-align: center;">Mode: ${mode}\n${segTime}</div>`;
+                    }
+
+                    if (frames.length > 0 && doc.articles && doc.articles.length > 0) {
                         const parts = frames[0].replace(/\\/g, '/').split('/');
                         const filename = parts[parts.length - 1];
                         const url = `/work/${data.job}/${filename}`;
@@ -913,23 +939,58 @@
                             }
                         });
                     }
-                    updateData('segment', segHtml, true);
+                    if (segHtml) {
+                        const el = document.getElementById('data-segment');
+                        if (el) {
+                            el.innerHTML = segHtml;
+                            el.parentElement.classList.add('has-data');
+                        }
+                    } else {
+                        const el = document.getElementById('data-segment');
+                        if (el) {
+                            el.innerHTML = 'segment';
+                            el.parentElement.classList.remove('has-data');
+                        }
+                    }
 
+                    // Title, Body, Polish
                     // Title, Body, Polish
                     if (doc.articles && doc.articles.length > 0) {
                         let allTitles = [];
                         let allBodies = [];
                         let allPolishes = [];
+                        let anyApplied = false;
+                        let generalReason = "";
+                        
                         doc.articles.forEach(art => {
                             allTitles.push(`<b>Article ${art.index + 1}:</b><br>${art.title || '(No title)'}`);
                             allBodies.push(`<b>Article ${art.index + 1}:</b><br>${art.body || '(No body)'}`);
-                            if (art.body_polished) {
-                                allPolishes.push(`<b>Article ${art.index + 1}:</b><br>${art.body_polished}`);
+                            
+                            if (art.body_polished || art.title_polished) {
+                                anyApplied = true;
                             }
+                            if (art.polish_reason && !generalReason && art.polish_reason.includes('unavailable')) {
+                                generalReason = art.polish_reason;
+                            } else if (art.polish_reason && !generalReason && art.polish_reason.includes('call failed')) {
+                                generalReason = art.polish_reason;
+                            }
+
+                            let t = art.title_polished || art.title || '(No title)';
+                            let b = art.body_polished || art.body || '(No body)';
+                            allPolishes.push(`<b>Article ${art.index + 1}:</b><br><i>Title:</i> ${t}<br><i>Body:</i> ${b}`);
                         });
+                        
+                        let statusHeader = "";
+                        if (anyApplied) {
+                            statusHeader = `<div style="color: var(--accent-deep); margin-bottom: 10px;"><b>Status: Changes were made</b></div>`;
+                        } else {
+                            let reason = generalReason || "No changes made";
+                            statusHeader = `<div style="color: var(--ink-soft); margin-bottom: 10px;"><b>Status: ${reason}</b></div>`;
+                        }
+
                         updateData('title', allTitles.join('<br><br>'), true);
                         updateData('body', allBodies.join('<br><br>'), true);
-                        updateData('polish', allPolishes.length > 0 ? allPolishes.join('<br><br>') : '(Not polished)', true);
+                        updateData('polish', statusHeader + allPolishes.join('<br><br>'), true);
                     } else {
                         updateData('title', '(No articles)');
                         updateData('body', '(No articles)');
@@ -939,7 +1000,18 @@
                     // Assemble
                     const w = doc.warnings.length > 0 ? doc.warnings.length + ' warnings' : 'OK';
                     const assembleTime = doc.timings.total ? 'Total: ' + doc.timings.total + 's' : '';
-                    updateData('assemble', doc.articles.length + ' articles\n' + w + '\n' + assembleTime);
+                    let assembleHeader = `<b>${doc.articles.length} articles</b><br>${w}<br>${assembleTime}<br><br>`;
+                    
+                    let assembleHtml = [];
+                    if (doc.articles && doc.articles.length > 0) {
+                        doc.articles.forEach(art => {
+                            let t = art.title_polished || art.title || art.title_raw || '(No title)';
+                            let b = art.body_polished || art.body || art.body_raw || '(No body)';
+                            assembleHtml.push(`<b>Article ${art.index + 1}:</b><br><i>Title:</i> ${t}<br><i>Body:</i> ${b}`);
+                        });
+                    }
+                    
+                    updateData('assemble', assembleHeader + assembleHtml.join('<br><br>'), true);
 
                     updateData('generator', 'Waiting for /ask...');
                     updateData('personalization', 'Placeholder');

@@ -89,10 +89,12 @@ class Pipeline:
         imgs = [i for i in imgs if i is not None]
         ref = imgs[0]
 
+        doc.progress_log.append("Started article detection...")
         # 1. First Pass: Segmenter (Layout full image)
         t0 = time.time()
         art_groups = self.seg.get_article_boxes(ref, max_articles=max_articles)
         t['segment_pass1'] = round(time.time() - t0, 2)
+        doc.progress_log.append(f"Articles detected: {len(art_groups)}")
         
         # Populate initial empty articles into document
         initial_arts = [ag[0] for ag in art_groups]
@@ -109,6 +111,7 @@ class Pipeline:
         def process_article(art, group):
             nonlocal extra_warnings
             try:
+                doc.progress_log.append(f"Cropping article {art.index + 1}...")
                 # 2. Second Pass: Extract Regions (PaddleOCR on crop)
                 t_sub0 = time.time()
                 art = self.seg.extract_regions(ref, art, group)
@@ -147,13 +150,16 @@ class Pipeline:
 
                 # 6. Polish
                 if POLISH_MODE.lower() != 'off':
-                    res = _polish.polish(art.body or art.body_raw)
+                    res = _polish.polish_article(art)
+                    art.polish_reason = res['reason']
                     if res['applied']:
-                        art.body_polished = res['text']
+                        art.body_polished = res['body']
+                        art.title_polished = res['title']
                     if res['applied'] or 'REJECTED' in res['reason']:
                         with extra_warnings_lock:
                             extra_warnings.append(f"Article {art.index + 1}: {res['reason']}")
 
+                doc.progress_log.append(f"Article {art.index + 1} scanned")
                 return art
             except Exception as e:
                 import traceback
@@ -182,8 +188,9 @@ class Pipeline:
 
         # Final assembly
         t0 = time.time()
-        doc = assemble(final_arts, [f.path for f in frames], t)
-        doc.warnings = list(extra_warnings) + list(doc.warnings)
-        doc.timings['total'] = round(sum(v for v in t.values() if isinstance(v, (int, float))), 2)
+        new_doc = assemble(final_arts, [f.path for f in frames], t)
+        new_doc.warnings = list(extra_warnings) + list(new_doc.warnings)
+        new_doc.timings['total'] = round(sum(v for v in t.values() if isinstance(v, (int, float))), 2)
+        new_doc.progress_log = doc.progress_log
         
-        return doc
+        return new_doc

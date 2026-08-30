@@ -49,30 +49,27 @@ it: replying in English, padding, or answering the text instead of repairing.
 from __future__ import annotations
 
 import difflib
+import json
+import re
 
 from core import llm, quality
 from core.config import (POLISH_MAX_CHARS, POLISH_MAX_LEN_RATIO,
                          POLISH_MIN_LEN_RATIO, POLISH_MIN_SIMILARITY,
                          POLISH_MODE)
+from core.schemas import Article
 
 SYSTEM_PROMPT = (
-    'You repair optical-character-recognition errors in Sinhala newspaper '
-    'text. You are not an assistant and you are not a writer.\n'
+    'You are a Sinhala language expert repairing OCR errors in newspaper articles.\n'
+    'You will receive a JSON object containing "title" and "body".\n'
     'RULES, in order of importance:\n'
-    '1. Output ONLY the repaired text. No preamble, no explanation, no '
-    'quotes, no markdown.\n'
-    '2. NEVER add information. No names, numbers, dates, places or clauses '
-    'that are not already present.\n'
-    '3. NEVER remove, summarise, reorder, translate or explain anything.\n'
-    '4. Repair only what is clearly an OCR error: a broken word, a wrong '
-    'dependent vowel sign, a split or merged word, a stray Latin fragment '
-    'where Sinhala belongs.\n'
-    '5. If a word is unrecoverable, LEAVE IT EXACTLY AS IT IS. A word you '
-    'cannot read is not a word you may guess.\n'
-    '6. Output Sinhala script. Leave digits and genuine Latin proper nouns '
-    'as they are.\n'
-    'The output should be almost identical to the input in length and in '
-    'sentence order.'
+    '1. Output ONLY a valid JSON object with keys "title" and "body". No preamble, no markdown, no quotes.\n'
+    '2. NEVER add information to the body. No names, numbers, dates, places or clauses that are not already present.\n'
+    '3. NEVER remove, summarise, reorder, translate or explain anything in the body.\n'
+    '4. Repair only what is clearly an OCR error in the body: a broken word, a wrong dependent vowel sign, a split/merged word, a stray Latin fragment.\n'
+    '5. If the title is empty or missing, USE the context of the body to GENERATE an appropriate short Sinhala headline for the "title" field.\n'
+    '6. If the title is present, repair its OCR errors using the context of the body.\n'
+    '7. Output Sinhala script. Leave digits and genuine Latin proper nouns as they are.\n'
+    'The output body should be almost identical to the input body in length and in sentence order.'
 )
 
 
@@ -80,18 +77,13 @@ def _similarity(a: str, b: str) -> float:
     return difflib.SequenceMatcher(None, a, b, autojunk=False).ratio()
 
 
-def _result(text, applied, reason, similarity=None, measures=None) -> dict:
-    return {'text': text, 'applied': bool(applied), 'reason': reason,
+def _result(body: str, title: str, applied: bool, reason: str, similarity=None, measures=None) -> dict:
+    return {'body': body, 'title': title, 'applied': bool(applied), 'reason': reason,
             'similarity': similarity, 'measures': measures or {}}
 
 
 def check(original: str, candidate: str) -> tuple:
-    """Run the four guards. Returns (accepted, reason, similarity).
-
-    Separated from the network call so it can be tested exhaustively without
-    one — which matters, because these four comparisons are the entire defence
-    against a model inventing the news.
-    """
+    """Run the four guards on the BODY text. Returns (accepted, reason, similarity)."""
     o, c = (original or '').strip(), (candidate or '').strip()
     if not c:
         return False, 'empty reply', 0.0
@@ -115,52 +107,74 @@ def check(original: str, candidate: str) -> tuple:
     return True, '', sim
 
 
-def polish(text: str, mode: str = None) -> dict:
-    """Post-edit `text`. Returns a result dict; never raises.
+def _is_nonsense(text: str) -> bool:
+    """Returns True if the text is empty or has fewer than 10 alphanumeric characters."""
+    if not text:
+        return True
+    alphanumeric = re.sub(r'[^\w\s]', '', text)
+    return len(alphanumeric.replace(' ', '')) < 10
 
-    `applied` False means the caller must keep its own text. In every such
-    case `text` in the result is the ORIGINAL, so a caller that ignores
-    `applied` still cannot accidentally use an unvetted rewrite.
-    """
-    original = (text or '').strip()
+
+def polish_article(article: Article, mode: str = None) -> dict:
+    """Post-edit title and body. Returns a result dict; never raises."""
     mode = (mode or POLISH_MODE or 'off').lower()
+    
+    orig_title = (article.title or article.title_raw or '').strip()
+    orig_body = (article.body or article.body_raw or '').strip()
 
     if mode == 'off':
-        return _result(original, False, 'polish: off')
-    if not original:
-        return _result(original, False, 'polish: nothing to repair')
+        return _result(orig_body, orig_title, False, 'polish: off')
 
-    verdict = quality.score(original)['verdict']
+    if _is_nonsense(orig_body) and _is_nonsense(orig_title):
+        return _result(orig_body, orig_title, False, 'polish: skipped, title and body are empty or nonsense')
+
+    verdict = quality.score(orig_body)['verdict']
     if mode == 'auto':
-        if verdict == 'good':
-            return _result(original, False, 'polish: not needed (text is good)')
+        if verdict == 'good' and not _is_nonsense(orig_title):
+            return _result(orig_body, orig_title, False, 'polish: not needed (text and title are good)')
         if verdict == 'unreadable':
-            return _result(original, False,
-                           'polish: skipped, text is unreadable — a model '
+            return _result(orig_body, orig_title, False,
+                           'polish: skipped, body is unreadable — a model '
                            'given this would invent rather than repair')
 
-    if len(original) > POLISH_MAX_CHARS:
-        return _result(original, False,
-                       f'polish: skipped, {len(original)} chars is over the '
+    if len(orig_body) > POLISH_MAX_CHARS:
+        return _result(orig_body, orig_title, False,
+                       f'polish: skipped, body {len(orig_body)} chars is over the '
                        f'{POLISH_MAX_CHARS} cap')
 
     ok, why = llm.available()
     if not ok:
-        return _result(original, False, f'polish: unavailable ({why})')
+        return _result(orig_body, orig_title, False, f'polish: unavailable ({why})')
 
-    candidate, reason = llm.chat(
+    prompt_payload = json.dumps({"title": orig_title, "body": orig_body}, ensure_ascii=False)
+    
+    reply_text, reason = llm.chat(
         [{'role': 'system', 'content': SYSTEM_PROMPT},
-         {'role': 'user', 'content': original}],
+         {'role': 'user', 'content': prompt_payload}],
         temperature=0.0)
-    if candidate is None:
-        return _result(original, False, f'polish: call failed ({reason})')
+        
+    if reply_text is None:
+        return _result(orig_body, orig_title, False, f'polish: call failed ({reason})')
 
-    accepted, why, sim = check(original, candidate)
+    # Parse JSON from LLM
+    try:
+        reply_json = json.loads(reply_text.strip('` \n').removeprefix('json'))
+        cand_title = str(reply_json.get('title', '')).strip()
+        cand_body = str(reply_json.get('body', '')).strip()
+    except json.JSONDecodeError:
+        return _result(orig_body, orig_title, False, 'polish: call failed (LLM did not return valid JSON)')
+
+    # Check the body for safety (hallucination guards)
+    # If the original body was mostly empty/nonsense, we might fail the similarity guard if the LLM expanded it.
+    # But wait, we already rejected if BOTH title and body are empty/nonsense.
+    # If the original body is not empty, run the check on it.
+    accepted, why, sim = check(orig_body, cand_body)
     if not accepted:
-        return _result(original, False, f'polish: REJECTED — {why}', sim)
+        return _result(orig_body, orig_title, False, f'polish: REJECTED body — {why}', sim)
 
     changed = 1.0 - sim
-    return _result(candidate.strip(), True,
-                   f'polish: applied, {changed:.1%} of characters changed',
+    return _result(cand_body, cand_title, True,
+                   f'polish: applied, {changed:.1%} of body chars changed',
                    sim, {'before': verdict,
-                         'after': quality.score(candidate)['verdict']})
+                         'after': quality.score(cand_body)['verdict']})
+

@@ -6,20 +6,11 @@ numpy
 opencv-python
 pillow
 torch
-fastapi
-uvicorn[standard]
-python-multipart
-pydantic>=2
-numpy
-opencv-python
-pillow
-torch
 transformers
 sentencepiece
 ultralytics
 pytesseract
 pytest
-# optional, better title/text labelling:
 paddlepaddle==3.0.0
 paddleocr>=2.7.3
 craft-text-detector

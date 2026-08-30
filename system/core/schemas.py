@@ -72,6 +72,8 @@ class Article(BaseModel):
     # output Chapter 4's CER is measured on — and nothing may overwrite it.
     # What gets SPOKEN is decided by l5_assemble.payload.article_text().
     body_polished: str = ''
+    title_polished: str = ''
+    polish_reason: str = ''
 
     # ---- diagnostics, any layer may set ----
     glyph_p75: Optional[float] = None       # capture metric, whole frame
@@ -87,6 +89,7 @@ class Document(BaseModel):
     articles: List[Article] = []
     timings: dict = {}
     warnings: List[str] = []
+    progress_log: List[str] = []
 
 
 class CaptureResponse(BaseModel):
