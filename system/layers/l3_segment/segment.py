@@ -28,11 +28,11 @@ class Segmenter:
         self.yolo = yolo
         self.layout = layout
 
-    def run(self, img, conf=YOLO_CONF, max_articles=MAX_ARTICLES):
+    def get_article_boxes(self, img, max_articles=MAX_ARTICLES):
         H, W = img.shape[:2]
         if self.layout is None:
             # Fallback (no layout model): treat whole page as one article
-            return self._create_single_article(img, [[0, 0, W, H]])
+            return [(a, []) for a in self._create_single_article(img, [[0, 0, W, H]])]
 
         # 1. First Pass: Detect all layout blocks on full image
         res = list(self.layout.predict(img, batch_size=1, layout_nms=True))[0]
@@ -41,7 +41,7 @@ class Segmenter:
         # Filter valid regions (text and titles)
         valid_regs = [r for r in regs if r['label'] in TITLE_LABELS | {'text', 'image_caption', 'aside_text'}]
         if not valid_regs:
-            return self._create_single_article(img, [[0, 0, W, H]])
+            return [(a, []) for a in self._create_single_article(img, [[0, 0, W, H]])]
 
         # 2. Group into horizontal columns first
         # Sort left-to-right to cluster columns
@@ -118,7 +118,7 @@ class Segmenter:
         grouped_articles = [d['group'] for d in deduped]
         grouped_articles = grouped_articles[:max_articles]
         
-        arts = []
+        art_groups = []
         for i, group in enumerate(grouped_articles):
             # Compute article bounding box
             x1 = min(r['box'][0] for r in group)
@@ -136,37 +136,47 @@ class Segmenter:
             p90 = glyph_p90(crop) if crop.size else None
             v, note = capture_verdict(p75)
 
-            final_regs = []
-            if crop.size > 0:
-                # 3. Second Pass: Re-run PaddleOCR on the crop
-                crop_res = list(self.layout.predict(crop, batch_size=1, layout_nms=True))[0]
-                crop_regs = [{'label': b['label'], 'box': [float(v) for v in b['coordinate']]} for b in crop_res['boxes']]
-                
-                # Map coordinates back to full image
-                for cr in crop_regs:
-                    if cr['label'] in TITLE_LABELS | {'text'}:
-                        cx1, cy1, cx2, cy2 = cr['box']
-                        mapped_box = Box(x1=cx1 + x1, y1=cy1 + y1, x2=cx2 + x1, y2=cy2 + y1)
-                        label = 'title' if cr['label'] in TITLE_LABELS else 'text'
-                        final_regs.append(Region(box=mapped_box, label=label))
-                
-                # Sort final regions
-                if final_regs:
-                    title_regs = [r for r in final_regs if r.label == 'title']
-                    text_regs = order_columns([ [r.box.x1, r.box.y1, r.box.x2, r.box.y2] for r in final_regs if r.label == 'text' ])
-                    final_regs = title_regs + [Region(box=Box(x1=r_[0], y1=r_[1], x2=r_[2], y2=r_[3]), label='text') for r_ in text_regs]
+            art = Article(index=i, box=Box(x1=x1, y1=y1, x2=x2, y2=y2),
+                          regions=[], glyph_p75=p75, glyph_p90=p90,
+                          verdict=v, note=note)
+            art_groups.append((art, group))
+        return art_groups
 
-            # If second pass failed to find anything, fallback to first pass regions
-            if not final_regs:
-                for gr in group:
-                    mapped_box = Box(x1=gr['box'][0], y1=gr['box'][1], x2=gr['box'][2], y2=gr['box'][3])
-                    label = 'title' if gr['label'] in TITLE_LABELS else 'text'
+    def extract_regions(self, img, art, group=None):
+        if self.layout is None:
+            return art
+            
+        x1, y1, x2, y2 = int(art.box.x1), int(art.box.y1), int(art.box.x2), int(art.box.y2)
+        crop = img[y1:y2, x1:x2]
+        final_regs = []
+        if crop.size > 0:
+            # 3. Second Pass: Re-run PaddleOCR on the crop
+            crop_res = list(self.layout.predict(crop, batch_size=1, layout_nms=True))[0]
+            crop_regs = [{'label': b['label'], 'box': [float(v) for v in b['coordinate']]} for b in crop_res['boxes']]
+            
+            # Map coordinates back to full image
+            for cr in crop_regs:
+                if cr['label'] in TITLE_LABELS | {'text'}:
+                    cx1, cy1, cx2, cy2 = cr['box']
+                    mapped_box = Box(x1=cx1 + x1, y1=cy1 + y1, x2=cx2 + x1, y2=cy2 + y1)
+                    label = 'title' if cr['label'] in TITLE_LABELS else 'text'
                     final_regs.append(Region(box=mapped_box, label=label))
+            
+            # Sort final regions
+            if final_regs:
+                title_regs = [r for r in final_regs if r.label == 'title']
+                text_regs = order_columns([ [r.box.x1, r.box.y1, r.box.x2, r.box.y2] for r in final_regs if r.label == 'text' ])
+                final_regs = title_regs + [Region(box=Box(x1=r_[0], y1=r_[1], x2=r_[2], y2=r_[3]), label='text') for r_ in text_regs]
 
-            arts.append(Article(index=i, box=Box(x1=x1, y1=y1, x2=x2, y2=y2),
-                                regions=final_regs, glyph_p75=p75, glyph_p90=p90,
-                                verdict=v, note=note))
-        return arts
+        # If second pass failed to find anything, fallback to first pass regions
+        if not final_regs and group:
+            for gr in group:
+                mapped_box = Box(x1=gr['box'][0], y1=gr['box'][1], x2=gr['box'][2], y2=gr['box'][3])
+                label = 'title' if gr['label'] in TITLE_LABELS else 'text'
+                final_regs.append(Region(box=mapped_box, label=label))
+
+        art.regions = final_regs
+        return art
 
     def _regions(self, img, boxes):
         if self.layout is None:

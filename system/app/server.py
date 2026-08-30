@@ -64,7 +64,7 @@ from core.config import (WORK_DIR, HOST, PORT, SESSION_MAX, SESSION_TTL_S,
                          VOICE_USER_ID)
 from core import quality
 from core.imaging import imdecode_upright
-from core.schemas import Answer, Question
+from core.schemas import Answer, Question, Document
 from core.session import SessionStore
 from layers.l0_voice import voice as l0
 from layers.l5_assemble.payload import article_text
@@ -216,7 +216,9 @@ def build(pipeline, web_dir: Path):
                 status_code=400)
 
         try:
-            doc = pipeline.run(paths)
+            doc = Document()
+            sessions.put(job, doc)
+            doc = pipeline.run(paths, doc=doc)
             reply = _document_to_reply(doc, job)
             reply['audio_url'] = l6.speak(doc)      # None until Layer 6 lands
             if not reply['ok']:

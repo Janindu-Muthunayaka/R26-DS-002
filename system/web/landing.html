@@ -35,10 +35,10 @@
             text-decoration: none;
             font-size: 13px;
             font-weight: 600;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
             transition: opacity 0.2s;
         }
-        
+
         .manual-btn:hover {
             opacity: 0.9;
         }
@@ -410,48 +410,72 @@
             pointer-events: none;
             z-index: 10;
         }
-        .seg-box.article { border: 3px solid #ef4444; outline: 1px solid white; }
-        .seg-box.title { border: 2.5px dashed #3b82f6; outline: 1px solid white; }
-        .seg-box.text { border: 2.5px dashed #22c55e; outline: 1px solid white; }
+
+        .seg-box.article {
+            border: 3px solid #ef4444;
+            outline: 1px solid white;
+        }
+
+        .seg-box.title {
+            border: 2.5px dashed #3b82f6;
+            outline: 1px solid white;
+        }
+
+        .seg-box.text {
+            border: 2.5px dashed #22c55e;
+            outline: 1px solid white;
+        }
 
         /* Lightbox Modal */
         #lightbox {
             display: none;
             position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0,0,0,0.85);
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.85);
             z-index: 1000;
             overflow-y: auto;
             text-align: center;
             cursor: zoom-out;
             padding: 40px 20px;
         }
+
         #lightbox.active {
             display: block;
         }
+
         #lightbox .lightbox-content {
             position: relative;
             display: inline-block;
             max-width: 100%;
             text-align: left;
         }
+
         #lightbox img {
             max-width: 100%;
             height: auto;
             display: block;
             border-radius: 8px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
         }
-    </style>
-            height: 90px;
+
+
+        .node2 {
+            min-height: 90px;
+            height: auto;
+            padding-bottom: 10px;
         }
 
         .node2.h-long {
-            height: 150px;
+            min-height: 150px;
+            height: auto;
         }
 
         .node2.h-single {
-            height: 90px;
+            min-height: 90px;
+            height: auto;
         }
 
         .node2.tint-a {
@@ -708,11 +732,11 @@
             const lb = document.getElementById('lightbox');
             const content = lb.querySelector('.lightbox-content');
             content.innerHTML = '';
-            
+
             if (wrapperEl) {
                 const clone = wrapperEl.cloneNode(true);
                 const img = clone.querySelector('img');
-                img.className = ''; 
+                img.className = '';
                 clone.onclick = null;
                 clone.style.cursor = 'default';
                 content.appendChild(clone);
@@ -728,18 +752,18 @@
             const lb = document.getElementById('lightbox');
             const content = lb.querySelector('.lightbox-content');
             content.innerHTML = '';
-            
+
             const wrapper = document.createElement('div');
             wrapper.style.position = 'relative';
             wrapper.style.display = 'inline-block';
-            
+
             const img = document.createElement('img');
             img.src = url;
-            img.onload = function() {
+            img.onload = function () {
                 const nw = img.naturalWidth;
                 const nh = img.naturalHeight;
                 if (!nw || !nh) return;
-                
+
                 try {
                     const data = JSON.parse(decodeURIComponent(dataStr));
                     if (type === 'main') {
@@ -760,11 +784,11 @@
                             });
                         }
                     }
-                } catch(e) {
+                } catch (e) {
                     console.error("Box draw failed", e);
                 }
             };
-            
+
             wrapper.appendChild(img);
             content.appendChild(wrapper);
             lb.classList.add('active');
@@ -775,16 +799,16 @@
             const nw = imgEl.naturalWidth;
             const nh = imgEl.naturalHeight;
             if (!nw || !nh) return;
-            
+
             imgEl.dataset.drawn = "1";
             const wrapper = imgEl.parentElement;
             const artsStr = imgEl.getAttribute('data-arts');
             if (!artsStr) return;
-            
+
             try {
                 const arts = JSON.parse(decodeURIComponent(artsStr));
                 const drawType = imgEl.getAttribute('data-arts-type');
-                
+
                 if (drawType === 'main') {
                     arts.forEach(a => {
                         if (a.box) addBox(wrapper, a.box, nw, nh, 'article');
@@ -803,7 +827,7 @@
                         });
                     }
                 }
-            } catch(e) {
+            } catch (e) {
                 console.error("Box draw failed", e);
             }
         }
@@ -845,19 +869,19 @@
                 const res = await fetch('/latest');
                 if (!res.ok) return;
                 const data = await res.json();
-                
+
                 if (data.ok && data.job !== lastJob) {
                     lastJob = data.job;
                     const doc = data.document;
-                    
+
                     updateData('voice', 'Waiting for /ask...');
-                    
+
                     // Select: Show thumbnails of all source frames
                     const frames = doc.source_frames || [];
                     const selectTime = doc.timings.select ? doc.timings.select + 's' : '';
                     let selectHtml = `<div style="margin-bottom: 4px;">${frames.length} frames selected\n${selectTime}</div>`;
-                    
-                    for(let f of frames) {
+
+                    for (let f of frames) {
                         const parts = f.replace(/\\/g, '/').split('/');
                         const filename = parts[parts.length - 1];
                         const url = `/work/${data.job}/${filename}`;
@@ -866,17 +890,17 @@
                                        </div>`;
                     }
                     updateData('select', selectHtml, true);
-                    
+
                     // Segment: Show first frame with overlaid segment boxes, and all article/region crops
                     const mode = doc.timings.mode || 'layout';
                     const segTime = doc.timings.segment ? doc.timings.segment + 's' : '';
                     let segHtml = `<div style="margin-bottom: 4px;">Mode: ${mode}\n${segTime}</div>`;
-                    
+
                     if (frames.length > 0) {
                         const parts = frames[0].replace(/\\/g, '/').split('/');
                         const filename = parts[parts.length - 1];
                         const url = `/work/${data.job}/${filename}`;
-                        const artsStr = encodeURIComponent(JSON.stringify(doc.articles || []));
+                        const artsStr = encodeURIComponent(JSON.stringify(doc.articles || [])).replace(/'/g, "%27");
                         segHtml += `<button class="manual-btn" style="position:relative; top:0; right:0; margin-bottom: 5px; display: block; width: 100%; text-align: center;" onclick="openLightboxWithData('${url}', 'main', '${artsStr}')">Full Image</button>`;
                     }
 
@@ -884,13 +908,13 @@
                         doc.articles.forEach((art, idx) => {
                             if (art.crop_path) {
                                 const artUrl = `/work/${data.job}/${art.crop_path}`;
-                                const artStr = encodeURIComponent(JSON.stringify(art));
+                                const artStr = encodeURIComponent(JSON.stringify(art)).replace(/'/g, "%27");
                                 segHtml += `<button class="manual-btn" style="position:relative; top:0; right:0; margin-bottom: 5px; display: block; width: 100%; text-align: center;" onclick="openLightboxWithData('${artUrl}', 'crop', '${artStr}')">Article ${idx + 1}</button>`;
                             }
                         });
                     }
                     updateData('segment', segHtml, true);
-                    
+
                     // Title, Body, Polish
                     if (doc.articles && doc.articles.length > 0) {
                         let allTitles = [];
@@ -911,12 +935,12 @@
                         updateData('body', '(No articles)');
                         updateData('polish', '');
                     }
-                    
+
                     // Assemble
                     const w = doc.warnings.length > 0 ? doc.warnings.length + ' warnings' : 'OK';
                     const assembleTime = doc.timings.total ? 'Total: ' + doc.timings.total + 's' : '';
                     updateData('assemble', doc.articles.length + ' articles\n' + w + '\n' + assembleTime);
-                    
+
                     updateData('generator', 'Waiting for /ask...');
                     updateData('personalization', 'Placeholder');
                     updateData('listen', 'Placeholder');
