@@ -99,17 +99,17 @@ def _local(document, intent, cursor, warnings) -> dict:
 
     if intent == 'FIRST_SCAN':
         n = len(document.articles)
-        titles = []
-        for a in document.articles:
+        titles_with_no = []
+        for idx, a in enumerate(document.articles):
             t = (a.title_polished or a.title or a.title_raw or '').strip()
             if t:
-                titles.append(t)
+                titles_with_no.append(f"ලිපිය {idx + 1}: {t}")
         if n == 0:
             msg = "කිසිදු ලිපියක් හඳුනාගෙන නොමැත."
         else:
             msg = f"ලිපි {n} ක් හඳුනාගෙන ඇත."
-            if titles:
-                msg += " එම ලිපිවල ශීර්ෂයන් වන්නේ: " + ", ".join(titles)
+            if titles_with_no:
+                msg += " එම ලිපිවල ශීර්ෂයන් වන්නේ: " + ", ".join(titles_with_no)
             else:
                 msg += " නමුත් ඒවායේ ශීර්ෂයන් හඳුනාගත නොහැක."
         return _out(True, 'LOCAL', intent, msg, warnings=warnings, cursor=cursor)
@@ -218,11 +218,17 @@ def answer(document: Document, voice: dict, mode: str = None,
     answer_si = (reply.get('answer_si') or '').strip()
     speakable = (reply.get('speakable_text') or answer_si or '').strip()
     if not speakable:
+        if intent == 'FIRST_SCAN':
+            warnings.append('rag: empty answer')
+            return _local(document, intent, max(0, int(cursor or 0)), warnings)
         warnings.append('rag: empty answer')
         return _out(False, 'GENERATE', reply.get('intent') or intent,
                     speakable=SI_FAILED, warnings=warnings, cursor=cursor)
 
     if reply.get('stub'):
+        if intent == 'FIRST_SCAN':
+            warnings.append('rag: stub service fallback to local first scan')
+            return _local(document, intent, max(0, int(cursor or 0)), warnings)
         warnings.append('rag: stub service, not Component 3')
 
     # Component 3 signals failure with `ok: false` and still fills
@@ -233,6 +239,9 @@ def answer(document: Document, voice: dict, mode: str = None,
     for n in reply.get('notes') or []:
         warnings.append(f'rag: {n}')
     if not service_ok:
+        if intent == 'FIRST_SCAN':
+            warnings.append('rag: the service reported a failure')
+            return _local(document, intent, max(0, int(cursor or 0)), warnings)
         warnings.append('rag: the service reported a failure')
 
     sources = reply.get('retrieved_sources') or []

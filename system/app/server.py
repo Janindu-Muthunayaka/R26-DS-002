@@ -226,11 +226,11 @@ def build(pipeline, web_dir: Path):
                 first_scan_voice = {
                     'route': 'GENERATE',
                     'intent': 'FIRST_SCAN',
-                    'english_translation': 'Tell the number of articles detected,and tell the title of each article.',
+                    'english_translation': 'Tell the number of articles detected,and tell the title of each article along with its article no.',
                     'style_class': 'Detailed',
                     'prompt_modifier': '',
                     'personalization_flags': {},
-                    'sinhala_input': 'හඳුනාගත් ලිපි සංඛ්‍යාව සහ එක් එක් ලිපියේ ශීර්ෂය පවසන්න.',
+                    'sinhala_input': 'හඳුනාගත් ලිපි සංඛ්‍යාව සහ එක් එක් ලිපියේ ශීර්ෂය එහි ලිපි අංකය සමඟ පවසන්න.',
                     'source': 'component4'
                 }
                 
@@ -348,6 +348,10 @@ def build(pipeline, web_dir: Path):
             english_translation=voice.get('english_translation', ''),
             style_class=voice.get('style_class', ''),
             correction_applied=voice.get('correction_applied'),
+            prompt_modifier=voice.get('prompt_modifier', ''),
+            style_source=voice.get('style_source'),
+            user_profile=voice.get('user_profile'),
+            learned=voice.get('learned', False),
             warnings=res['warnings'],
             timings={'voice': t_voice, 'generate': t_gen,
                      'total': round(time.time() - t0, 2)},
@@ -364,6 +368,9 @@ def build(pipeline, web_dir: Path):
             'intent': res['intent'],
             'prompt_modifier': voice.get('prompt_modifier', ''),
             'style_class': voice.get('style_class', ''),
+            'style_source': voice.get('style_source'),
+            'user_profile': voice.get('user_profile'),
+            'learned': voice.get('learned', False),
             'english_translation': voice.get('english_translation', ''),
             'correction_applied': voice.get('correction_applied'),
             'warnings': res['warnings'],

@@ -134,6 +134,44 @@ def _is_nonsense(text: str) -> bool:
     return len(alphanumeric.replace(' ', '')) < 10
 
 
+def _body_makes_sense(body: str) -> bool:
+    """Returns True if the body text is sensible and not complete gibberish."""
+    if not body:
+        return False
+    if _is_nonsense(body):
+        return False
+    
+    from core import quality
+    m = quality.score(body)
+    
+    # If the text is marked as unreadable and is fatal, it does not make sense.
+    if m['verdict'] == 'unreadable' and m['fatal']:
+        return False
+    # If less than 65% of the letters are Sinhala, or more than 50% are short tokens, it's gibberish.
+    if m['sinhala_ratio'] < 0.65 or m['short_ratio'] > 0.50:
+        return False
+        
+    return True
+
+
+def _title_makes_sense(title: str) -> bool:
+    """Returns True if the title is real, sensible, and actual."""
+    if not title:
+        return False
+        
+    from core import quality
+    # A sensible title should be in Sinhala (high Sinhala ratio)
+    if quality.sinhala_ratio(title) < 0.65:
+        return False
+        
+    # A title should not be too short in terms of letters (less than 4 characters is probably gibberish/fragment)
+    alphanumeric = re.sub(r'[^\w\s]', '', title)
+    if len(alphanumeric.replace(' ', '')) < 4:
+        return False
+        
+    return True
+
+
 def polish_articles(articles: list[Article], mode: str = None) -> list[dict]:
     """Post-edit title and body for all articles in a single batch. Returns a list of result dicts."""
     mode = (mode or POLISH_MODE or 'off').lower()
@@ -149,19 +187,19 @@ def polish_articles(articles: list[Article], mode: str = None) -> list[dict]:
             results[i] = _result(orig_body, orig_title, False, 'polish: off')
             continue
 
-        if _is_nonsense(orig_body) and _is_nonsense(orig_title):
-            results[i] = _result(orig_body, orig_title, False, 'polish: skipped, title and body are empty or nonsense')
+        # If body doesn't make sense -> give up and discard.
+        if not _body_makes_sense(orig_body):
+            results[i] = _result("[DISCARD]", "[DISCARD]", True, 'polish: discarded, body does not make sense')
             continue
+
+        # If the body makes sense, let's see if the title is sensible.
+        # If the title is NOT sensible, we will instruct the LLM to regenerate it by sending title=""
+        needs_title_generation = not _title_makes_sense(orig_title)
 
         verdict = quality.score(orig_body)['verdict']
         if mode == 'auto':
-            if verdict == 'good' and not _is_nonsense(orig_title):
+            if verdict == 'good' and not needs_title_generation:
                 results[i] = _result(orig_body, orig_title, False, 'polish: not needed (text and title are good)')
-                continue
-            if verdict == 'unreadable':
-                results[i] = _result(orig_body, orig_title, False,
-                               'polish: skipped, body is unreadable — a model '
-                               'given this would invent rather than repair')
                 continue
 
         if len(orig_body) > POLISH_MAX_CHARS:
@@ -173,9 +211,10 @@ def polish_articles(articles: list[Article], mode: str = None) -> list[dict]:
         to_process.append({
             'idx': i,
             'id': str(i),
-            'title': orig_title,
+            'title': "" if needs_title_generation else orig_title,
             'body': orig_body,
-            'verdict': verdict
+            'verdict': verdict,
+            'needs_title_generation': needs_title_generation
         })
 
     if not to_process:
@@ -236,8 +275,18 @@ def polish_articles(articles: list[Article], mode: str = None) -> list[dict]:
         cand_title = str(reply_item.get('title', '')).strip()
         cand_body = str(reply_item.get('body', '')).strip()
 
-        if cand_body == "[DISCARD]":
+        if cand_body == "[DISCARD]" or cand_title == "[DISCARD]":
             results[i] = _result("[DISCARD]", "[DISCARD]", True, 'polish: applied, article discarded by LLM as a dud', 1.0)
+            continue
+
+        # Check if the candidate body makes sense
+        if not _body_makes_sense(cand_body):
+            results[i] = _result("[DISCARD]", "[DISCARD]", True, 'polish: discarded, LLM candidate body does not make sense', 1.0)
+            continue
+
+        # Check if the candidate title makes sense
+        if not _title_makes_sense(cand_title):
+            results[i] = _result("[DISCARD]", "[DISCARD]", True, 'polish: discarded, LLM candidate title does not make sense', 1.0)
             continue
 
         accepted, why, sim = check(orig_body, cand_body)

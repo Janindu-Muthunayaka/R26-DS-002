@@ -46,6 +46,12 @@ def interpret(req: InterpretRequest):
         # The main pipeline (l0_voice) only needs the final prompt dictionary
         final_prompt = result.get("final_prompt", {})
         
+        # Merge personalization stage details for frontend logging/diagnostics
+        pers_stage = result.get("personalization_stage", {})
+        final_prompt["style_source"] = pers_stage.get("style_source")
+        final_prompt["user_profile"] = pers_stage.get("user_profile")
+        final_prompt["learned"] = pers_stage.get("learned")
+        
         # Ensure we add the retrieved_chunk_id back into the response if provided
         if req.retrieved_chunk_id:
             final_prompt["retrieved_chunk_id"] = req.retrieved_chunk_id

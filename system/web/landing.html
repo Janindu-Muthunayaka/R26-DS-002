@@ -703,7 +703,7 @@
 
                 <div class="col2 node-col">
                     <div class="vline"></div>
-                    <div class="node2 h-single"><span id="data-personalization">personalization</span></div>
+                    <div class="node2 h-long"><span id="data-personalization">personalization</span></div>
                 </div>
 
                 <div class="col2 split-col">
@@ -1061,10 +1061,33 @@
 
                         let persHtml = `<b>Style:</b> ${latest.style_class || 'Default'}<br>`;
                         if (latest.prompt_modifier) {
-                            persHtml += `<b>Prompt Modifier:</b> <span style="font-family: monospace; font-size: 10px;">"${latest.prompt_modifier}"</span><br>`;
+                            persHtml += `<div style="margin-top: 4px; margin-bottom: 6px; padding: 4px 6px; background: rgba(0,0,0,0.03); border-radius: 4px; font-family: monospace; font-size: 9.5px; border-left: 2px solid var(--accent); white-space: pre-wrap; word-break: break-word;">"${latest.prompt_modifier}"</div>`;
+                        }
+                        if (latest.style_source) {
+                            let srcName = latest.style_source;
+                            if (srcName === 'model') srcName = 'Model Confident Prediction';
+                            else if (srcName === 'history_fallback') srcName = 'User History Fallback';
+                            else if (srcName === 'cold_start') srcName = 'Cold Start Default';
+                            else if (srcName === 'explicit_intent') srcName = 'Explicit Intent';
+                            else if (srcName === 'explicit_flag') srcName = 'Explicit Flag';
+                            else if (srcName === 'text_keywords') srcName = 'Text Keywords';
+                            persHtml += `<b style="font-size:10px;">Source:</b> <span style="font-size:10.5px;color:var(--accent-deep);">${srcName}</span><br>`;
+                        }
+                        if (latest.user_profile) {
+                            const prof = latest.user_profile;
+                            persHtml += `<div style="margin-top: 6px; font-size: 9.5px; border-top: 1px dashed var(--card-border); padding-top: 6px;">`;
+                            persHtml += `<b>Confirmed Turns:</b> ${prof.n_confirmed || 0}<br>`;
+                            if (prof.history_weights) {
+                                persHtml += `<b>History Weights:</b><br>`;
+                                for (let [k, v] of Object.entries(prof.history_weights)) {
+                                    let pct = Math.round(v * 100);
+                                    persHtml += `• ${k}: ${pct}%<br>`;
+                                }
+                            }
+                            persHtml += `</div>`;
                         }
                         if (latest.correction_applied) {
-                            persHtml += `<b>Correction:</b> ${latest.correction_applied}`;
+                            persHtml += `<div style="margin-top: 4px; font-size: 9.5px; color: #ef4444;"><b>Correction Applied:</b> ${latest.correction_applied}</div>`;
                         }
                         updateData('personalization', persHtml, true);
 
@@ -1085,15 +1108,35 @@
                         }
                         updateData('generator', genHtml, true);
                         
-                        let persHtml = `<b>Intent:</b> ${ans.intent}<br>`;
-                        if (ans.english_translation) {
-                            persHtml += `<b>English:</b> ${ans.english_translation}<br>`;
+                        let persHtml = `<b>Style:</b> ${ans.style_class || 'Default'}<br>`;
+                        if (ans.prompt_modifier) {
+                            persHtml += `<div style="margin-top: 4px; margin-bottom: 6px; padding: 4px 6px; background: rgba(0,0,0,0.03); border-radius: 4px; font-family: monospace; font-size: 9.5px; border-left: 2px solid var(--accent); white-space: pre-wrap; word-break: break-word;">"${ans.prompt_modifier}"</div>`;
                         }
-                        if (ans.style_class) {
-                            persHtml += `<b>Style:</b> ${ans.style_class}<br>`;
+                        if (ans.style_source) {
+                            let srcName = ans.style_source;
+                            if (srcName === 'model') srcName = 'Model Confident Prediction';
+                            else if (srcName === 'history_fallback') srcName = 'User History Fallback';
+                            else if (srcName === 'cold_start') srcName = 'Cold Start Default';
+                            else if (srcName === 'explicit_intent') srcName = 'Explicit Intent';
+                            else if (srcName === 'explicit_flag') srcName = 'Explicit Flag';
+                            else if (srcName === 'text_keywords') srcName = 'Text Keywords';
+                            persHtml += `<b style="font-size:10px;">Source:</b> <span style="font-size:10.5px;color:var(--accent-deep);">${srcName}</span><br>`;
+                        }
+                        if (ans.user_profile) {
+                            const prof = ans.user_profile;
+                            persHtml += `<div style="margin-top: 6px; font-size: 9.5px; border-top: 1px dashed var(--card-border); padding-top: 6px;">`;
+                            persHtml += `<b>Confirmed Turns:</b> ${prof.n_confirmed || 0}<br>`;
+                            if (prof.history_weights) {
+                                persHtml += `<b>History Weights:</b><br>`;
+                                for (let [k, v] of Object.entries(prof.history_weights)) {
+                                    let pct = Math.round(v * 100);
+                                    persHtml += `• ${k}: ${pct}%<br>`;
+                                }
+                            }
+                            persHtml += `</div>`;
                         }
                         if (ans.correction_applied) {
-                            persHtml += `<b>Correction:</b> ${ans.correction_applied}`;
+                            persHtml += `<div style="margin-top: 4px; font-size: 9.5px; color: #ef4444;"><b>Correction Applied:</b> ${ans.correction_applied}</div>`;
                         }
                         updateData('personalization', persHtml, true);
                         
