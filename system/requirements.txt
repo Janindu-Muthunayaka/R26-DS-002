@@ -16,3 +16,7 @@ paddleocr>=2.7.3
 craft-text-detector
 scipy
 scikit-image
+tinydb
+river
+SpeechRecognition
+PyAudio

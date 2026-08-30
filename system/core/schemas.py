@@ -155,7 +155,10 @@ class Answer(BaseModel):
     intent: str = ''
     speakable: str = ''                   # <-- the phone speaks THIS
     answer_si: str = ''                   # the generated answer alone
-    sources: List[dict] = []              # retrieval provenance, for the log
+    sources: List[dict] = []
+    english_translation: str = ''
+    style_class: str = ''
+    correction_applied: Optional[str] = None
     warnings: List[str] = []
     timings: dict = {}
     error: Optional[str] = None

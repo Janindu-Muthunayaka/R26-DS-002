@@ -1,0 +1,29 @@
+﻿id,user_id,timestamp,sinhala_input,english_translation,intent,personalization_flags,retrieved_chunk_id,style_class,corrected
+1,user_001,2026-08-28T08:12:50.026649,සරල කරන්න,Simplify,Simplify,"{""speed"": ""fast""}",,Simple,False
+2,user_001,2026-08-28T08:12:54.522297,කරුණාකර මෙය ඉතාමත් සරලව පහදා දෙන්න,Please make this very simple.,Simplify,"{""speed"": ""fast""}",,Simple,False
+3,user_001,2026-08-28T08:12:59.183243,කෙටියෙන් කියන්න,Let me tell you briefly.,SUMMARIZE,"{""detail_level"": ""brief""}",,Simple,False
+4,user_002,2026-08-28T08:13:03.480198,තව විස්තර කරන්න,More details,MORE_DETAILS,"{""detail_level"": ""detailed""}",,Detailed,False
+5,user_002,2026-08-28T08:13:08.286253,මෙය තව ටිකක් විස්තර කරන්න පුළුවන්ද,Can you explain this a little more?,EXPLAIN,"{""language_style"": ""simple""}",,Detailed,False
+6,user_002,2026-08-28T08:13:12.882725,සම්පූර්ණ විස්තරය දෙන්න,Give me the full details,EXPLAIN,"{""language_style"": ""simple""}",,Detailed,False
+7,user_003,2026-08-28T08:13:17.369104,පියවරෙන් පියවර පහදන්න,Step by step,STEP_BY_STEP,"{""speed"": ""fast""}",,StepByStep,False
+8,user_003,2026-08-28T08:13:21.656554,එකින් එක කියන්න,One by one .,STEP_BY_STEP,"{""speed"": ""fast""}",,StepByStep,False
+9,user_003,2026-08-28T08:13:25.931383,පියවර වශයෙන් විස්තර කරන්න,Step by step description,STEP_BY_STEP,"{""speed"": ""fast""}",,StepByStep,False
+10,user_001,2026-08-28T08:13:30.715272,මෙහි ඇත්තේ කුමක්ද,What's wrong with that?,ASK_INQUIRY,"{""speed"": ""fast""}",,StepByStep,True
+11,user_002,2026-08-28T08:13:35.265735,මෙහි ඇත්තේ කුමක්ද,What's wrong with that?,ASK_INQUIRY,"{""speed"": ""fast""}",,Detailed,False
+12,user_003,2026-08-28T08:13:39.879931,මෙහි ඇත්තේ කුමක්ද,What's wrong with that?,ASK_INQUIRY,"{""speed"": ""fast""}",,StepByStep,False
+13,user_001,2026-08-28T08:44:16.928870,පියවරෙන් පියවර පහදන්න,Step by step,STEP_BY_STEP,"{""speed"": ""fast""}",,StepByStep,False
+14,user_001,2026-08-28T13:31:22.803417,මෙය තව ටිකක් විස්තර කරන්න පුළුවන්ද,Can you explain this a little more?,EXPLAIN,"{""language_style"": ""simple""}",,Detailed,False
+15,user_002,2026-08-28T13:32:54.165249,මෙය තව ටිකක් විස්තර කරන්න පුළුවන්ද,Can you explain this a little more?,EXPLAIN,"{""language_style"": ""simple""}",,Detailed,False
+16,user_001,2026-08-29T12:46:51.718764,මේකේ මොනවද තියෙන්නේ,What's in this?,IDENTIFY_CONTENT,"{""language_style"": ""simple""}",,Simple,False
+17,user_002,2026-08-29T12:53:16.482125,මේකේ මොනවද තියෙන්නේ,What's in this?,IDENTIFY_CONTENT,"{""language_style"": ""simple""}",,Detailed,False
+18,user_002,2026-08-29T12:57:43.133753,මෙය සරලව කියන්න,This is simple.,IDENTIFY_CONTENT,"{""language_style"": ""simple""}",,Simple,False
+19,user_002,2026-08-29T12:58:53.751006,මේක ගැන කියන්න,Tell me about this .,IDENTIFY_CONTENT,"{""language_style"": ""simple""}",,Simple,False
+20,user_003,2026-08-30T10:06:29.293951,මේකේ මොනවද තියෙන්නේ,What's in this?,IDENTIFY_CONTENT,"{""language_style"": ""simple""}",,StepByStep,False
+21,user_003,2026-08-30T10:09:07.045510,හොදින් විස්තර කරලා කියන්න.,"Well, explain it to me.",EXPLAIN,"{""language_style"": ""simple""}",,StepByStep,False
+22,user_003,2026-08-30T10:10:47.720229,ගැඹුරින් පැහැදිලි කරන්න,Explain in depth,EXPLAIN IN DEPTH,"{""language_style"": ""technical""}",,StepByStep,False
+23,user_003,2026-08-30T10:13:09.886125,ගැඹුරින් පහදන්න,Go down deep,GO_DOWN_DEEP,"{""speed"": ""slow"", ""language_style"": ""simple""}",,StepByStep,False
+24,user_003,2026-08-30T10:13:59.613664,ලේසියෙන් කියන්න,Easy to say .,SPEAK_EASILY,"{""speed"": ""fast""}",,Simple,False
+25,user_003,2026-08-30T10:15:39.722715,මේකේ මොනවද තියෙන්නේ,What's in this?,IDENTIFY_CONTENT,"{""language_style"": ""simple""}",,Simple,False
+26,user_003,2026-08-30T10:16:57.523736,ගැඹුරින් පැහැදිලි කරන්න,Explain in depth,EXPLAIN IN DEPTH,"{""language_style"": ""technical""}",,Simple,False
+27,user_003,2026-08-30T10:18:38.936470,ගැඹුරින් පහදන්න,Go down deep,GO_DOWN_DEEP,"{""speed"": ""slow"", ""language_style"": ""simple""}",,Simple,False
+28,user_002,2026-08-30T10:34:10.475269,මේකේ මොනවද තියෙන්නේ,What's in this?,IDENTIFY_CONTENT,"{""language_style"": ""simple""}",,Simple,False

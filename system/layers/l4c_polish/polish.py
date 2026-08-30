@@ -60,16 +60,17 @@ from core.schemas import Article
 
 SYSTEM_PROMPT = (
     'You are a Sinhala language expert repairing OCR errors in newspaper articles.\n'
-    'You will receive a JSON object containing "title" and "body".\n'
+    'You will receive a JSON array of objects, each containing "id", "title", and "body".\n'
     'RULES, in order of importance:\n'
-    '1. Output ONLY a valid JSON object with keys "title" and "body". No preamble, no markdown, no quotes.\n'
-    '2. NEVER add information to the body. No names, numbers, dates, places or clauses that are not already present.\n'
-    '3. NEVER remove, summarise, reorder, translate or explain anything in the body.\n'
-    '4. Repair only what is clearly an OCR error in the body: a broken word, a wrong dependent vowel sign, a split/merged word, a stray Latin fragment.\n'
-    '5. If the title is empty or missing, USE the context of the body to GENERATE an appropriate short Sinhala headline for the "title" field.\n'
-    '6. If the title is present, repair its OCR errors using the context of the body.\n'
-    '7. Output Sinhala script. Leave digits and genuine Latin proper nouns as they are.\n'
-    'The output body should be almost identical to the input body in length and in sentence order.'
+    '1. Output ONLY a valid JSON array of objects. Each object must have "id", "title" and "body". No preamble, no markdown.\n'
+    '2. IDENTIFY DUDS: If a body has almost no meaningful Sinhala text (e.g. only a few nonsense characters, or completely empty), return "[DISCARD]" for both its "title" and "body". Do not attempt to repair a completely meaningless article.\n'
+    '3. GENERATE TITLE: If a body has valid information but the title is empty, missing, gibberish (e.g., contains only a few characters, repetitive symbols, or looks nonsensical), or otherwise not a proper headline, USE the context of the body to GENERATE an appropriate short Sinhala headline for the "title" field.\n'
+    '4. NEVER add new factual information to any body. No names, numbers, dates, places or clauses that are not already present.\n'
+    '5. NEVER remove, summarise, reorder, translate or explain anything in any body.\n'
+    '6. Repair only what is clearly an OCR error in the body: a broken word, a wrong dependent vowel sign, a split/merged word, a stray Latin fragment.\n'
+    '7. If the title is present and meaningful, repair its OCR errors using the context of the body.\n'
+    '8. Output Sinhala script. Leave digits and genuine Latin proper nouns as they are.\n'
+    'The output bodies should be almost identical to the input bodies in length and in sentence order.'
 )
 
 
@@ -115,38 +116,62 @@ def _is_nonsense(text: str) -> bool:
     return len(alphanumeric.replace(' ', '')) < 10
 
 
-def polish_article(article: Article, mode: str = None) -> dict:
-    """Post-edit title and body. Returns a result dict; never raises."""
+def polish_articles(articles: list[Article], mode: str = None) -> list[dict]:
+    """Post-edit title and body for all articles in a single batch. Returns a list of result dicts."""
     mode = (mode or POLISH_MODE or 'off').lower()
     
-    orig_title = (article.title or article.title_raw or '').strip()
-    orig_body = (article.body or article.body_raw or '').strip()
+    results = [None] * len(articles)
+    to_process = []
+    
+    for i, article in enumerate(articles):
+        orig_title = (article.title or article.title_raw or '').strip()
+        orig_body = (article.body or article.body_raw or '').strip()
 
-    if mode == 'off':
-        return _result(orig_body, orig_title, False, 'polish: off')
+        if mode == 'off':
+            results[i] = _result(orig_body, orig_title, False, 'polish: off')
+            continue
 
-    if _is_nonsense(orig_body) and _is_nonsense(orig_title):
-        return _result(orig_body, orig_title, False, 'polish: skipped, title and body are empty or nonsense')
+        if _is_nonsense(orig_body) and _is_nonsense(orig_title):
+            results[i] = _result(orig_body, orig_title, False, 'polish: skipped, title and body are empty or nonsense')
+            continue
 
-    verdict = quality.score(orig_body)['verdict']
-    if mode == 'auto':
-        if verdict == 'good' and not _is_nonsense(orig_title):
-            return _result(orig_body, orig_title, False, 'polish: not needed (text and title are good)')
-        if verdict == 'unreadable':
-            return _result(orig_body, orig_title, False,
-                           'polish: skipped, body is unreadable — a model '
-                           'given this would invent rather than repair')
+        verdict = quality.score(orig_body)['verdict']
+        if mode == 'auto':
+            if verdict == 'good' and not _is_nonsense(orig_title):
+                results[i] = _result(orig_body, orig_title, False, 'polish: not needed (text and title are good)')
+                continue
+            if verdict == 'unreadable':
+                results[i] = _result(orig_body, orig_title, False,
+                               'polish: skipped, body is unreadable — a model '
+                               'given this would invent rather than repair')
+                continue
 
-    if len(orig_body) > POLISH_MAX_CHARS:
-        return _result(orig_body, orig_title, False,
-                       f'polish: skipped, body {len(orig_body)} chars is over the '
-                       f'{POLISH_MAX_CHARS} cap')
+        if len(orig_body) > POLISH_MAX_CHARS:
+            results[i] = _result(orig_body, orig_title, False,
+                           f'polish: skipped, body {len(orig_body)} chars is over the '
+                           f'{POLISH_MAX_CHARS} cap')
+            continue
+
+        to_process.append({
+            'idx': i,
+            'id': str(i),
+            'title': orig_title,
+            'body': orig_body,
+            'verdict': verdict
+        })
+
+    if not to_process:
+        return results
 
     ok, why = llm.available()
     if not ok:
-        return _result(orig_body, orig_title, False, f'polish: unavailable ({why})')
+        for p in to_process:
+            results[p['idx']] = _result(p['body'], p['title'], False, f'polish: unavailable ({why})')
+        return results
 
-    prompt_payload = json.dumps({"title": orig_title, "body": orig_body}, ensure_ascii=False)
+    # Batch LLM Call
+    payload_json = [{"id": p["id"], "title": p["title"], "body": p["body"]} for p in to_process]
+    prompt_payload = json.dumps(payload_json, ensure_ascii=False)
     
     reply_text, reason = llm.chat(
         [{'role': 'system', 'content': SYSTEM_PROMPT},
@@ -154,27 +179,50 @@ def polish_article(article: Article, mode: str = None) -> dict:
         temperature=0.0)
         
     if reply_text is None:
-        return _result(orig_body, orig_title, False, f'polish: call failed ({reason})')
+        for p in to_process:
+            results[p['idx']] = _result(p['body'], p['title'], False, f'polish: call failed ({reason})')
+        return results
 
     # Parse JSON from LLM
     try:
         reply_json = json.loads(reply_text.strip('` \n').removeprefix('json'))
-        cand_title = str(reply_json.get('title', '')).strip()
-        cand_body = str(reply_json.get('body', '')).strip()
-    except json.JSONDecodeError:
-        return _result(orig_body, orig_title, False, 'polish: call failed (LLM did not return valid JSON)')
+        if not isinstance(reply_json, list):
+            raise ValueError("LLM did not return a JSON array")
+    except (json.JSONDecodeError, ValueError) as e:
+        for p in to_process:
+            results[p['idx']] = _result(p['body'], p['title'], False, f'polish: call failed ({str(e)})')
+        return results
 
-    # Check the body for safety (hallucination guards)
-    # If the original body was mostly empty/nonsense, we might fail the similarity guard if the LLM expanded it.
-    # But wait, we already rejected if BOTH title and body are empty/nonsense.
-    # If the original body is not empty, run the check on it.
-    accepted, why, sim = check(orig_body, cand_body)
-    if not accepted:
-        return _result(orig_body, orig_title, False, f'polish: REJECTED body — {why}', sim)
+    # Map results back
+    reply_map = {str(item.get("id", "")): item for item in reply_json if isinstance(item, dict)}
 
-    changed = 1.0 - sim
-    return _result(cand_body, cand_title, True,
-                   f'polish: applied, {changed:.1%} of body chars changed',
-                   sim, {'before': verdict,
-                         'after': quality.score(cand_body)['verdict']})
+    for p in to_process:
+        i = p['idx']
+        orig_body = p['body']
+        orig_title = p['title']
+        
+        reply_item = reply_map.get(str(i))
+        if not reply_item:
+            results[i] = _result(orig_body, orig_title, False, 'polish: call failed (LLM missed this article ID)')
+            continue
+            
+        cand_title = str(reply_item.get('title', '')).strip()
+        cand_body = str(reply_item.get('body', '')).strip()
+
+        if cand_body == "[DISCARD]":
+            results[i] = _result("[DISCARD]", "[DISCARD]", True, 'polish: applied, article discarded by LLM as a dud', 1.0)
+            continue
+
+        accepted, why, sim = check(orig_body, cand_body)
+        if not accepted:
+            results[i] = _result(orig_body, orig_title, False, f'polish: REJECTED body — {why}', sim)
+            continue
+
+        changed = 1.0 - sim
+        results[i] = _result(cand_body, cand_title, True,
+                       f'polish: applied, {changed:.1%} of body chars changed',
+                       sim, {'before': p['verdict'],
+                             'after': quality.score(cand_body)['verdict']})
+
+    return results
 

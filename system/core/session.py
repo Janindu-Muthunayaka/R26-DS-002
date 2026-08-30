@@ -37,18 +37,16 @@ class SessionStore:
         self.ttl_s = float(ttl_s)
         self.max_items = int(max_items)
         self._clock = clock
-        # Value is [stored_at, document, cursor]. The cursor is how far
-        # through the article the listener has walked with "next"; it lives
-        # here so it expires and is evicted WITH its article. A cursor that
-        # outlives the text it indexes into is a bug waiting for a demo.
+        # Value is [stored_at, document, cursor, last_answer_dict]
         self._items: "OrderedDict[str, list]" = OrderedDict()
 
     def put(self, job: str, document: Document) -> None:
         if not job:
             return
         self.purge()
+        existing_answer = self.get_answer(job)
         self._items.pop(job, None)          # re-inserting moves it to newest
-        self._items[job] = [self._clock(), document, 0]
+        self._items[job] = [self._clock(), document, 0, existing_answer]
         while len(self._items) > self.max_items:
             self._items.popitem(last=False)
 
@@ -71,6 +69,18 @@ class SessionStore:
         hit = self._items.get(job or '')
         if hit:
             hit[2] = max(0, int(value))
+
+    def get_answer(self, job: str) -> Optional[dict]:
+        hit = self._items.get(job or '')
+        return hit[3] if hit and len(hit) > 3 else None
+
+    def set_answer(self, job: str, answer_dict: dict) -> None:
+        hit = self._items.get(job or '')
+        if hit:
+            # Ensure the list is long enough
+            while len(hit) <= 3:
+                hit.append(None)
+            hit[3] = answer_dict
 
     def age_of(self, job: str) -> Optional[float]:
         hit = self._items.get(job or '')

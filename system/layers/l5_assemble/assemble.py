@@ -16,7 +16,7 @@ def assemble(articles, source_frames, timings=None) -> Document:
             continue
         if a.verdict == 'warn' and a.note:
             warnings.append(f'Article {a.index + 1}: {a.note}')
-        if not (a.title.strip() or a.body.strip()):
+        if not a.body.strip():
             continue
         keep.append(a)
     for i, a in enumerate(keep):

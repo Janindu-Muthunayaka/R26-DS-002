@@ -289,13 +289,20 @@ def build(pipeline, web_dir: Path):
         for w in res['warnings']:
             print(f'[ask {q.job}] {w}')
 
-        return Answer(
+        ans_dict = Answer(
             ok=res['ok'], job=q.job, route=res['route'], intent=res['intent'],
             speakable=res['speakable'], answer_si=res['answer_si'],
-            sources=res['sources'], warnings=res['warnings'],
+            sources=res['sources'],
+            english_translation=voice.get('english_translation', ''),
+            style_class=voice.get('style_class', ''),
+            correction_applied=voice.get('correction_applied'),
+            warnings=res['warnings'],
             timings={'voice': t_voice, 'generate': t_gen,
                      'total': round(time.time() - t0, 2)},
         ).model_dump()
+        
+        sessions.set_answer(q.job, ans_dict)
+        return ans_dict
 
     @app.get('/session/{job}')
     def session(job: str):
@@ -332,12 +339,23 @@ def build(pipeline, web_dir: Path):
 
     @app.get('/latest')
     def latest():
-        """Returns the most recent job data for the dashboard."""
         jobs = sessions.jobs()
         if not jobs:
             return {'ok': False, 'error': 'no active jobs'}
-        doc = sessions.get(jobs[0])
-        return {'ok': True, 'job': jobs[0], 'document': doc.model_dump()}
+        job = jobs[0]
+        doc = sessions.get(job)
+        
+        reply = {
+            'ok': True,
+            'job': job,
+            'document': doc.model_dump()
+        }
+        
+        ans = sessions.get_answer(job)
+        if ans:
+            reply['document']['last_answer'] = ans
+            
+        return reply
 
     @app.get('/audio/{job}')
     def audio(job: str):

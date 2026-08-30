@@ -101,6 +101,18 @@ def _degraded(text: str, reason: str) -> dict:
 def interpret(text: str, user_id: str = None,
               retrieved_chunk_id: str = None, mode: str = None) -> dict:
     """Sinhala utterance -> Component 4's routing dict. Never raises."""
+    # Connect l8a_listen: if no text was provided (e.g. debugging/testing), 
+    # optionally grab it from the local microphone if PyAudio is installed.
+    if not text:
+        try:
+            from layers.l8a_listen.stt.google_stt_live import listen_and_transcribe
+            print("[l8a_listen] Connecting to microphone...")
+            captured = listen_and_transcribe()
+            if captured:
+                text = captured
+        except ImportError:
+            pass
+
     mode = (mode or VOICE_MODE or 'stub').lower()
     if mode != 'http':
         return _stub(text)

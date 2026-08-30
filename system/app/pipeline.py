@@ -148,17 +148,6 @@ class Pipeline:
                 else:
                     art.body = art.body_raw
 
-                # 6. Polish
-                if POLISH_MODE.lower() != 'off':
-                    res = _polish.polish_article(art)
-                    art.polish_reason = res['reason']
-                    if res['applied']:
-                        art.body_polished = res['body']
-                        art.title_polished = res['title']
-                    if res['applied'] or 'REJECTED' in res['reason']:
-                        with extra_warnings_lock:
-                            extra_warnings.append(f"Article {art.index + 1}: {res['reason']}")
-
                 doc.progress_log.append(f"Article {art.index + 1} scanned")
                 return art
             except Exception as e:
@@ -185,6 +174,20 @@ class Pipeline:
         
         # Replace document articles with completed ones
         doc.articles = final_arts
+
+        # 6. Polish (Batch)
+        if POLISH_MODE.lower() != 'off':
+            t0_polish = time.time()
+            from layers.l4c_polish import polish as _polish
+            results = _polish.polish_articles(final_arts)
+            for art, res in zip(final_arts, results):
+                art.polish_reason = res['reason']
+                if res['applied']:
+                    art.body_polished = res['body']
+                    art.title_polished = res['title']
+                if res['applied'] or 'REJECTED' in res['reason']:
+                    extra_warnings.append(f"Article {art.index + 1}: {res['reason']}")
+            t['polish_batch'] = round(time.time() - t0_polish, 2)
 
         # Final assembly
         t0 = time.time()

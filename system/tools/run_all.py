@@ -74,6 +74,8 @@ def main():
                     help='use the stand-ins instead of the real services')
     ap.add_argument('--rag-python', default=None,
                     help="the rag venv's python.exe, if it has its own")
+    ap.add_argument('--voice-python', default=None,
+                    help="the voice/l7 venv's python.exe, if it has its own")
     ap.add_argument('--polish', choices=('off', 'auto', 'on'), default=None,
                     help='Layer 4C. Leave unset to keep the configured value '
                          '(off). "auto" only runs on text rated poor.')
@@ -108,6 +110,13 @@ def main():
             reader_env['SINHALA_VOICE_MODE'] = 'http'
             reader_env['SINHALA_RAG_MODE'] = 'http'
         elif not a.no_rag:
+            # Spawn Voice (L7 Personalization) if not in stubs mode
+            v_py = a.voice_python or sys.executable
+            spawn('svc-voice', [v_py, 'layers/l7_personalization/server.py', '--port', a.voice_port],
+                  cwd=_SYSTEM)
+            reader_env['SINHALA_VOICE_MODE'] = 'http'
+            reader_env['SINHALA_VOICE_URL'] = f'http://127.0.0.1:{a.voice_port}'
+            
             if not ok:
                 print('  svc-rag needs a key — starting WITHOUT it. The '
                       'reading path and\n  every local command still work; '

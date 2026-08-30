@@ -1,0 +1,501 @@
+ID,Input,Expected,English,Intent,Correct,Flags,Trans Time,LLM Time,Total Time
+gen_1,ඊළඟ පිටුවට යන්න,NEXT_PAGE,Go to the next page,NEXT_PAGE,True,"{""language_style"": ""simple""}",3.423,27.462,30.885
+gen_2,පෙර පිටුවට යන්න,PREVIOUS_PAGE,Go to the previous page,PREVIOUS_PAGE,True,"{""language_style"": ""simple""}",1.649,3.864,5.513
+gen_3,මේ පුවත සාරාංශ කරන්න,SUMMARIZE,Summarize this report,SUMMARIZE,True,"{""language_style"": ""simple""}",1.773,3.891,5.664
+gen_4,අද ප්‍රධාන සිරස්තල කියවන්න,READ_HEADLINES,Read the main headlines today,READ_HEADLINES,True,"{""language_style"": ""simple""}",1.776,4.014,5.79
+gen_5,මට මේක තේරෙන්නේ නෑ කරුණාකර පැහැදිලි කරන්න,EXPLAIN,I don't understand this. Please explain.,EXPLAIN,True,"{""language_style"": ""simple""}",2.66,3.858,6.518
+gen_6,ආයෙත් කියන්න,REPEAT,Say it again .,REPEAT,True,"{""speed"": ""fast""}",1.417,3.801,5.218
+gen_7,කෙටියෙන් කියන්න,SIMPLIFY,Let me tell you briefly.,SUMMARIZE,False,"{""language_style"": ""simple""}",2.067,3.873,5.94
+gen_8,නවතන්න,STOP,Stop it .,STOP,True,"{""speed"": ""fast""}",1.139,3.652,4.791
+gen_9,දිනමිණ පත්තරේ අද තියෙන ප්‍රධාන ප්‍රවෘත්ති මොනවද,READ_HEADLINES,What are the main news stories in the daily newspaper today?,READ_ARTICLE,False,"{""language_style"": ""simple""}",3.197,4.06,7.257
+gen_10,ඊළඟ පුවත කියවන්න,NEXT_ARTICLE,Read the next article,NEXT_ARTICLE,True,"{""language_style"": ""simple""}",1.434,3.867,5.301
+gen_11,කලින් කියවපු එකට ආපහු යන්න,PREVIOUS_ARTICLE,Back to the previous reading,PREVIOUS_ARTICLE,True,"{""language_style"": ""simple""}",1.687,4.132,5.819
+gen_12,මේක තව ටිකක් සරලව කියන්න පුළුවන්ද,SIMPLIFY,Can you make this a little easier ?,SIMPLIFY,True,"{""language_style"": ""simple""}",3.108,4.053,7.16
+gen_13,වෙනත් විදිහකට මේක කියන්න,REPHRASE,"In other words, say it.",EXPLAIN,False,"{""language_style"": ""simple""}",2.619,3.918,6.536
+gen_14,ක්‍රීඩා පිටුවට යන්න,NAVIGATE_SECTION,Go to the games page,NEXT_PAGE,False,"{""language_style"": ""simple""}",2.102,3.943,6.045
+gen_15,මේ සම්පූර්ණ ලිපියම කියවන්න,READ_ARTICLE,Read the whole article.,READ_ARTICLE,True,"{""language_style"": ""simple""}",2.089,3.917,6.006
+gen_16,හ්ම් මට ඕනේ මේකේ වැදගත්ම කරුණු ටික විතරක් දැනගන්න,SUMMARIZE,I just want to know the most important things about this .,SUMMARIZE,True,"{""detail_level"": ""brief""}",4.059,4.13,8.189
+gen_17,මට ඇහුණේ නෑ මුල ඉඳන් ආයේ කියවන්න,REPEAT,I didn't hear it from the beginning. Read it again.,REPEAT,True,{},4.616,3.659,8.275
+gen_18,මේ පුවතේ පසුබිම ටිකක් විස්තර කරන්න,EXPLAIN,Describe the background of this article,EXPLAIN,True,"{""language_style"": ""simple""}",2.673,4.007,6.681
+gen_19,දැන් ඇති කියෙව්වා නවත්වන්න,STOP,Now enough to stop reading,STOP,True,"{""speed"": ""fast""}",2.073,3.763,5.835
+gen_20,ඊළඟ එක,NEXT_ARTICLE,The next one.,NEXT_PAGE,False,"{""language_style"": ""simple""}",1.795,3.876,5.671
+gen_21,පස්සට යන්න,PREVIOUS_PAGE,Go back to the drawing board .,PREVIOUS_ARTICLE,False,"{""language_style"": ""simple""}",2.929,4.063,6.992
+gen_22,කලින් පිටුව පෙරලන්න,PREVIOUS_PAGE,Previous page,PREVIOUS_PAGE,True,"{""language_style"": ""simple""}",1.287,3.848,5.136
+gen_23,මේ විස්තරේ ගොඩක් දිග වැඩියි කෙටියෙන් කියන්න,SIMPLIFY,This is a very long detail.,SUMMARIZE,False,"{""detail_level"": ""detailed""}",2.771,4.041,6.812
+gen_24,වෙන මොනවද අද පත්තරේ තියෙන්නේ,READ_HEADLINES,What else is in today's paper?,READ_ARTICLE,False,"{""language_style"": ""simple""}",3.183,3.946,7.129
+gen_25,වාණිජ පුවත් තියෙන පිටුවට යන්න,NAVIGATE_SECTION,Go to the commercial news page,NEXT_PAGE,False,"{""language_style"": ""simple""}",1.494,3.943,5.437
+gen_26,අර කලින් කියවපු ප්‍රවෘත්තියට ආයෙත් යන්න පුළුවන්ද,PREVIOUS_ARTICLE,Can you go back to that old news story ?,PREVIOUS_ARTICLE,True,"{""language_style"": ""simple""}",2.266,4.157,6.423
+gen_27,මට මේ ඡේදය පියවරෙන් පියවර පැහැදිලි කරලා දෙන්න,EXPLAIN,Let me explain this paragraph step by step,EXPLAIN,True,"{""language_style"": ""simple""}",1.92,3.865,5.785
+gen_28,සාරාංශය මොකක්ද,SUMMARIZE,What is the summary?,SUMMARIZE,True,"{""language_style"": ""simple""}",1.504,3.783,5.287
+gen_29,ඔය කියපු දේ මට පැහැදිලි මදි වෙන වචන වලින් කියන්න,REPHRASE,Tell me what you said in no other words,EXPLAIN,False,"{""language_style"": ""simple""}",2.102,4.049,6.151
+gen_30,දැන් කියවීම නවතන්න,STOP,Now stop reading,STOP,True,"{""speed"": ""fast""}",1.019,3.85,4.868
+gen_31,දිනමිණ පුවත්පතේ අද කතුවැකිය කියවන්න,READ_ARTICLE,Read today's article in the daily newspaper,READ_ARTICLE,True,"{""language_style"": ""simple""}",2.398,4.018,6.416
+gen_32,ඊළඟ පිටුව,NEXT_PAGE,Next page,NEXT_PAGE,True,"{""language_style"": ""simple""}",0.815,4.24,5.055
+gen_33,මේකේ තියෙන අමාරු වචන ටික සරල කරලා කියන්න,SIMPLIFY,Let me simplify the hardest words in this.,SIMPLIFY,True,"{""language_style"": ""simple""}",2.345,3.87,6.215
+gen_34,මොකක්ද ඒ කිව්වේ ආයෙත් කියන්නකෝ,REPEAT,What did you say ?,EXPLAIN,False,"{""language_style"": ""simple""}",1.105,3.954,5.059
+gen_35,වෙනත් මාතෘකා මොනවද තියෙන්නේ,READ_HEADLINES,What are the other topics?,NAVIGATE_SECTION,False,"{""language_style"": ""simple""}",1.459,3.993,5.452
+gen_36,මේ පුවත විතරක් සාරාංශ කරන්න,SUMMARIZE,Just summarize this story.,SUMMARIZE,True,"{""language_style"": ""simple""}",1.404,3.872,5.276
+gen_37,පෙර පුවත,PREVIOUS_ARTICLE,Previous article,PREVIOUS_ARTICLE,True,"{""language_style"": ""simple""}",0.711,3.895,4.606
+gen_38,මට මේකේ තේරුම හරියටම විස්තර කරලා දෙන්න,EXPLAIN,Let me know exactly what this means.,EXPLAIN,True,"{""language_style"": ""simple""}",2.016,3.865,5.881
+gen_39,කියවන එක පොඩ්ඩකට නවත්වන්න,STOP,Stop reading for a while.,STOP,True,"{""speed"": ""slow""}",1.475,3.738,5.213
+gen_40,දේශපාලන ප්‍රවෘත්ති තියෙන කොටසට යන්න,NAVIGATE_SECTION,Go to the section with political news,NAVIGATE_SECTION,True,"{""language_style"": ""simple""}",1.726,4.016,5.742
+gen_41,ඊළඟ එකට යන්න නෑ නෑ කලින් එකට යන්න,PREVIOUS_ARTICLE,We don't have to go to the next one.,NEXT_PAGE,False,"{""language_style"": ""simple""}",2.566,3.864,6.43
+gen_42,මේ ලිපියේ අදහස වෙනස් විදිහකට පැහැදිලි කරන්න,REPHRASE,Explain the idea of this article in a different way,EXPLAIN,False,"{""language_style"": ""simple""}",2.749,3.915,6.664
+gen_43,මට වෙලාව නෑ මේක ඉක්මනින් සාරාංශ කරලා කියන්න,SUMMARIZE,I don't have time to summarize this quickly.,NEXT_PAGE,False,"{""speed"": ""slow""}",2.884,3.872,6.756
+gen_44,මේක ගොඩක් සංකීර්ණයි සරලව කියන්න,SIMPLIFY,It's very complicated.,SIMPLIFY,True,"{""language_style"": ""simple""}",1.64,3.861,5.501
+gen_45,මුලටම යන්න,GO_TO_START,Go to the beginning,GO_TO_START,True,"{""language_style"": ""simple""}",1.213,3.895,5.109
+gen_46,අවසන් පිටුවට යන්න,GO_TO_END,Go to the last page,GO_TO_END,True,"{""language_style"": ""simple""}",1.385,3.806,5.191
+gen_47,ඔය වාක්‍යය විතරක් ආයෙත් කියවන්න,REPEAT,Just read that sentence again.,REPEAT,True,"{""speed"": ""fast""}",1.474,3.759,5.233
+gen_48,මේකෙන් කියවෙන්නේ මොකක්ද කියලා මට තේරෙන විදිහට කියන්න,EXPLAIN,This is what it means . Tell me how I understand .,EXPLAIN,True,"{""language_style"": ""simple""}",2.692,3.917,6.609
+gen_49,ඊළඟ ප්‍රවෘත්තිය කියවන්න පටන් ගන්න,NEXT_ARTICLE,Start reading the next news .,NEXT_ARTICLE,True,"{""language_style"": ""simple""}",1.357,3.891,5.248
+gen_50,නවතින්න,STOP,Stop it .,STOP,True,"{""speed"": ""fast""}",0.924,3.515,4.439
+gen_51,අන්තර්ජාතික පුවත් පිටුවට යන්න,NAVIGATE_SECTION,Go to the international news page,NEXT_PAGE,False,"{""language_style"": ""simple""}",1.395,3.865,5.26
+gen_52,මේ ඡේදය සාරාංශ කරන්න,SUMMARIZE,Summarize this section,SUMMARIZE,True,"{""language_style"": ""simple""}",1.289,3.987,5.277
+gen_53,කලින් පිටුවට ආපහු යන්න ඕනේ,PREVIOUS_PAGE,I need to go back to the previous page,PREVIOUS_PAGE,True,"{""language_style"": ""simple""}",2.013,3.891,5.904
+gen_54,අද පත්තරේ විශේෂාංග ලිපි මොනවද,READ_HEADLINES,What are the special features of the paper,IDENTIFY_CONTENT,False,"{""language_style"": ""simple""}",1.925,3.825,5.75
+gen_55,මට තේරුණේ නෑ ආයේ සැරයක් කියවන්න,REPEAT,I don't understand. Read it again.,EXPLAIN,False,"{""language_style"": ""simple""}",2.327,3.851,6.177
+gen_56,මේ සිද්ධිය ගැන තව විස්තර තියෙනවද ඒක පැහැදිලි කරන්න,EXPLAIN,Is there any more details about this incident to explain it,EXPLAIN,True,"{""detail_level"": ""detailed""}",2.422,4.01,6.432
+gen_57,මේක වෙන විදිහකට කියන්න පුළුවන්ද,REPHRASE,Can you say this any other way ?,REPHRASE,True,"{""language_style"": ""simple""}",1.845,4.045,5.89
+gen_58,මේකේ ප්‍රධාන අදහස විතරක් කෙටියෙන් කියන්න,SIMPLIFY,Let me just say the main idea of this briefly.,SUMMARIZE,False,"{""language_style"": ""brief""}",2.511,3.955,6.467
+gen_59,ඉස්සරහට යන්න,NEXT_PAGE,Go ahead,NEXT_PAGE,True,"{""language_style"": ""simple""}",0.829,3.73,4.559
+gen_60,ඔතනින් නවත්වන්න,STOP,Stop there .,STOP,True,"{""speed"": ""fast""}",0.887,3.597,4.484
+gen_61,පළවෙනි පිටුවට යන්න,GO_TO_START,Go to the first page,GO_TO_START,True,"{""language_style"": ""simple""}",1.373,3.855,5.229
+gen_62,මේකේ ඉතුරු ටික කියවන්න,READ_ARTICLE,Read the rest of this .,NEXT_ARTICLE,False,"{""language_style"": ""simple""}",1.565,3.924,5.489
+gen_63,මේ ප්‍රවෘත්තියේ හරය මොකක්ද,SUMMARIZE,What is the heart of this news?,EXPLAIN,False,"{""language_style"": ""simple""}",1.942,3.871,5.814
+gen_64,දිනමිණ එකේ අද ක්‍රීඩා සිරස්තල ටික කියවන්න,READ_HEADLINES,Read the headlines of today's games in the Daily Mail,READ_HEADLINES,True,"{""language_style"": ""simple""}",2.856,4.14,6.996
+gen_65,අංක පහ පිටුවට යන්න,NAVIGATE_PAGE_NUMBER,Go to page five,NEXT_PAGE,False,"{""language_style"": ""simple""}",1.137,3.8,4.937
+gen_66,මට මේ ලිපිය තේරුම් ගන්න අමාරුයි සරලව කියන්න,SIMPLIFY,I find this article difficult to understand.,EXPLAIN,False,"{""language_style"": ""technical""}",1.892,3.856,5.749
+gen_67,අන්තිමට කියපු දේ ආයෙත් කියන්න,REPEAT,Say what you said last .,REPEAT,True,"{""speed"": ""fast""}",1.489,3.743,5.232
+gen_68,මේක මට පැහැදිලි කරලා දෙන්න පුළුවන්ද,EXPLAIN,Can you explain this to me ?,EXPLAIN,True,"{""language_style"": ""simple""}",1.733,3.823,5.556
+gen_69,පිටුව පෙරලන්න,NEXT_PAGE,Page to be redirected,NEXT_PAGE,True,"{""language_style"": ""simple""}",1.521,3.843,5.364
+gen_70,මට මේ ප්‍රවෘත්තිය වෙනස් වචන වලින් කියල දෙන්න,REPHRASE,Let me tell you the news in different words .,REPHRASE,True,{},2.3,3.752,6.052
+gen_71,කියවීම අවසන් කරන්න,STOP,Finish reading,STOP,True,"{""speed"": ""fast""}",0.97,3.609,4.578
+gen_72,කලින් ප්‍රවෘත්තිය,PREVIOUS_ARTICLE,Previous story,PREVIOUS_ARTICLE,True,"{""language_style"": ""simple""}",0.822,3.972,4.794
+gen_73,මේකේ සාරාංශයක් මට දෙන්න,SUMMARIZE,Give me a summary of this .,SUMMARIZE,True,"{""language_style"": ""simple""}",1.862,3.975,5.836
+gen_74,විනෝදාස්වාද පුවත් තියෙන තැනට යන්න,NAVIGATE_SECTION,Go to the place where there is entertainment news,NAVIGATE_SECTION,True,"{""language_style"": ""simple""}",2.299,4.06,6.359
+gen_75,මේ ඡේදයේ තේරුම මොකක්ද කියලා පැහැදිලි කරන්න,EXPLAIN,Explain what this verse means.,EXPLAIN,True,"{""language_style"": ""simple""}",1.798,3.822,5.619
+gen_76,තව ටිකක් සරල කරලා කියන්න,SIMPLIFY,Just make it a little easier .,SIMPLIFY,True,"{""language_style"": ""simple""}",1.667,3.87,5.537
+gen_77,ඊළඟ සිරස්තලය මොකක්ද,NEXT_ARTICLE,What's the next headline?,NEXT_ARTICLE,True,"{""language_style"": ""simple""}",1.738,3.859,5.597
+gen_78,ඇහුණේ නෑ නැවත කියන්න,REPEAT,I didn't hear you say it again.,REPEAT,True,"{""speed"": ""fast""}",2.13,3.766,5.896
+gen_79,ඔය අදහසම වෙන විදිහකට කියන්න,REPHRASE,You can tell me the same idea in another way.,REPHRASE,True,{},2.284,3.685,5.97
+gen_80,මේ මුළු ලිපියම සාරාංශ කරලා කියන්න,SUMMARIZE,This is the whole article I want to summarize.,SUMMARIZE,True,"{""language_style"": ""simple""}",2.372,51.922,54.294
+gen_81,පිටු අංක දහයට යන්න,NAVIGATE_PAGE_NUMBER,Go to page number ten,NEXT_PAGE,False,"{""language_style"": ""simple""}",0.794,4.001,4.795
+gen_82,ඔතනින් නවතින්න,STOP,Stop there.,STOP,True,"{""speed"": ""fast""}",1.003,3.743,4.746
+gen_83,පෙර සිරස්තලයට යන්න,PREVIOUS_ARTICLE,Before heading to the top,GO_TO_START,False,"{""language_style"": ""simple""}",1.481,3.931,5.412
+gen_84,මේක මට තේරෙන භාෂාවෙන් සරලව කියන්න,SIMPLIFY,This is something I can understand.,EXPLAIN,False,"{""language_style"": ""simple""}",1.483,3.836,5.319
+gen_85,මුල් පිටුවට යන්න,GO_TO_START,Go to the original page,GO_TO_START,True,"{""language_style"": ""simple""}",1.157,3.868,5.025
+gen_86,මේ ප්‍රවෘත්තිය විස්තරාත්මකව කියන්න,EXPLAIN,Tell me the news in detail .,SUMMARIZE,False,"{""detail_level"": ""detailed""}",1.545,4.012,5.556
+gen_87,ඊළඟ පිටුවේ මොනවද තියෙන්නේ,NEXT_PAGE,What's on the next page?,NEXT_PAGE,True,"{""language_style"": ""simple""}",1.672,3.781,5.453
+gen_88,අද පත්තරේ වැදගත්ම පුවත කියවන්න,READ_ARTICLE,Read the most important news in today's paper,NEXT_ARTICLE,False,"{""language_style"": ""simple""}",1.9,3.941,5.841
+gen_89,මේකෙන් අදහස් කරන්නේ මොකක්ද කියලා වෙන විදිහකට පැහැදිලි කරන්න,REPHRASE,Explain what this means in another way.,EXPLAIN,False,"{""language_style"": ""simple""}",1.981,3.794,5.775
+gen_90,ආයෙත් මුල ඉඳන් කියවන්න,REPEAT,Read it again from the beginning .,READ_HEADLINES,False,"{""speed"": ""fast""}",1.543,3.917,5.459
+gen_91,කෙටි සාරාංශයක් දෙන්න,SUMMARIZE,Give me a short summary,SUMMARIZE,True,"{""language_style"": ""simple""}",1.347,3.866,5.212
+gen_92,ප්‍රාදේශීය පුවත් පිටුවට යන්න,NAVIGATE_SECTION,Go to the local news page,NEXT_PAGE,False,"{""language_style"": ""simple""}",1.405,3.779,5.184
+gen_93,මේ කියන දේ මට පැහැදිලි නෑ සරල කරන්න,SIMPLIFY,I don't know what this is saying.,EXPLAIN,False,"{""language_style"": ""simple""}",2.196,3.78,5.975
+gen_94,ඔව් ඊළඟ එකට යමු,NEXT_ARTICLE,"Yeah, let's go to the next one.",NEXT_PAGE,False,"{""language_style"": ""simple""}",2.298,3.978,6.276
+gen_95,නෑ නෑ කලින් එකට,PREVIOUS_ARTICLE,"No, not before.",PREVIOUS_ARTICLE,True,"{""language_style"": ""simple""}",1.286,3.945,5.231
+gen_96,මේ පුවත ගැන තව දුරටත් විස්තර කරන්න,EXPLAIN,Please explain more about this news,EXPLAIN,True,"{""language_style"": ""simple""}",1.371,3.854,5.225
+gen_97,දැන් ඇති නවත්වන්න,STOP,Now enough to stop,STOP,True,"{""speed"": ""fast""}",1.01,3.713,4.723
+gen_98,මේකේ තියෙන කරුණු ටික වෙනස් විදිහකට ගොනු කරලා කියන්න,REPHRASE,Let me just file the details in a different way.,REPHRASE,True,{},2.241,3.67,5.912
+gen_99,දිනමිණ පත්තරේ අද මුල් පිටුවේ සිරස්තල ටික කියවන්න,READ_HEADLINES,Read the headlines of the daily newspaper Today's Homepage,READ_HEADLINES,True,"{""language_style"": ""simple""}",2.717,3.957,6.673
+gen_100,මේක සම්පූර්ණයෙන්ම සාරාංශ කරන්න,SUMMARIZE,This is a complete summary.,SUMMARIZE,True,"{""language_style"": ""simple""}",1.527,3.882,5.409
+gen_101,ඊළඟ පිටුවට යමු,NEXT_PAGE,Let's go to the next page.,NEXT_PAGE,True,"{""language_style"": ""simple""}",1.97,3.882,5.852
+gen_102,ඊළඟට තියෙන පිටුව පෙරලන්න,NEXT_PAGE,Turn the next page,NEXT_PAGE,True,"{""language_style"": ""simple""}",1.021,3.789,4.81
+gen_103,මේ පිටුව ඉවරයි ඊළඟ එකට යන්න,NEXT_PAGE,This page is over . Go to the next one .,NEXT_PAGE,True,"{""language_style"": ""simple""}",2.21,3.842,6.052
+gen_104,අපහු කලින් පිටුවට යන්න,PREVIOUS_PAGE,We're going to the page.,NEXT_PAGE,False,"{""language_style"": ""simple""}",1.663,3.791,5.454
+gen_105,පිටු අංක දෙකට ආපහු යන්න,PREVIOUS_PAGE,Go back to page two,PREVIOUS_PAGE,True,"{""language_style"": ""simple""}",1.314,3.896,5.21
+gen_106,පෙර පිටුව,PREVIOUS_PAGE,Other articles,NEXT_ARTICLE,False,"{""language_style"": ""simple""}",0.784,3.801,4.586
+gen_107,ආපස්සට යන්න,PREVIOUS_PAGE,Go back to the drawing board.,PREVIOUS_ARTICLE,False,"{""language_style"": ""simple""}",1.951,3.925,5.876
+gen_108,ඉස්සරහට යන්න,NEXT_PAGE,Go ahead,NEXT_PAGE,True,"{""language_style"": ""simple""}",0.64,3.764,4.404
+gen_109,තව ඉස්සරහට පිටුවක් පෙරලන්න,NEXT_PAGE,Turn a page further ahead,NEXT_PAGE,True,"{""language_style"": ""simple""}",1.182,3.814,4.996
+gen_110,කලින් කියවපු පිටුවටම යන්න,PREVIOUS_PAGE,Previously on Go to the country,NEXT_ARTICLE,False,"{""language_style"": ""simple""}",1.499,3.86,5.36
+gen_111,දැන් කියෙව්වා ඇති,STOP,I've read enough.,STOP,True,"{""speed"": ""fast""}",1.396,3.623,5.019
+gen_112,පොඩ්ඩක් නවත්වන්න,STOP,Stop it a little bit.,STOP,True,"{""speed"": ""fast""}",1.416,3.708,5.124
+gen_113,හරි ඔතනින් නවතින්න,STOP,"Okay , stop there .",STOP,True,"{""speed"": ""fast""}",1.197,3.609,4.806
+gen_114,කියවීම නවතන්න,STOP,Stop reading,STOP,True,"{""speed"": ""fast""}",0.699,3.582,4.281
+gen_115,මට ආයේ ඒක අහන්න ඕනේ,REPEAT,I want to hear it again .,REPEAT,True,"{""speed"": ""fast""}",1.515,3.91,5.425
+gen_116,ඔය කියපු ටික ආයෙත් කියන්න,REPEAT,Say it again .,REPEAT,True,"{""speed"": ""fast""}",1.013,3.779,4.792
+gen_117,නැවත වතාවක් කියවන්න,REPEAT,Read it again .,REPEAT,True,"{""speed"": ""fast""}",1.05,3.759,4.809
+gen_118,මට ඒක ඇහුනේ නෑ ආයෙත් කියන්න,REPEAT,I didn't hear it. I'll say it again.,REPEAT,True,{},2.988,3.759,6.748
+gen_119,මුල ඉඳන් ආයෙත් කියවන්න පුළුවන්ද,REPEAT,Can you read it again from the beginning ?,READ_HEADLINES,False,{},1.911,3.701,5.612
+gen_120,මොකක්ද ඒ කිව්වේ,REPEAT,What did that say?,EXPLAIN,False,"{""language_style"": ""simple""}",1.385,3.809,5.193
+gen_121,මේ ලිපියේ සාරාංශය මොකක්ද,SUMMARIZE,What is the summary of this article,SUMMARIZE,True,"{""language_style"": ""simple""}",1.749,3.819,5.568
+gen_122,මට මේක කෙටියෙන් පැහැදිලි කරන්න,SUMMARIZE,Let me explain this briefly.,EXPLAIN,False,"{""detail_level"": ""brief""}",1.451,3.786,5.236
+gen_123,මුළු ප්‍රවෘත්තියම නැතුව සාරාංශය විතරක් දෙන්න,SUMMARIZE,I'm just going to give you a summary without the whole news.,SUMMARIZE,True,"{""detail_level"": ""brief""}",3.133,3.993,7.126
+gen_124,වැදගත්ම කරුණු ටික විතරක් සාරාංශ කරන්න,SUMMARIZE,Just summarize the most important points.,SUMMARIZE,True,"{""language_style"": ""simple""}",1.854,3.862,5.716
+gen_125,මේකේ තියෙන දේ කොටිකරලා කියන්න,SUMMARIZE,Tell me what's in this.,SUMMARIZE,True,"{""language_style"": ""simple""}",1.764,3.797,5.561
+gen_126,අන්තර්ගතය කෙටියෙන් කියන්න,SUMMARIZE,Give a brief summary of the content,SUMMARIZE,True,"{""language_style"": ""simple""}",1.651,3.961,5.612
+gen_127,සාරාංශයක් දෙන්න පුළුවන්ද,SUMMARIZE,Can I give you a summary ?,SUMMARIZE,True,"{""language_style"": ""simple""}",1.7,3.92,5.62
+gen_128,ලොකු විස්තරයක් ඕනෙ නෑ සාරාංශය කියන්න,SUMMARIZE,Big detail doesn't need to be summarized.,EXPLAIN,False,"{""detail_level"": ""detailed""}",2.307,3.897,6.204
+gen_129,මේ පුවත කෙටි කරලා කියවන්න,SUMMARIZE,Read this briefing .,READ_ARTICLE,False,"{""language_style"": ""simple""}",1.141,3.809,4.95
+gen_130,සාරාංශය කියවන්න,SUMMARIZE,Read the summary,SUMMARIZE,True,"{""language_style"": ""simple""}",0.977,3.835,4.812
+gen_131,මේක මට තේරෙන්නේ නෑ විස්තර කරන්න,EXPLAIN,I don't understand this.,EXPLAIN,True,"{""language_style"": ""simple""}",1.603,3.892,5.495
+gen_132,මේ කරුණ තවදුරටත් පැහැදිලි කරන්න,EXPLAIN,Please explain this further.,EXPLAIN,True,"{""language_style"": ""simple""}",1.366,3.81,5.176
+gen_133,මේකෙන් අදහස් කරන්නේ මොකක්ද කියලා විස්තර කරන්න,EXPLAIN,Explain what this means.,EXPLAIN,True,"{""language_style"": ""simple""}",1.509,3.808,5.317
+gen_134,තව ටිකක් පැහැදිලි කරලා දෙන්න පුළුවන්ද,EXPLAIN,Can you explain a little more ?,EXPLAIN,True,"{""language_style"": ""simple""}",1.536,3.898,5.434
+gen_135,මේ අමාරු වචන ටික සරලව කියන්න,SIMPLIFY,These are some hard words to say simply,SIMPLIFY,True,"{""language_style"": ""simple""}",1.78,3.924,5.704
+gen_136,මට තේරෙන විදිහට සරල කරන්න,SIMPLIFY,I understand . Make it simple .,SIMPLIFY,True,"{""language_style"": ""simple""}",1.54,3.925,5.465
+gen_137,ගොඩක් බර වචන නැතුව සරලව කියන්න,SIMPLIFY,I'm not saying that with too many words.,EXPLAIN,False,"{""detail_level"": ""detailed""}",2.527,3.877,6.404
+gen_138,මේකේ තේරුම සරල භාෂාවෙන් කියන්න,SIMPLIFY,This means in simple langage,SIMPLIFY,True,"{""language_style"": ""simple""}",1.305,3.846,5.151
+gen_139,පැහැදිලිව තේරුම් කරලා දෙන්න,EXPLAIN,Make it clear,EXPLAIN,True,"{""language_style"": ""simple""}",0.893,3.782,4.675
+gen_140,පොඩි ළමයෙකුට වගේ සරලව කියන්න,SIMPLIFY,Say it like a little kid .,SIMPLIFY,True,"{""language_style"": ""simple""}",1.583,3.839,5.421
+gen_141,මේක වෙන විදිහකට පැහැදිලි කරන්න,REPHRASE,Explain this in another way.,EXPLAIN,False,"{""language_style"": ""simple""}",1.761,3.776,5.537
+gen_142,ඔය අදහසම වෙන වචන වලින් කියන්න පුළුවන්ද,REPHRASE,Can you put that idea in other words ?,REPHRASE,True,{},2.023,3.654,5.678
+gen_143,වෙනත් ආකාරයකට මේක කියන්න,REPHRASE,Another way to say it.,REPHRASE,True,"{""language_style"": ""simple""}",1.345,3.96,5.304
+gen_144,මේකේ අර්ථය වෙනස් නොකර වෙන විදිහකට කියන්න,REPHRASE,Don't change the meaning of this.,EXPLAIN,False,"{""language_style"": ""simple""}",2.007,3.834,5.841
+gen_145,මෙහි ඇත්තේ මොනවද කියලා කියන්න,IDENTIFY_CONTENT,Tell me what's in here.,SUMMARIZE,False,"{""language_style"": ""simple""}",1.641,3.86,5.502
+gen_146,මේ පිටුවේ තියෙන මාතෘකා මොනවද,IDENTIFY_CONTENT,What are the topics on this page?,NEXT_ARTICLE,False,"{""language_style"": ""simple""}",1.947,3.869,5.816
+gen_147,මේ ප්‍රවෘත්තියට අදාළව තියෙන්නේ මොනවද,IDENTIFY_CONTENT,What's the news about this?,NEXT_ARTICLE,False,"{""language_style"": ""simple""}",1.628,3.858,5.486
+gen_148,මේක ඇතුලේ තියෙන දේවල් මොනවද,IDENTIFY_CONTENT,What's in this?,READ_ARTICLE,False,"{""language_style"": ""simple""}",1.311,3.773,5.084
+gen_149,වෙනත් වචන භාවිතා කරලා කියන්න,REPHRASE,Other words used to say,EXPLAIN,False,"{""language_style"": ""simple""}",1.124,3.805,4.929
+gen_150,මේකේ අන්තර්ගතය මොකක්ද කියලා හඳුනාගන්න,IDENTIFY_CONTENT,Find out what's in this.,IDENTIFY_CONTENT,True,"{""language_style"": ""simple""}",1.752,3.8,5.552
+gen_151,අංක පහ පිටුව පෙරලන්න,NAVIGATE_PAGE_NUMBER,Number five page to turn,NEXT_PAGE,False,"{""language_style"": ""simple""}",1.165,3.803,4.967
+gen_152,පිටු අංක අටට යන්න,NAVIGATE_PAGE_NUMBER,Page number eight to go,NEXT_PAGE,False,"{""language_style"": ""simple""}",1.181,3.785,4.966
+gen_153,දොළොස්වෙනි පිටුවට යමු,NAVIGATE_PAGE_NUMBER,Let's go to the twelfth page.,NEXT_PAGE,False,"{""language_style"": ""simple""}",2.223,3.825,6.049
+gen_154,පළවෙනි පිටුවටම ආපහු යන්න,GO_TO_START,Go back to the first page,GO_TO_START,True,"{""language_style"": ""simple""}",1.375,3.874,5.249
+gen_155,මුලටම යමු,GO_TO_START,Let's go first.,GO_TO_START,True,"{""language_style"": ""simple""}",1.353,3.868,5.221
+gen_156,පුවත්පතේ අගටම යන්න,GO_TO_END,Go to the newspaper,NEXT_ARTICLE,False,"{""language_style"": ""simple""}",1.222,3.827,5.049
+gen_157,අවසන් පිටුවට පෙරලන්න,GO_TO_END,Go to the last page,GO_TO_END,True,"{""language_style"": ""simple""}",1.205,3.769,4.974
+gen_158,ලෝක පුවත් පිටුවට යන්න,NAVIGATE_SECTION,Go to the World News page,NEXT_PAGE,False,"{""language_style"": ""simple""}",1.328,3.723,5.051
+gen_159,දේශපාලන පිටුව පෙරලන්න,NAVIGATE_SECTION,Political page to be forwarded,NEXT_PAGE,False,"{""language_style"": ""simple""}",1.503,3.855,5.358
+gen_160,ක්‍රීඩා පුවත් තියෙන තැනට යන්න,NAVIGATE_SECTION,Go where there's sports news.,NEXT_ARTICLE,False,"{""language_style"": ""simple""}",1.702,3.837,5.539
+gen_161,අද ප්‍රධාන ප්‍රවෘත්ති මොනවද,READ_HEADLINES,What's the big news today?,NEXT_ARTICLE,False,"{""language_style"": ""simple""}",1.711,3.94,5.651
+gen_162,සිරස්තල විතරක් කියවන්න,READ_HEADLINES,Read the headlines,READ_HEADLINES,True,"{""language_style"": ""simple""}",0.992,3.894,4.886
+gen_163,මුල් පිටුවේ සිරස්තල කියවන්න,READ_HEADLINES,Read the headlines of the original page,READ_HEADLINES,True,"{""language_style"": ""simple""}",1.676,3.9,5.576
+gen_164,ඊළඟ පුවතට යන්න,NEXT_ARTICLE,Go to the next post.,NEXT_ARTICLE,True,"{""language_style"": ""simple""}",1.375,3.874,5.25
+gen_165,ඊළඟට තියෙන ප්‍රවෘත්තිය කියවන්න,NEXT_ARTICLE,Read the next news .,NEXT_ARTICLE,True,"{""language_style"": ""simple""}",1.228,3.851,5.079
+gen_166,මේක ඉවරයි ඊළඟ එකට යමු,NEXT_ARTICLE,This is over . Let 's go to the next one .,NEXT_PAGE,False,"{""language_style"": ""simple""}",2.602,3.926,6.529
+gen_167,ආයෙත් කලින් ප්‍රවෘත්තියට යන්න,PREVIOUS_ARTICLE,Go back to the news .,PREVIOUS_ARTICLE,True,"{""language_style"": ""simple""}",1.437,3.884,5.321
+gen_168,පෙර පුවත කියවන්න,PREVIOUS_ARTICLE,Read the previous posts,PREVIOUS_ARTICLE,True,"{""language_style"": ""simple""}",1.218,3.954,5.172
+gen_169,මේ සම්පූර්ණ ප්‍රවෘත්තියම කියවන්න,READ_ARTICLE,Read the full news.,READ_ARTICLE,True,"{""language_style"": ""simple""}",1.149,3.738,4.887
+gen_170,මේ ලිපිය කියවන්න පටන් ගන්න,READ_ARTICLE,Start reading this article,READ_ARTICLE,True,"{""speed"": ""fast""}",1.0,3.729,4.729
+gen_171,හ්ම් මට මේකේ තියෙන ඔක්කොම විස්තර අහන්න වෙලාවක් නෑ ඒ නිසා සාරාංශයක් විතරක් දෙන්න,SUMMARIZE,I don't have time to ask all the details so just give me a summary.,SUMMARIZE,True,"{""detail_level"": ""brief""}",3.601,4.114,7.715
+gen_172,ඒක නම් මට හරියටම තේරුනේ නෑ කරුණාකරලා ඒක තව ටිකක් පැහැදිලි කරලා දෙනවද,EXPLAIN,"If that's the case, I don't understand. Please explain it a little more.",EXPLAIN,True,{},3.722,3.69,7.412
+gen_173,ඇත්තටම මට ඕනේ අද පත්තරේ තියෙන ප්‍රධානම සිරස්තල ටික විතරක් අහගන්න,READ_HEADLINES,I really just want to hear some of the main headlines in today's paper.,READ_HEADLINES,True,"{""language_style"": ""simple""}",3.509,4.142,7.652
+gen_174,මට මේ වචන ටිකක් අමාරුයි වගේ පුළුවන් නම් මේක ඉතාමත් සරලව මට කියල දෙන්න,SIMPLIFY,I find these words a little difficult if I can explain it very simply.,EXPLAIN,False,"{""language_style"": ""simple""}",2.903,3.93,6.833
+gen_175,අර කලින් කියවපු ප්‍රවෘත්තියට ආපහු ගිහිල්ලා ඒකේ ඉතුරු ටික කියවන්න පුළුවන්ද,PREVIOUS_ARTICLE,Go back to the news you read before and read the rest of it.,NEXT_ARTICLE,False,"{""language_style"": ""simple""}",2.978,4.178,7.156
+gen_176,ඔතනින් පොඩ්ඩක් නවත්වලා මට කියන්න අර ඡේදයේ තේරුම මොකක්ද කියලා,EXPLAIN,Stop there and tell me what that verse means.,EXPLAIN,True,"{""language_style"": ""simple""}",2.063,4.052,6.116
+gen_177,මේ පිටුව නම් කියවලා ඉවරයි අපි දැන් ඊළඟ පිටුවට යමු නේද,NEXT_PAGE,This page is finished. Let's go to the next page.,NEXT_PAGE,True,"{""language_style"": ""simple""}",2.748,3.94,6.688
+gen_178,මේකේ අදහස මට තේරෙන්නේ නෑ ඔයාට පුළුවන්ද වෙන විදිහකට මේක කියන්න,REPHRASE,I don't understand the idea of this. Can you tell me this any other way?,EXPLAIN,False,{},3.439,3.847,7.286
+gen_179,අද පත්තරේ ක්‍රීඩා ගැන තියෙන ප්‍රවෘත්ති තියෙන පිටුවට කෙලින්ම යන්න පුළුවන්ද,NAVIGATE_SECTION,Can you go directly to the page with the news about the games in today 's newspaper ?,NEXT_PAGE,False,"{""language_style"": ""simple""}",3.46,4.0,7.46
+gen_180,මේ පුවතේ පසුබිම ගැන මට තව ටිකක් දැනගන්න ඕනේ ඒක පැහැදිලි කරන්න,EXPLAIN,I need to know more about the background of this newsletter .,IDENTIFY_CONTENT,False,"{""language_style"": ""simple""}",2.654,4.131,6.784
+gen_181,හ්ම් ඊළඟට,NEXT_PAGE,Hmm next .,NEXT_PAGE,True,"{""language_style"": ""simple""}",0.816,3.723,4.539
+gen_182,අ ආයෙත් කියන්න,REPEAT,I'll say it again.,REPEAT,True,"{""speed"": ""fast""}",1.545,3.731,5.277
+gen_183,නෑ නෑ කලින් එක,PREVIOUS_ARTICLE,"No, not the last one.",NEXT_PAGE,False,"{""language_style"": ""simple""}",1.658,3.751,5.409
+gen_184,ආ සාරාංශය,SUMMARIZE,The following is the summary:,SUMMARIZE,True,"{""language_style"": ""simple""}",1.512,3.784,5.296
+gen_185,පොඩ්ඩක් ඉන්න නවතින්න,STOP,"Wait a minute , stop .",STOP,True,"{""speed"": ""fast""}",1.276,3.627,4.903
+gen_186,ඒ කියන්නේ පැහැදිලි කරන්න,EXPLAIN,That means make it clear.,EXPLAIN,True,"{""language_style"": ""simple""}",1.356,3.805,5.161
+gen_187,හ්ම් සරලව,SIMPLIFY,"Oh , that 's simple .",SIMPLIFY,True,"{""language_style"": ""simple""}",1.557,3.921,5.479
+gen_188,ඔව් ඊළඟ එක,NEXT_ARTICLE,"Yeah, the next one.",NEXT_ARTICLE,True,"{""language_style"": ""simple""}",1.434,3.897,5.33
+gen_189,අ මුලට,GO_TO_START,A to the bottom,GO_TO_END,False,"{""language_style"": ""simple""}",1.007,3.866,4.872
+gen_190,හරි සිරස්තල,READ_HEADLINES,"Okay, headline.",READ_HEADLINES,True,"{""language_style"": ""simple""}",1.37,3.854,5.225
+gen_191,සම්පූර්ණ පුවතම අහන්න ඕනේ,READ_ARTICLE,I need to hear the full story .,READ_ARTICLE,True,"{""language_style"": ""simple""}",1.794,3.918,5.712
+gen_192,මේකෙ ඇතුලේ මොනවද තියෙන්නේ කියලා කෙටියෙන් කියන්න,IDENTIFY_CONTENT,Tell me what's inside this.,SUMMARIZE,False,"{""language_style"": ""simple""}",1.652,3.788,5.44
+gen_193,පිටු අංක විස්සට යන්න,NAVIGATE_PAGE_NUMBER,I'm going to go to page number twenty.,NEXT_PAGE,False,"{""language_style"": ""simple""}",2.388,3.825,6.214
+gen_194,අවසන් ප්‍රවෘත්තියට යන්න,GO_TO_END,Go to the final news .,NEXT_PAGE,False,"{""language_style"": ""simple""}",1.325,3.765,5.09
+gen_195,ව්‍යාපාරික පුවත් තියෙන තැන කොහෙද,NAVIGATE_SECTION,Where's the business news?,NEXT_ARTICLE,False,"{""language_style"": ""simple""}",1.513,3.891,5.404
+gen_196,මේ වාක්‍යය වෙනස් වචන වලින් හදලා කියන්න,REPHRASE,Make this sentence different words,REPHRASE,True,"{""language_style"": ""simple""}",1.202,3.886,5.088
+gen_197,පෙර පිටුවට ගිහින් ආයේ කියවන්න,PREVIOUS_PAGE,Go to the previous page and read it again,NEXT_PAGE,False,"{""language_style"": ""simple""}",1.945,3.837,5.782
+gen_198,මොකක්ද ඒ කිව්වේ මට ඇහුනේ නෑ,REPEAT,What did you say I didn't hear?,REPEAT,True,"{""speed"": ""slow""}",1.983,4.891,6.874
+gen_199,මේක තවදුරටත් සරල කරන්න,SIMPLIFY,Make this even simpler.,SIMPLIFY,True,"{""language_style"": ""simple""}",1.937,4.859,6.797
+gen_200,දැන් පත්තරේ කියවන එක නවත්වන්න,STOP,Now stop reading the paper,STOP,True,"{""speed"": ""fast""}",1.405,4.487,5.892
+gen_201,ඊළඟට තියෙන පිටුවට යමු,NEXT_PAGE,Let's go to the next page.,NEXT_PAGE,True,"{""language_style"": ""simple""}",1.154,4.577,5.731
+gen_202,තව ඉස්සරහට යන්න,NEXT_PAGE,Go further ahead,NEXT_PAGE,True,"{""language_style"": ""simple""}",0.971,4.604,5.575
+gen_203,පිටුවක් ඉස්සරහට පෙරලන්න,NEXT_PAGE,Turn to the front of the page,GO_TO_START,False,"{""language_style"": ""simple""}",1.757,4.407,6.164
+gen_204,ඊළඟ පිටුව මොකක්ද,NEXT_PAGE,What's next?,NEXT_ARTICLE,False,"{""language_style"": ""simple""}",1.436,4.324,5.761
+gen_205,මේ පිටුව කියවලා ඉවරයි ඊළඟ එකට,NEXT_PAGE,I've read this page and finished the next one.,NEXT_PAGE,True,"{""language_style"": ""simple""}",2.796,4.636,7.432
+gen_206,ආපහු කලින් තිබ්බ පිටුවට යන්න,PREVIOUS_PAGE,Back to the old page,PREVIOUS_PAGE,True,"{""language_style"": ""simple""}",1.42,4.554,5.974
+gen_207,පස්සට පිටුවක් පෙරලන්න,PREVIOUS_PAGE,Turn a page back,NEXT_PAGE,False,"{""language_style"": ""simple""}",1.222,4.338,5.56
+gen_208,පෙර පිටුවට ආපහු යමු,PREVIOUS_PAGE,Let's go back to the previous page,PREVIOUS_PAGE,True,"{""language_style"": ""simple""}",2.213,4.516,6.729
+gen_209,කලින් පිටුවට යන්න පුළුවන්ද,PREVIOUS_PAGE,Can you go to the previous page?,PREVIOUS_PAGE,True,"{""language_style"": ""simple""}",2.08,4.622,6.702
+gen_210,ආපස්සට යන්න පිටුවක්,PREVIOUS_PAGE,Back to the page,PREVIOUS_PAGE,True,"{""language_style"": ""simple""}",1.231,4.708,5.938
+gen_211,ඊළඟ ප්‍රවෘත්තියට යමු,NEXT_ARTICLE,Let's get to the next news.,NEXT_ARTICLE,True,"{""language_style"": ""simple""}",2.234,4.794,7.028
+gen_212,මේකට පස්සේ තියෙන ලිපිය කියවන්න,NEXT_ARTICLE,Read the article on this later.,NEXT_ARTICLE,True,"{""language_style"": ""simple""}",1.864,4.654,6.518
+gen_213,ඊළඟ පුවත,NEXT_ARTICLE,Next post,NEXT_ARTICLE,True,"{""language_style"": ""simple""}",0.852,4.563,5.415
+gen_214,වෙනත් ප්‍රවෘත්තියක් කියවන්න,NEXT_ARTICLE,Read another news,NEXT_ARTICLE,True,"{""language_style"": ""simple""}",1.051,4.648,5.699
+gen_215,මේක ඉවරයි ඊළඟ එක,NEXT_ARTICLE,This is over . The next one .,NEXT_PAGE,False,"{""language_style"": ""simple""}",2.048,4.825,6.873
+gen_216,කලින් කියවපු ප්‍රවෘත්තිය ආයේ ගන්න,PREVIOUS_ARTICLE,Read the news again,NEXT_ARTICLE,False,"{""language_style"": ""simple""}",1.183,4.692,5.875
+gen_217,පෙර පුවතට ආපහු යන්න,PREVIOUS_ARTICLE,Back to the previous post,PREVIOUS_ARTICLE,True,"{""language_style"": ""simple""}",1.325,4.827,6.152
+gen_218,මීට කලින් තිබ්බ එක,PREVIOUS_ARTICLE,It was a long time ago .,EXPLAIN,False,"{""detail_level"": ""detailed""}",1.807,4.672,6.479
+gen_219,අර කලින් ලිපියට යමු,PREVIOUS_ARTICLE,Let's go to that previous article.,PREVIOUS_ARTICLE,True,"{""language_style"": ""simple""}",2.239,4.84,7.079
+gen_220,පස්සට ගිහින් කලින් පුවත ගන්න,PREVIOUS_ARTICLE,Go back and get some news .,PREVIOUS_ARTICLE,True,"{""language_style"": ""simple""}",1.932,4.738,6.67
+gen_221,මේක කෙටි කරලා කියන්න,SUMMARIZE,Let me make this short .,SUMMARIZE,True,"{""language_style"": ""simple""}",1.634,4.504,6.139
+gen_222,ලිපියේ සාරාංශය මට දෙන්න,SUMMARIZE,Give me the summary of the article,SUMMARIZE,True,"{""language_style"": ""simple""}",1.956,4.593,6.549
+gen_223,ප්‍රධාන කරුණු ටික විතරක් කියන්න,SUMMARIZE,Just tell me the main points.,SUMMARIZE,True,"{""language_style"": ""simple""}",1.784,4.48,6.264
+gen_224,මේ මුළු පුවතම සාරාංශ කරන්න පුළුවන්ද,SUMMARIZE,Can you summarize the whole story?,SUMMARIZE,True,"{""language_style"": ""simple""}",2.228,4.582,6.811
+gen_225,ලොකුවට ඕනේ නෑ කෙටියෙන් කියන්න,SUMMARIZE,It's not necessary to say it briefly.,EXPLAIN,False,"{""language_style"": ""technical""}",2.687,4.467,7.154
+gen_226,මේකේ අගමුල කෙටියෙන් පැහැදිලි කරන්න,SUMMARIZE,Explain briefly the basics of this.,EXPLAIN,False,"{""language_style"": ""simple""}",2.682,4.569,7.251
+gen_227,සාරාංශයක් විදිහට කියවන්න,SUMMARIZE,Read it as a summary .,SUMMARIZE,True,"{""language_style"": ""simple""}",1.873,4.594,6.467
+gen_228,මට කෙටි සාරාංශයක් ඕනේ,SUMMARIZE,I need a short summary .,SUMMARIZE,True,"{""language_style"": ""simple""}",1.864,4.564,6.428
+gen_229,වැදගත් දේවල් ටික විතරක් කියන්න,SUMMARIZE,Just tell me a few important things .,SUMMARIZE,True,"{""language_style"": ""simple""}",2.085,4.818,6.903
+gen_230,මේකේ සාරාංශය අහන්නයි ඕනේ,SUMMARIZE,I need to hear the summary of this .,SUMMARIZE,True,"{""language_style"": ""simple""}",2.502,4.93,7.431
+gen_231,මට මේක තේරුම් ගන්න අමාරුයි පැහැදිලි කරලා දෙන්න,EXPLAIN,I find this hard to understand. Explain it.,EXPLAIN,True,"{""language_style"": ""simple""}",2.931,4.912,7.843
+gen_232,මේ ඡේදය විස්තර කරන්න,EXPLAIN,Describe this paragraph,EXPLAIN,True,"{""language_style"": ""simple""}",1.207,4.612,5.819
+gen_233,මේ කරුණ තවදුරටත් පැහැදිලි කරන්න පුළුවන්ද,EXPLAIN,Can you explain this further?,EXPLAIN,True,"{""language_style"": ""simple""}",1.927,4.666,6.592
+gen_234,මොකක්ද මේකෙන් අදහස් කරන්නේ,EXPLAIN,What does this mean?,EXPLAIN,True,"{""language_style"": ""simple""}",1.437,4.66,6.097
+gen_235,මේකේ තේරුම මට විස්තර කරලා දෙන්න,EXPLAIN,Let me know what this means .,IDENTIFY_CONTENT,False,"{""language_style"": ""simple""}",1.864,4.788,6.653
+gen_236,මේ ප්‍රවෘත්තියේ පසුබිම පැහැදිලි කරන්න,EXPLAIN,Explain the background of this news.,EXPLAIN,True,"{""language_style"": ""simple""}",2.324,4.75,7.075
+gen_237,මට පැහැදිලි මදි තව විස්තර කරන්න,EXPLAIN,I can't explain it.,EXPLAIN,True,"{""language_style"": ""simple""}",1.887,4.44,6.327
+gen_238,මේක තව ටිකක් ගැඹුරින් පැහැදිලි කරන්න,EXPLAIN,Explain this a little more in depth.,EXPLAIN,True,"{""language_style"": ""simple""}",2.422,4.506,6.927
+gen_239,මේ සිද්ධිය ගැන තව විස්තර කියන්න,EXPLAIN,Tell me more about this incident,EXPLAIN,True,"{""detail_level"": ""detailed""}",1.564,4.632,6.196
+gen_240,මේකේ තේරුම හොඳටම පැහැදිලි කරන්න,EXPLAIN,Explain this to me clearly.,EXPLAIN,True,"{""language_style"": ""simple""}",2.013,4.505,6.518
+gen_241,ගොඩක් අමාරු වචන තියෙන්නේ සරලව කියන්න,SIMPLIFY,There are a lot of hard words to say simply.,SIMPLIFY,True,"{""language_style"": ""simple""}",2.48,4.817,7.297
+gen_242,මට තේරෙන විදිහට ලේසි වචන වලින් කියන්න,SIMPLIFY,I understand that it's easy to say.,EXPLAIN,False,"{""language_style"": ""simple""}",2.466,4.529,6.995
+gen_243,මේක සරල කරන්න පුළුවන්ද,SIMPLIFY,Can you make this simple?,SIMPLIFY,True,"{""language_style"": ""simple""}",1.606,4.508,6.114
+gen_244,අමාරු වචන අයින් කරලා සරලව කියන්න,SIMPLIFY,Remove the hard words and say it simply,SIMPLIFY,True,"{""language_style"": ""simple""}",2.243,4.611,6.854
+gen_245,තව ටිකක් සරල භාෂාවෙන් කියන්න,SIMPLIFY,Tell me in a simple language,SIMPLIFY,True,"{""language_style"": ""simple""}",1.573,4.553,6.126
+gen_246,පොඩි කෙනෙකුට වගේ සරලව පැහැදිලි කරන්න,SIMPLIFY,Just explain it like a little kid .,EXPLAIN,False,"{""language_style"": ""simple""}",2.053,4.674,6.727
+gen_247,මේක සරලව තේරුම් කරලා දෙන්න,SIMPLIFY,Let me explain this very simply.,EXPLAIN,False,"{""language_style"": ""simple""}",1.827,4.647,6.474
+gen_248,සංකීර්ණ වැඩියි සරලව කියන්න,SIMPLIFY,It's too complicated to say.,SIMPLIFY,True,"{""language_style"": ""simple""}",2.271,4.683,6.954
+gen_249,මේ ලිපිය සරල භාෂාවකට හරවන්න,SIMPLIFY,Translate this article into simple langage,SIMPLIFY,True,"{""language_style"": ""simple""}",2.117,4.844,6.962
+gen_250,ඉතාමත් සරලව මේක කියවන්න,SIMPLIFY,Very simply read this,SIMPLIFY,True,"{""language_style"": ""simple""}",1.275,4.786,6.061
+gen_251,මේ වාක්‍යය වෙනස් විදිහකට කියන්න,REPHRASE,Say this sentence differently,REPHRASE,True,"{""language_style"": ""simple""}",1.361,5.109,6.47
+gen_252,වෙනත් වචන පාවිච්චි කරලා මේක කියන්න,REPHRASE,"In other words, use this to say",EXPLAIN,False,"{""language_style"": ""simple""}",0.703,4.688,5.391
+gen_253,ඔය අදහසම වෙන විදිහකින් කියන්න පුළුවන්ද,REPHRASE,Can you tell me the same idea in another way ?,REPHRASE,True,{},2.718,4.607,7.325
+gen_254,මේක වෙනස් ආකාරයකට කියවන්න,REPHRASE,Read this differently.,REPHRASE,True,"{""language_style"": ""simple""}",1.433,4.785,6.218
+gen_255,වෙනත් විදිහකට පැහැදිලි කරන්න,REPHRASE,Explain it in other ways,EXPLAIN,False,"{""language_style"": ""simple""}",1.794,4.634,6.428
+gen_256,මේකේ අර්ථය වෙනස් නොකර වෙන විදිහකට හදලා කියන්න,REPHRASE,Don't change the meaning of this.,EXPLAIN,False,"{""language_style"": ""simple""}",2.342,4.444,6.786
+gen_257,ඔය ටික ආයෙත් වෙන වචන වලින් කියන්න,REPHRASE,Let me say that again in other words .,REPEAT,False,"{""language_style"": ""simple""}",2.262,4.463,6.725
+gen_258,මට ඒ විදිහට තේරුණේ නෑ වෙන විදිහකට කියන්න,REPHRASE,I don't know how else to say it.,EXPLAIN,False,"{""language_style"": ""simple""}",2.658,4.573,7.23
+gen_259,වාක්‍ය රටාව වෙනස් කරලා කියන්න,REPHRASE,Change the sentence pattern and tell me,NEXT_ARTICLE,False,"{""sentence_pattern"": ""Tell me""}",1.839,4.679,6.517
+gen_260,වෙන විදිහකට කිව්වොත් කොහොමද,REPHRASE,"In other words, how?",EXPLAIN,False,"{""language_style"": ""simple""}",1.54,4.528,6.068
+gen_261,ආයෙත් සැරයක් මුල ඉඳන් කියවන්න,REPEAT,Read it again from the beginning,READ_HEADLINES,False,"{""speed"": ""fast""}",1.728,4.624,6.352
+gen_262,මට ඇහුණේ නෑ නැවත කියන්න,REPEAT,I didn't hear you say it again.,REPEAT,True,"{""speed"": ""fast""}",2.461,4.424,6.884
+gen_263,අන්තිමට කියපු වාක්‍යය ආයේ කියන්න,REPEAT,Say the last sentence again,REPEAT,True,"{""speed"": ""fast""}",1.417,4.285,5.703
+gen_264,ඔය කියපු ටික ආයෙත් කියන්න පුළුවන්ද,REPEAT,Can you repeat what you said ?,REPEAT,True,"{""speed"": ""fast""}",2.0,4.413,6.413
+gen_265,නැවත වරක් කියවන්න,REPEAT,Read it again .,REPEAT,True,"{""speed"": ""fast""}",1.178,4.566,5.745
+gen_266,දැන් කියවන එක නවත්වන්න,STOP,Stop reading now,STOP,True,"{""speed"": ""fast""}",1.048,4.36,5.408
+gen_267,කියවීම නවතන්න,STOP,Stop reading,STOP,True,"{""speed"": ""fast""}",1.117,4.256,5.373
+gen_268,පොඩ්ඩක් ඉන්න ඔතනින් නවත්වන්න,STOP,Just wait there and stop .,STOP,True,"{""speed"": ""fast""}",1.7,4.521,6.221
+gen_269,හරි දැන් ඇති,STOP,"Okay , that 's enough .",STOP,True,"{""language_style"": ""simple""}",1.787,4.711,6.499
+gen_270,කියවලා ඉවර කරන්න,STOP,Read it and finish it.,NEXT_ARTICLE,False,"{""language_style"": ""simple""}",1.643,4.685,6.328
+gen_271,අද පත්තරේ සිරස්තල ටික කියවන්න,READ_HEADLINES,Read the headlines of today's paper,READ_HEADLINES,True,"{""language_style"": ""simple""}",2.268,4.799,7.067
+gen_272,ප්‍රධාන සිරස්තල මොනවද තියෙන්නේ,READ_HEADLINES,What are the main headlines?,READ_HEADLINES,True,"{""language_style"": ""simple""}",1.791,4.885,6.677
+gen_273,මුල් පිටුවේ තියෙන සිරස්තල කියවන්න,READ_HEADLINES,Read the headlines on the original page,READ_HEADLINES,True,"{""language_style"": ""simple""}",2.022,4.924,6.946
+gen_274,වෙනත් ප්‍රවෘත්ති සිරස්තල මොනවද,READ_HEADLINES,What are the other headlines?,READ_HEADLINES,True,"{""language_style"": ""simple""}",1.895,4.669,6.564
+gen_275,අද දවසේ සිරස්තල අහන්න ඕනේ,READ_HEADLINES,I need to hear the headlines today .,READ_HEADLINES,True,"{""language_style"": ""simple""}",2.356,4.662,7.018
+gen_276,ක්‍රීඩා පුවත් පිටුවට යන්න,NAVIGATE_SECTION,Go to the sports news page,NEXT_PAGE,False,"{""language_style"": ""simple""}",1.596,4.4,5.996
+gen_277,විදේශ පුවත් තියෙන කොටසට යන්න,NAVIGATE_SECTION,Go to the section with foreign news,NAVIGATE_SECTION,True,"{""language_style"": ""simple""}",1.844,4.56,6.405
+gen_278,ව්‍යාපාරික පුවත් පිටුව පෙරලන්න,NAVIGATE_SECTION,Business news page,NEXT_PAGE,False,"{""language_style"": ""simple""}",1.105,4.375,5.481
+gen_279,කතුවැකිය තියෙන තැනට යන්න,NAVIGATE_SECTION,Go to the place where the library is,NAVIGATE_PAGE_NUMBER,False,"{""language_style"": ""simple""}",2.211,4.71,6.921
+gen_280,ප්‍රාදේශීය පුවත් කොටසට යමු,NAVIGATE_SECTION,Let's go to the local news section,NAVIGATE_SECTION,True,"{""language_style"": ""simple""}",2.346,4.675,7.021
+gen_281,පත්තරේ මුලටම යන්න,GO_TO_START,Go to the top of the paper,GO_TO_START,True,"{""language_style"": ""simple""}",1.831,4.556,6.387
+gen_282,පළවෙනි පිටුවට ආපහු යන්න,GO_TO_START,Go back to the first page,GO_TO_START,True,"{""language_style"": ""simple""}",1.613,4.704,6.317
+gen_283,අගටම යන්න,GO_TO_END,I'm going to go.,NEXT_PAGE,False,"{""language_style"": ""simple""}",1.858,4.499,6.357
+gen_284,පත්තරේ අන්තිම පිටුවට යන්න,GO_TO_END,Go to the last page of the paper,GO_TO_END,True,"{""language_style"": ""simple""}",2.146,4.955,7.1
+gen_285,හත්වෙනි පිටුවට යන්න,NAVIGATE_PAGE_NUMBER,Go to page seven .,NEXT_PAGE,False,"{""language_style"": ""simple""}",1.438,4.487,5.925
+gen_286,පිටු අංක පහළොව පෙරලන්න,NAVIGATE_PAGE_NUMBER,Page number five,NEXT_PAGE,False,"{""language_style"": ""simple""}",1.006,4.697,5.703
+gen_287,මේ පිටුවේ මොනවද තියෙන්නේ,IDENTIFY_CONTENT,What's on this page?,READ_ARTICLE,False,"{""language_style"": ""simple""}",1.808,4.785,6.593
+gen_288,මේ ප්‍රවෘත්තිය ඇතුලේ තියෙන අන්තර්ගතය මොකක්ද,IDENTIFY_CONTENT,What's in this news?,READ_ARTICLE,False,"{""language_style"": ""simple""}",1.851,4.713,6.564
+gen_289,මේකේ ඇතුලත් වෙලා තියෙන දේවල් මොනවද,IDENTIFY_CONTENT,What's in this?,READ_ARTICLE,False,"{""language_style"": ""simple""}",1.645,4.534,6.178
+gen_290,මේ පිටුවේ මාතෘකා ටික කියන්න,IDENTIFY_CONTENT,Tell me some of the topics on this page,NEXT_ARTICLE,False,"{""language_style"": ""simple""}",2.418,4.98,7.398
+gen_291,හ්ම් මට මේකේ සාරාංශයක් විතරක් කිව්වා නම් ඇති,SUMMARIZE,I wish I could just summarize this.,SUMMARIZE,True,"{""language_style"": ""simple""}",2.563,4.746,7.308
+gen_292,ඇත්තටම මට ඕනේ අද පත්තරේ දේශපාලන පුවත් මොනවද කියලා දැනගන්න ඒ කොටසට යන්න,NAVIGATE_SECTION,I really want to know what the political news is in today's paper to go to that section,NAVIGATE_SECTION,True,"{""language_style"": ""simple""}",4.608,5.366,9.974
+gen_293,මට මේ ලිපිය නම් තේරෙනවා මදි ඒ නිසා තව ටිකක් සරල කරලා මට කියල දෙන්න පුළුවන්ද,SIMPLIFY,I don't understand this article well enough so can you simplify it a little bit and tell me?,SIMPLIFY,True,"{""language_style"": ""simple""}",5.369,4.673,10.042
+gen_294,අර කලින් කියවපු ප්‍රවෘත්තිය ගොඩක් වැදගත් වගේ ආපහු ඒකට යන්න,PREVIOUS_ARTICLE,That old news you read is so important to go back to .,PREVIOUS_ARTICLE,True,"{""language_style"": ""simple""}",2.643,4.808,7.451
+gen_295,ඔව් ඊළඟ පිටුවට යමු නේද,NEXT_PAGE,"Yeah , let 's go to the next page , shall we ?",NEXT_PAGE,True,"{""language_style"": ""simple""}",2.991,4.65,7.641
+gen_296,පොඩ්ඩක් ඉන්න අර අන්තිමට කියපු වාක්‍යය මට හරියට ඇහුනේ නෑ ඒක ආයේ කියන්න,REPEAT,"Wait a minute. That last sentence I said, I didn't hear it.",REPEAT,True,{},3.587,4.294,7.881
+gen_297,මට වෙලාව නෑ ඒ නිසා මේ සම්පූර්ණ ප්‍රවෘත්තියම නැතුව වැදගත්ම දේවල් ටික විතරක් තෝරලා කියන්න,SUMMARIZE,I don't have time so I'm gonna pick out the most important things without this full news.,NEXT_ARTICLE,False,"{""language_style"": ""simple""}",4.809,4.898,9.707
+gen_298,මේ ලිපියේ තේරුම මට හිතාගන්න අමාරුයි වෙන විදිහකට මේක පැහැදිලි කරන්න,REPHRASE,I can't imagine how else to explain this.,EXPLAIN,False,"{""language_style"": ""simple""}",2.502,4.51,7.012
+gen_299,හරි දැන් කියෙව්වා ඇති ඔතනින් නවත්වමු,STOP,"Okay, now I've read enough. Let's stop there.",STOP,True,{},3.085,4.062,7.147
+gen_300,මේක ඇතුලේ තියෙන දේවල් මොනවද කියලා මට කෙටියෙන් හඳුන්වලා දෙන්න පුළුවන්ද,IDENTIFY_CONTENT,Can I briefly tell you what's inside this?,SUMMARIZE,False,"{""detail_level"": ""brief""}",2.637,4.854,7.491
+gen_301,ඊළඟ පිටුවට යමුකෝ,NEXT_PAGE,Let's go to the next page.,NEXT_PAGE,True,"{""language_style"": ""simple""}",2.039,4.824,6.863
+gen_302,තව ඉස්සරහට යන්න පුළුවන්ද,NEXT_PAGE,Can you go further?,NEXT_PAGE,True,"{""language_style"": ""simple""}",1.253,4.572,5.825
+gen_303,ඊළඟට තියෙන පිටුව පෙන්නන්න,NEXT_PAGE,Show me the next page,NEXT_PAGE,True,"{""language_style"": ""simple""}",1.252,4.79,6.041
+gen_304,අපි ඊළඟ පිටුවට යමු,NEXT_PAGE,Let's go to the next page.,NEXT_PAGE,True,"{""language_style"": ""simple""}",2.045,4.689,6.734
+gen_305,පිටුවක් ඉස්සරහට දාන්න,NEXT_PAGE,Put a page in front of you,GO_TO_START,False,"{""language_style"": ""simple""}",1.615,4.805,6.421
+gen_306,ආයෙත් පස්සට යමු,PREVIOUS_PAGE,Let's go back again.,REPEAT,False,"{""speed"": ""fast""}",1.674,4.695,6.369
+gen_307,කලින් පිටුවට ගිහින් බලමු,PREVIOUS_PAGE,Let's go to the previous page.,PREVIOUS_PAGE,True,"{""language_style"": ""simple""}",2.016,4.605,6.621
+gen_308,පිටුවක් පස්සට පෙරලන්න,PREVIOUS_PAGE,Turn back to the page,PREVIOUS_PAGE,True,"{""language_style"": ""simple""}",1.284,4.734,6.018
+gen_309,පෙර පිටුවට හැරෙන්න,PREVIOUS_PAGE,Go back to the previous page,PREVIOUS_PAGE,True,"{""language_style"": ""simple""}",1.377,4.716,6.092
+gen_310,ආපස්සට පිටුවක් පෙරලන්න,PREVIOUS_PAGE,Turn a page back,NEXT_PAGE,False,"{""language_style"": ""simple""}",1.158,4.575,5.733
+gen_311,ඊළඟ ප්‍රවෘත්තියට යමු,NEXT_ARTICLE,Let's get to the next news.,NEXT_ARTICLE,True,"{""language_style"": ""simple""}",2.023,4.666,6.689
+gen_312,ඊළඟට තියෙන පුවත කියවන්න,NEXT_ARTICLE,Read the next news.,NEXT_ARTICLE,True,"{""language_style"": ""simple""}",1.244,4.513,5.757
+gen_313,වෙන පුවතක් අරගන්න,NEXT_ARTICLE,Get another note.,NEXT_ARTICLE,True,"{""language_style"": ""simple""}",1.103,4.544,5.647
+gen_314,ඊළඟ ලිපියට මාරු වෙන්න,NEXT_ARTICLE,Switch to the next article,NEXT_ARTICLE,True,"{""language_style"": ""simple""}",1.274,4.568,5.841
+gen_315,මේක ඇති ඊළඟ ප්‍රවෘත්තිය කියවන්න,NEXT_ARTICLE,This is enough. Read the next news.,NEXT_ARTICLE,True,"{""language_style"": ""simple""}",1.933,4.568,6.501
+gen_316,කලින් කියවපු එකට යන්න,PREVIOUS_ARTICLE,Previously on Go Together,NEXT_ARTICLE,False,"{""language_style"": ""simple""}",1.275,4.477,5.752
+gen_317,පෙර ප්‍රවෘත්තියට ආපහු යමු,PREVIOUS_ARTICLE,Let's get back to the news.,PREVIOUS_ARTICLE,True,"{""language_style"": ""simple""}",2.021,4.698,6.719
+gen_318,මීට කලින් තිබ්බ පුවත ගන්න,PREVIOUS_ARTICLE,I should have known before .,EXPLAIN,False,"{""language_style"": ""simple""}",1.462,4.512,5.974
+gen_319,අර කලින් කියවපු ප්‍රවෘත්තිය,PREVIOUS_ARTICLE,That's the news I read earlier.,NEXT_ARTICLE,False,"{""language_style"": ""simple""}",2.058,4.906,6.964
+gen_320,පස්සට ගිහින් අර පුවත ආයේ අරගන්න,PREVIOUS_ARTICLE,Go back and get that news again,REPEAT,False,"{""language_style"": ""simple""}",1.581,5.085,6.666
+gen_321,සාරාංශයක් විදිහට කියන්නකෝ,SUMMARIZE,Let me summarize it .,SUMMARIZE,True,"{""language_style"": ""simple""}",1.391,8.733,10.124
+gen_322,මේකේ කෙටි සාරාංශයක් ඕනේ,SUMMARIZE,This needs a brief summary .,SUMMARIZE,True,"{""language_style"": ""brief""}",1.311,4.814,6.124
+gen_323,වැදගත් ටික විතරක් කියන්න,SUMMARIZE,Just tell me the important things.,SUMMARIZE,True,"{""language_style"": ""simple""}",1.922,4.949,6.871
+gen_324,මට මේකේ සාරාංශය දෙන්න පුළුවන්ද,SUMMARIZE,Can I give you a summary of this ?,SUMMARIZE,True,"{""language_style"": ""simple""}",2.347,40.679,43.026
+gen_325,මේ ප්‍රවෘත්තිය කෙටි කරලා කියන්න,SUMMARIZE,Shorten the news .,SUMMARIZE,True,"{""language_style"": ""simple""}",0.693,4.476,5.169
+gen_326,ලොකු විස්තරයක් නැතුව කෙටියෙන් කියන්න,SUMMARIZE,I'll tell you shortly without much detail.,SUMMARIZE,True,"{""detail_level"": ""brief""}",2.583,4.663,7.246
+gen_327,සම්පූර්ණ කතාවම නැතුව සාරාංශය කියවන්න,SUMMARIZE,Read the summary without completing the story,SUMMARIZE,True,"{""detail_level"": ""brief""}",2.285,4.608,6.893
+gen_328,මේකේ හරය මොකක්ද,SUMMARIZE,What's the point of this?,EXPLAIN,False,"{""language_style"": ""simple""}",1.864,4.454,6.319
+gen_329,කෙටි සටහනක් විදිහට මේක කියන්න,SUMMARIZE,"As a brief note , I 'll tell you this .",SUMMARIZE,True,"{""detail_level"": ""brief""}",2.617,4.837,7.454
+gen_330,වැදගත්ම කරුණු ටික ගොනු කරලා කියන්න,SUMMARIZE,I want to know the most important things .,SUMMARIZE,True,"{""detail_level"": ""brief""}",1.988,4.538,6.527
+gen_331,මේක පැහැදිලි කරන්න,EXPLAIN,Explain this .,EXPLAIN,True,"{""language_style"": ""simple""}",1.285,4.661,5.945
+gen_332,තව ටිකක් තේරෙන විදිහට කියන්න,EXPLAIN,Let me explain a little more clearly .,EXPLAIN,True,"{""language_style"": ""simple""}",1.833,4.699,6.532
+gen_333,මට මේකේ තේරුම කියල දෙන්න,EXPLAIN,Let me know what this means .,IDENTIFY_CONTENT,False,"{""language_style"": ""simple""}",1.654,4.719,6.373
+gen_334,මේ ඡේදයේ අර්ථය විස්තර කරන්න,EXPLAIN,Describe the meaning of this paragraph,EXPLAIN,True,"{""language_style"": ""simple""}",1.673,4.683,6.356
+gen_335,මේ කරුණ තවදුරටත් විස්තර කරලා කියන්න,EXPLAIN,Let me explain this further .,EXPLAIN,True,"{""language_style"": ""simple""}",1.392,4.677,6.07
+gen_336,මොකක්ද මේ කියන්නේ කියලා පැහැදිලි කරන්න,EXPLAIN,Explain what you're saying.,EXPLAIN,True,"{""language_style"": ""simple""}",2.077,4.625,6.702
+gen_337,මේ සිද්ධියේ පසුබිම ගැන පැහැදිලි කරන්න,EXPLAIN,Explain the background of this incident.,EXPLAIN,True,"{""language_style"": ""simple""}",2.013,4.671,6.684
+gen_338,මට තේරුම් ගන්න අමාරුයි මේක විස්තර කරන්න,EXPLAIN,I find it hard to explain this.,EXPLAIN,True,"{""language_style"": ""simple""}",1.796,4.767,6.564
+gen_339,මේකෙන් අදහස් වෙන්නේ මොකක්ද,EXPLAIN,What does this mean?,EXPLAIN,True,"{""language_style"": ""simple""}",1.181,4.586,5.768
+gen_340,තව දුරටත් මේ ගැන කරුණු දක්වන්න,EXPLAIN,More details about this,EXPLAIN,True,"{""detail_level"": ""detailed""}",1.048,4.627,5.675
+gen_341,සරලව කියන්න,SIMPLIFY,I just want to say,NEXT_ARTICLE,False,"{""language_style"": ""simple""}",1.308,4.585,5.894
+gen_342,ලේසි වචන වලින් පැහැදිලි කරන්න,SIMPLIFY,Explain in simple words,EXPLAIN,False,"{""language_style"": ""simple""}",1.418,4.411,5.829
+gen_343,බර වචන නැතුව කියන්න,SIMPLIFY,I'm not saying that.,EXPLAIN,False,"{""language_style"": ""simple""}",1.647,4.409,6.056
+gen_344,මේක තව ටිකක් සරල කරන්න පුළුවන්ද,SIMPLIFY,Can you make this a little easier?,SIMPLIFY,True,"{""language_style"": ""simple""}",1.862,4.521,6.383
+gen_345,සරල භාෂාවෙන් මට මේක කියල දෙන්න,SIMPLIFY,"In simple language, let me tell you this.",SIMPLIFY,True,"{""language_style"": ""simple""}",2.121,4.882,7.003
+gen_346,අමාරු වචන අයින් කරලා ලේසියෙන් කියන්න,SIMPLIFY,Remove the hard words and say it easily,SIMPLIFY,True,"{""language_style"": ""simple""}",2.023,4.613,6.636
+gen_347,පොඩි කෙනෙකුට කියනවා වගේ සරලව කියන්න,SIMPLIFY,Tell a little one like that,SUMMARIZE,False,"{""language_style"": ""simple""}",1.43,4.513,5.943
+gen_348,සංකීර්ණ වචන නැතුව කියවන්න,SIMPLIFY,Read without complicated words,SIMPLIFY,True,"{""language_style"": ""simple""}",1.204,4.495,5.699
+gen_349,මේ ලිපිය ඉතාමත් සරලව කියන්න,SIMPLIFY,This article is very simple to say,SIMPLIFY,True,"{""language_style"": ""simple""}",1.642,4.571,6.212
+gen_350,තේරුම් ගන්න ලේසි විදිහට මේක සරල කරන්න,SIMPLIFY,Make it easy to understand,SIMPLIFY,True,"{""language_style"": ""simple""}",1.297,4.553,5.85
+gen_351,වෙන විදිහකට මේක කියන්න,REPHRASE,Another way to say this,REPHRASE,True,"{""language_style"": ""simple""}",1.261,4.796,6.056
+gen_352,අදහස වෙනස් නොකර වෙනස් වචන වලින් කියන්න,REPHRASE,I'm not changing my mind.,STOP,False,"{""speed"": ""fast""}",1.837,4.431,6.268
+gen_353,ඔය වාක්‍යය වෙනස් කරලා කියන්න,REPHRASE,Change the sentence and tell me,EXPLAIN,False,"{""language_style"": ""simple""}",1.418,4.718,6.136
+gen_354,වෙනත් වචන පාවිච්චි කරලා පැහැදිලි කරන්න,REPHRASE,Explain using other words,EXPLAIN,False,"{""language_style"": ""simple""}",1.499,4.676,6.175
+gen_355,මට මේක වෙන විදිහකින් අහන්න ඕනේ,REPHRASE,I need to hear this another way .,REPHRASE,True,"{""language_style"": ""simple""}",1.899,4.979,6.878
+gen_356,වාක්‍ය රටාව වෙනස් කරලා කියවන්න,REPHRASE,Change the sentence pattern and read it,NEXT_ARTICLE,False,"{""language_style"": ""simple""}",1.784,377.488,379.272
+gen_357,වෙනත් ආකාරයකට මේක ගොනු කරන්න,REPHRASE,Other way to file this,REPHRASE,True,"{""language_style"": ""simple""}",0.792,4.334,5.126
+gen_358,ඔය ටිකම වෙන විදිහකට කියන්න පුළුවන්ද,REPHRASE,Can you tell me that in another way?,REPHRASE,True,"{""language_style"": ""simple""}",2.519,4.088,6.607
+gen_359,මට තේරුණේ නෑ වෙන වචන වලින් කියන්න,REPHRASE,I don't understand. I don't know.,EXPLAIN,False,"{""language_style"": ""simple""}",3.013,3.887,6.9
+gen_360,මේක වෙනත් විදිහකට ඉදිරිපත් කරන්න,REPHRASE,Put this in another way.,REPHRASE,True,"{""language_style"": ""simple""}",1.776,3.997,5.773
+gen_361,ආයෙත් කියන්න,REPEAT,Say it again .,REPEAT,True,"{""speed"": ""fast""}",1.366,3.817,5.183
+gen_362,මට ඇහුණේ නෑ නැවත කියන්න,REPEAT,I didn't hear you say it again.,REPEAT,True,"{""speed"": ""fast""}",2.609,3.735,6.343
+gen_363,මුල ඉඳන් කියවන්න,REPEAT,Read it from the beginning,GO_TO_START,False,"{""language_style"": ""simple""}",1.58,3.908,5.487
+gen_364,අර කියපු එක ආයෙත් කියන්න පුළුවන්ද,REPEAT,Can you say that again ?,REPEAT,True,"{""language_style"": ""simple""}",1.928,3.86,5.788
+gen_365,ඔය වාක්‍යය ආයෙත් සැරයක් කියවන්න,REPEAT,Read that sentence again .,REPEAT,True,"{""speed"": ""fast""}",1.537,3.758,5.295
+gen_366,නවතින්න,STOP,Stop it .,STOP,True,"{""speed"": ""fast""}",1.233,3.645,4.879
+gen_367,දැන් ඇති කියෙව්වා,STOP,Enough of that .,STOP,True,"{""language_style"": ""simple""}",1.658,3.739,5.397
+gen_368,ඔතනින් කියවීම නවත්වන්න,STOP,Stop reading from there,STOP,True,"{""speed"": ""fast""}",1.274,3.748,5.022
+gen_369,පොඩ්ඩක් නවත්වන්න පුළුවන්ද,STOP,Can you stop it a little bit ?,STOP,True,"{""speed"": ""fast""}",2.294,3.733,6.026
+gen_370,හරි දැන් නතර කරන්න,STOP,"Okay , now stop .",STOP,True,"{""speed"": ""fast""}",1.437,3.764,5.201
+gen_371,සිරස්තල කියවන්න,READ_HEADLINES,Read the headlines,READ_HEADLINES,True,"{""language_style"": ""simple""}",1.352,3.916,5.268
+gen_372,අද ප්‍රධාන ප්‍රවෘත්ති මොනවද,READ_HEADLINES,What's the big news today?,NEXT_ARTICLE,False,"{""language_style"": ""simple""}",2.263,3.866,6.129
+gen_373,මුල් පිටුවේ සිරස්තල ටික අහන්න ඕනේ,READ_HEADLINES,I need to hear the headlines .,READ_HEADLINES,True,"{""language_style"": ""simple""}",2.205,3.967,6.172
+gen_374,දිනමිණ පත්තරේ අද සිරස්තල කියවන්න,READ_HEADLINES,Read the headlines in the daily newspaper today,READ_HEADLINES,True,"{""language_style"": ""simple""}",2.713,3.952,6.664
+gen_375,වෙනත් ප්‍රධාන පුවත් මොනවද,READ_HEADLINES,What are the other major news,NEXT_ARTICLE,False,"{""language_style"": ""simple""}",1.772,3.857,5.629
+gen_376,ක්‍රීඩා පිටුවට යන්න,NAVIGATE_SECTION,Go to the games page,NEXT_PAGE,False,"{""language_style"": ""simple""}",1.639,3.879,5.518
+gen_377,වාණිජ පුවත් තියෙන තැනට යන්න,NAVIGATE_SECTION,Go where there's commercial news.,NEXT_ARTICLE,False,"{""language_style"": ""simple""}",2.259,3.854,6.113
+gen_378,විදේශ පුවත් කොටසට යමු,NAVIGATE_SECTION,Let's go to foreign news section,NAVIGATE_SECTION,True,"{""language_style"": ""simple""}",2.316,4.068,6.384
+gen_379,දේශපාලන ලිපි තියෙන පිටුවට පෙරලන්න,NAVIGATE_SECTION,Go to the page with political articles,NEXT_PAGE,False,"{""language_style"": ""simple""}",1.864,3.925,5.789
+gen_380,කතුවැකිය තියෙන පිටුවට යන්න,NAVIGATE_SECTION,Go to the page with the book,NEXT_PAGE,False,"{""language_style"": ""simple""}",2.039,3.774,5.813
+gen_381,මේකේ මොනවද තියෙන්නේ,IDENTIFY_CONTENT,What's in this?,READ_ARTICLE,False,"{""language_style"": ""simple""}",1.737,3.854,5.59
+gen_382,මේ පිටුවේ තියෙන දේවල් මොනවද,IDENTIFY_CONTENT,What's on this page?,READ_ARTICLE,False,"{""language_style"": ""simple""}",2.054,3.89,5.944
+gen_383,මෙතන තියෙන මාතෘකා මොනවද,IDENTIFY_CONTENT,What are the titles here?,READ_ARTICLE,False,"{""language_style"": ""simple""}",1.673,3.899,5.572
+gen_384,මේක ඇතුලේ තියෙන අන්තර්ගතය මොකක්ද,IDENTIFY_CONTENT,What's in this?,READ_ARTICLE,False,"{""language_style"": ""simple""}",1.719,3.815,5.534
+gen_385,මුලටම යන්න,GO_TO_START,Go to the beginning,GO_TO_START,True,"{""language_style"": ""simple""}",1.219,3.813,5.032
+gen_386,පළවෙනි පිටුවට යන්න,GO_TO_START,Go to the first page,GO_TO_START,True,"{""language_style"": ""simple""}",1.509,3.778,5.287
+gen_387,අගටම යන්න,GO_TO_END,I'm going to go.,NEXT_PAGE,False,"{""language_style"": ""simple""}",1.72,3.849,5.569
+gen_388,අන්තිම පිටුවට යන්න,GO_TO_END,Go to the last page,GO_TO_END,True,"{""language_style"": ""simple""}",1.427,3.868,5.295
+gen_389,දහවෙනි පිටුවට යන්න,NAVIGATE_PAGE_NUMBER,Go to the tenth page,NEXT_PAGE,False,"{""page_number"": 10}",1.642,3.754,5.395
+gen_390,පිටු අංක හතර පෙරලන්න,NAVIGATE_PAGE_NUMBER,Page number four,NEXT_PAGE,False,"{""language_style"": ""simple""}",1.021,3.819,4.839
+gen_391,ආ... ඊළඟ එකට යමු නේද,NEXT_ARTICLE,"Uh... let's go to the next one, shall we?",NEXT_PAGE,False,"{""language_style"": ""simple""}",3.232,4.004,7.236
+gen_392,හ්ම්... මේක සරල කරන්න පුළුවන්ද,SIMPLIFY,Um... can you make this simple?,SIMPLIFY,True,"{""language_style"": ""simple""}",2.045,4.037,6.082
+gen_393,මට ඕනේ අර කලින් කියපු එක ආයේ අහන්න,PREVIOUS_ARTICLE,I want to hear that one again .,REPEAT,False,"{""speed"": ""fast""}",2.058,3.735,5.793
+gen_394,මේක නම් තේරෙන්නේ නෑ පොඩ්ඩක් පැහැදිලි කරලා දෙන්න,EXPLAIN,I don't understand this. Let me explain.,EXPLAIN,True,"{""language_style"": ""simple""}",2.643,3.86,6.503
+gen_395,අද පත්තරේ තියෙන ඔක්කොම සිරස්තල ටික මට කියවලා ඇහෙන්න සලස්වන්න,READ_HEADLINES,All the headlines in today's paper read me and make sure I hear them.,READ_HEADLINES,True,"{""language_style"": ""simple""}",4.042,4.085,8.127
+gen_396,ඇත්තටම මට මේකේ සාරාංශයක් විතරක් දැනගන්න ලැබුණා නම් ඇති,SUMMARIZE,"Actually , I wish I had only known a summary of this .",SUMMARIZE,True,"{""language_style"": ""simple""}",3.107,3.942,7.049
+gen_397,පොඩ්ඩක් ඉන්න ඔතනින් නවත්වලා මට කියන්න ඔය කියපු දේ වෙනස් විදිහකට,REPHRASE,ERROR,ERROR,False,{},0,0,0
+gen_398,මොකක්ද ඒ කිව්වේ මට හරියට ඇහුනේ නෑ ආයෙත් මුල ඉඳන් කියවන්න,REPEAT,What did that say I didn't hear it again read it from the beginning,REPEAT,True,{},3.486,3.664,7.149
+gen_399,මේ පිටුව නම් කියවලා ඉවරයි අපි ඊළඟ පිටුවට යමු,NEXT_PAGE,This page is finished . Let 's go to the next page .,NEXT_PAGE,True,"{""language_style"": ""simple""}",3.005,3.94,6.946
+gen_400,මට මේ ප්‍රවෘත්තිය ඇතුලේ තියෙන දේවල් මොනවද කියලා කෙටියෙන් හඳුන්වලා දෙන්න,IDENTIFY_CONTENT,Let me know what's in this news.,IDENTIFY_CONTENT,True,"{""language_style"": ""simple""}",2.337,3.908,6.244
+gen_401,අපි ඊළඟ පිටුවට යමු,NEXT_PAGE,Let's go to the next page.,NEXT_PAGE,True,"{""language_style"": ""simple""}",2.313,3.777,6.09
+gen_402,මේ පිටුව ඉවරයි ඉස්සරහට යන්න,NEXT_PAGE,This page is over . Go ahead .,NEXT_PAGE,True,"{""language_style"": ""simple""}",2.208,3.825,6.034
+gen_403,ඊළඟට තියෙන පිටුව කියවන්න,NEXT_PAGE,Read the next page,NEXT_PAGE,True,"{""language_style"": ""simple""}",1.156,3.737,4.894
+gen_404,ඉස්සරහට පිටුවක් පෙරලමු,NEXT_PAGE,Let's go ahead and get a page.,NEXT_PAGE,True,"{""language_style"": ""simple""}",2.665,3.816,6.481
+gen_405,ඊළඟ එකට යන්න,NEXT_PAGE,Next time we go together,NEXT_PAGE,True,"{""language_style"": ""simple""}",1.328,3.802,5.13
+gen_406,ආපහු පස්සට යන්න,PREVIOUS_PAGE,Go back to the drawing board .,PREVIOUS_ARTICLE,False,"{""language_style"": ""simple""}",2.33,4.019,6.349
+gen_407,අපි කලින් පිටුවට ගිහින් බලමු,PREVIOUS_PAGE,Let 's go to the front page and see .,GO_TO_START,False,{},2.502,3.618,6.121
+gen_408,පෙර පිටුවට මාරු වෙන්න,PREVIOUS_PAGE,Change to previous page,PREVIOUS_PAGE,True,"{""language_style"": ""simple""}",1.109,3.826,4.935
+gen_409,ආපස්සට පිටුවක් පෙරලන්න පුළුවන්ද,PREVIOUS_PAGE,Can you turn a page back?,NEXT_PAGE,False,"{""language_style"": ""simple""}",1.667,3.88,5.546
+gen_410,කලින් තිබ්බ පිටුවට යන්න,PREVIOUS_PAGE,Previously on Go to the Page,NEXT_PAGE,False,"{""language_style"": ""simple""}",1.696,3.85,5.546
+gen_411,ඊළඟ ප්‍රවෘත්තිය මොකක්ද,NEXT_ARTICLE,What's the next news?,NEXT_ARTICLE,True,"{""language_style"": ""simple""}",1.633,3.877,5.51
+gen_412,මේ පුවත ඉවරයි ඊළඟ එක ගන්න,NEXT_ARTICLE,This news is over. Get the next one.,NEXT_ARTICLE,True,"{""language_style"": ""simple""}",2.249,3.961,6.21
+gen_413,ඊළඟට තියෙන ලිපිය කියවන්න පටන් ගන්න,NEXT_ARTICLE,Start reading the next article.,NEXT_ARTICLE,True,"{""language_style"": ""simple""}",1.506,3.903,5.409
+gen_414,වෙනත් ප්‍රවෘත්තියකට යමු,NEXT_ARTICLE,Let's go to another news.,NEXT_ARTICLE,True,"{""language_style"": ""simple""}",1.917,3.847,5.763
+gen_415,ඊළඟ සිරස්තලයට යන්න,NEXT_ARTICLE,Go to the next heading,NEXT_ARTICLE,True,"{""language_style"": ""simple""}",1.422,3.861,5.283
+gen_416,කලින් ප්‍රවෘත්තියට ආපහු යන්න,PREVIOUS_ARTICLE,Back to the news .,PREVIOUS_ARTICLE,True,"{""language_style"": ""simple""}",1.336,3.845,5.182
+gen_417,පෙර කියවපු පුවතට ආයේ යන්න,PREVIOUS_ARTICLE,Go back to the previously read news,PREVIOUS_ARTICLE,True,"{""language_style"": ""simple""}",1.796,3.946,5.741
+gen_418,මීට කලින් තිබ්බ ලිපිය ගන්න,PREVIOUS_ARTICLE,Previously on Get the Article,NEXT_ARTICLE,False,"{""language_style"": ""simple""}",1.434,3.812,5.245
+gen_419,අර අන්තිමට කියවපු එකට යන්න,PREVIOUS_ARTICLE,Go to the last one you read,GO_TO_END,False,"{""language_style"": ""simple""}",1.66,4.001,5.661
+gen_420,පස්සට ගිහින් අර පුවත කියවන්න,PREVIOUS_ARTICLE,Go back and read that news .,PREVIOUS_ARTICLE,True,"{""language_style"": ""simple""}",1.621,3.961,5.582
+gen_421,මේකේ සාරාංශයක් මට දෙන්න පුළුවන්ද,SUMMARIZE,Can I get a summary of this?,SUMMARIZE,True,"{""language_style"": ""simple""}",2.158,3.925,6.083
+gen_422,මේ ප්‍රවෘත්තියේ කෙටි සටහනක් කියන්න,SUMMARIZE,Give me a brief note of this news .,SUMMARIZE,True,"{""language_style"": ""simple""}",1.968,3.858,5.826
+gen_423,සාරාංශ කරලා කියවන්න,SUMMARIZE,Read the summary.,SUMMARIZE,True,"{""language_style"": ""simple""}",1.395,3.899,5.294
+gen_424,මේ මුළු ලිපියම කෙටි කරලා කියන්න,SUMMARIZE,Shorten the whole article.,SUMMARIZE,True,"{""language_style"": ""simple""}",1.49,3.936,5.427
+gen_425,මට වෙලාව නෑ මේක කෙටියෙන් අහන්න ඕනේ,SUMMARIZE,I don't have time to hear this briefly.,NEXT_PAGE,False,"{""speed"": ""fast""}",2.801,3.808,6.609
+gen_426,මේකේ ප්‍රධාන අදහස විතරක් සාරාංශ කරන්න,SUMMARIZE,Just summarize the main idea of this.,SUMMARIZE,True,"{""language_style"": ""simple""}",2.291,3.929,6.219
+gen_427,වැදගත් කරුණු ටික විතරක් කියවන්න,SUMMARIZE,Just read some important facts.,SUMMARIZE,True,"{""detail_level"": ""brief""}",1.46,3.844,5.304
+gen_428,මේකේ අගමුල කෙටියෙන් කියන්න,SUMMARIZE,Let me tell you the truth.,EXPLAIN,False,"{""language_style"": ""simple""}",1.683,3.81,5.493
+gen_429,සාරාංශයක් අහන්නයි මට ඕනේ,SUMMARIZE,I need to ask you a summary .,SUMMARIZE,True,"{""language_style"": ""simple""}",2.097,3.958,6.055
+gen_430,අනවශ්‍ය දේවල් නැතුව කෙටියෙන් කියන්න,SUMMARIZE,Tell me shortly without unnecessary things,SUMMARIZE,True,"{""detail_level"": ""brief""}",2.625,3.828,6.453
+gen_431,මේක මට තේරෙන්නේ නෑ පැහැදිලි කරන්න,EXPLAIN,I don't understand this. Explain.,EXPLAIN,True,"{""language_style"": ""simple""}",2.908,3.899,6.808
+gen_432,මේ ඡේදයේ තේරුම මොකක්ද කියලා විස්තර කරන්න,EXPLAIN,Describe what this verse means,EXPLAIN,True,"{""language_style"": ""simple""}",1.76,3.774,5.534
+gen_433,මේ කරුණ තවදුරටත් පැහැදිලි කරලා දෙන්න,EXPLAIN,Please explain this further.,EXPLAIN,True,"{""language_style"": ""simple""}",1.498,3.729,5.227
+gen_434,මොකක්ද මේකෙන් අදහස් වෙන්නේ කියලා කියන්න,EXPLAIN,Tell me what this means.,EXPLAIN,True,"{""language_style"": ""simple""}",1.562,3.854,5.416
+gen_435,මේකෙ පසුබිම ගැන පැහැදිලි කිරීමක් කරන්න,EXPLAIN,Make an explanation about this background.,EXPLAIN,True,"{""language_style"": ""simple""}",2.291,3.786,6.077
+gen_436,මට මේක තව ටිකක් විස්තරාත්මකව කියල දෙන්න,EXPLAIN,Let me explain this in more detail .,EXPLAIN,True,"{""language_style"": ""simple""}",2.376,3.8,6.176
+gen_437,මේ සිද්ධිය ගැන තව පැහැදිලි කරන්න,EXPLAIN,Explain this incident further.,EXPLAIN,True,"{""language_style"": ""simple""}",1.854,3.814,5.667
+gen_438,මේ වාක්‍යයේ අර්ථය මොකක්ද,EXPLAIN,What is the meaning of this phrase?,EXPLAIN,True,"{""language_style"": ""simple""}",2.143,3.89,6.033
+gen_439,තව දුරටත් මේ ගැන පැහැදිලි කරලා දෙන්න පුළුවන්ද,EXPLAIN,Can you explain this further ?,EXPLAIN,True,"{""language_style"": ""simple""}",1.578,3.765,5.343
+gen_440,මේකේ තේරුම ගැඹුරින් විස්තර කරන්න,EXPLAIN,Describe this in depth,EXPLAIN,True,"{""language_style"": ""simple""}",1.403,3.758,5.161
+gen_441,මේක ගොඩක් සංකීර්ණයි සරලව කියන්න,SIMPLIFY,It's very complicated.,SIMPLIFY,True,"{""language_style"": ""simple""}",1.807,3.919,5.726
+gen_442,මට තේරෙන භාෂාවෙන් ලේසියෙන් කියන්න,SIMPLIFY,I can easily tell you in a clear language.,SIMPLIFY,True,"{""language_style"": ""simple""}",2.384,3.894,6.277
+gen_443,අමාරු වචන නැතුව සරලව කියන්න පුළුවන්ද,SIMPLIFY,Can you say it without difficult words?,SIMPLIFY,True,"{""language_style"": ""simple""}",1.972,3.942,5.914
+gen_444,මේක තව ටිකක් සරල කරන්න,SIMPLIFY,Make this a little easier .,SIMPLIFY,True,"{""language_style"": ""simple""}",1.72,3.861,5.58
+gen_445,සාමාන්‍ය කෙනෙකුට තේරෙන විදිහට මේක සරල කරන්න,SIMPLIFY,Make it simple as a normal person can understand .,SIMPLIFY,True,"{""language_style"": ""simple""}",2.512,3.874,6.386
+gen_446,බර වචන අයින් කරලා ලේසි වචන වලින් කියන්න,SIMPLIFY,We have to get rid of the heavy words and say it in easy words.,SIMPLIFY,True,"{""language_style"": ""simple""}",3.725,4.045,7.77
+gen_447,පොඩි ළමයෙකුට කියනවා වගේ සරලව පැහැදිලි කරන්න,SIMPLIFY,Just explain it to a little kid .,EXPLAIN,False,"{""language_style"": ""simple""}",1.99,3.948,5.938
+gen_448,මේ ලිපිය සරල භාෂාවකට හරවලා කියවන්න,SIMPLIFY,Read this article in simple langage,SIMPLIFY,True,"{""language_style"": ""simple""}",1.867,3.874,5.741
+gen_449,තේරුම් ගන්න පහසු විදිහට මේක කියන්න,SIMPLIFY,It's easy to understand.,SIMPLIFY,True,"{""language_style"": ""simple""}",1.898,3.886,5.784
+gen_450,ඉතාමත් සරලව මේකේ තේරුම කියන්න,SIMPLIFY,"Very simply, tell me what this means.",EXPLAIN,False,"{""language_style"": ""simple""}",2.372,3.799,6.171
+gen_451,මේක වෙන විදිහකට පැහැදිලි කරන්න පුළුවන්ද,REPHRASE,Can you explain this in another way?,EXPLAIN,False,"{""language_style"": ""simple""}",2.093,3.811,5.904
+gen_452,ඔය අදහසම වෙනස් වචන පාවිච්චි කරලා කියන්න,REPHRASE,You have the same idea . Use different words .,REPHRASE,True,{},2.472,3.664,6.136
+gen_453,වෙනත් ආකාරයකට මේ වාක්‍යය කියවන්න,REPHRASE,"Otherwise, read this sentence.",NEXT_ARTICLE,False,"{""language_style"": ""simple""}",1.778,3.866,5.645
+gen_454,මේකේ අර්ථය වෙනස් නොකර වෙන විදිහකට කියන්න,REPHRASE,Don't change the meaning of this.,EXPLAIN,False,"{""language_style"": ""simple""}",2.14,3.821,5.962
+gen_455,මට ඒක තේරුණේ නෑ වෙන වචන වලින් කියන්න,REPHRASE,I don't understand it. I can't put it another way.,EXPLAIN,False,"{""language_style"": ""technical""}",3.603,3.912,7.515
+gen_456,වාක්‍ය රටාව වෙනස් කරලා පැහැදිලි කරන්න,REPHRASE,Change the sentence pattern and explain,EXPLAIN,False,"{""language_style"": ""simple""}",1.623,3.77,5.393
+gen_457,වෙන විදිහකට කිව්වොත් කොහොමද මේක තේරුම් ගන්නේ,REPHRASE,"In other words , how do you understand this ?",EXPLAIN,False,"{""language_style"": ""simple""}",2.371,3.823,6.194
+gen_458,ඔය දේම වෙනස් විදිහකට හදලා කියන්න,REPHRASE,Tell me how to make it different .,REPHRASE,True,"{""language_style"": ""simple""}",2.091,3.957,6.048
+gen_459,මට වෙනත් විදිහකින් මේක අහන්න ඕනේ,REPHRASE,I want to hear this another way .,REPHRASE,True,"{""language_style"": ""simple""}",1.951,3.946,5.897
+gen_460,වෙනත් වචන වලින් මේක ඉදිරිපත් කරන්න,REPHRASE,"In other words, make this present.",EXPLAIN,False,"{""language_style"": ""simple""}",1.883,3.849,5.732
+gen_461,ආයෙත් සැරයක් මුල ඉඳන් කියවන්නකෝ,REPEAT,Read it again from the beginning.,READ_HEADLINES,False,"{""speed"": ""fast""}",1.787,3.847,5.634
+gen_462,මට හරියට ඇහුණේ නෑ නැවත කියන්න,REPEAT,I just didn't hear you say it again.,REPEAT,True,"{""speed"": ""fast""}",2.762,3.799,6.561
+gen_463,අන්තිමට කියපු ටික ආයෙත් කියන්න,REPEAT,Say it again .,REPEAT,True,"{""speed"": ""fast""}",1.252,3.701,4.953
+gen_464,ඔය වාක්‍යය ආයෙත් කියන්න පුළුවන්ද,REPEAT,Can you repeat that sentence ?,REPEAT,True,"{""speed"": ""fast""}",1.751,3.727,5.478
+gen_465,නැවත වරක් මේ ඡේදය කියවන්න,REPEAT,Read this verse again.,READ_ARTICLE,False,"{""speed"": ""fast""}",1.474,3.792,5.266
+gen_466,දැන් කියවීම නවත්වන්න,STOP,Now stop reading,STOP,True,"{""speed"": ""fast""}",1.112,3.664,4.776
+gen_467,පොඩ්ඩක් ඉන්න නවතින්න,STOP,"Wait a minute , stop .",STOP,True,"{""speed"": ""fast""}",1.637,3.678,5.315
+gen_468,ඔතනින් නවත්වලා තියන්න,STOP,Stop there and stop there,STOP,True,"{""speed"": ""fast""}",1.433,3.664,5.097
+gen_469,හරි දැන් කියෙව්වා ඇති,STOP,"Okay , now I 've read enough .",STOP,True,"{""speed"": ""fast""}",2.299,3.708,6.007
+gen_470,නතර කරන්න,STOP,Stop it,STOP,True,"{""speed"": ""fast""}",0.87,3.629,4.499
+gen_471,අද පත්තරේ ප්‍රධාන සිරස්තල ටික කියවන්න,READ_HEADLINES,Read the main headlines of today's paper,READ_HEADLINES,True,"{""language_style"": ""simple""}",2.349,3.929,6.278
+gen_472,මුල් පිටුවේ මොනවද තියෙන්නේ කියලා සිරස්තල කියවන්න,READ_HEADLINES,Read the headlines on the original page,READ_HEADLINES,True,"{""language_style"": ""simple""}",1.909,3.915,5.825
+gen_473,දිනමිණ පත්තරේ අද සිරස්තල මොනවද,READ_HEADLINES,What are the headlines of the daily newspaper today?,READ_HEADLINES,True,"{""language_style"": ""simple""}",2.565,3.995,6.56
+gen_474,වෙනත් ප්‍රවෘත්ති සිරස්තල අහන්න ඕනේ,READ_HEADLINES,Other news headlines to hear,READ_ARTICLE,False,"{""language_style"": ""simple""}",1.789,3.884,5.672
+gen_475,අද දවසේ ප්‍රධාන පුවත් සිරස්තල කියවන්න,READ_HEADLINES,Read the headlines of today's main news,READ_HEADLINES,True,"{""language_style"": ""simple""}",2.273,3.97,6.243
+gen_476,දේශපාලන පුවත් පිටුවට යන්න,NAVIGATE_SECTION,political news page,NEXT_PAGE,False,"{""language_style"": ""simple""}",1.066,3.699,4.765
+gen_477,ක්‍රීඩා ලිපි තියෙන කොටසට යමු,NAVIGATE_SECTION,Let's go to the section with sports articles,NAVIGATE_SECTION,True,"{""language_style"": ""simple""}",2.387,3.925,6.312
+gen_478,ව්‍යාපාරික පුවත් පිටුව පෙරලන්න,NAVIGATE_SECTION,Business news page,NEXT_PAGE,False,"{""language_style"": ""simple""}",1.136,3.699,4.836
+gen_479,කතුවැකිය කියවන්න ඒ පිටුවට යන්න,NAVIGATE_SECTION,Read the book and go to that page,READ_ARTICLE,False,"{""language_style"": ""simple""}",2.188,3.952,6.14
+gen_480,විදේශ පුවත් තියෙන තැනට යන්න,NAVIGATE_SECTION,Go to a place with foreign news,NEXT_PAGE,False,"{""language_style"": ""simple""}",2.062,3.773,5.835
+gen_481,පත්තරේ මුලටම ආපහු යන්න,GO_TO_START,Go back to the beginning of the paper,GO_TO_START,True,"{""language_style"": ""simple""}",1.889,3.966,5.855
+gen_482,පළවෙනි පිටුවට යමු,GO_TO_START,Let's go to the first page.,GO_TO_START,True,"{""language_style"": ""simple""}",2.096,3.917,6.013
+gen_483,අගටම යන්න අන්තිම පිටුවට,GO_TO_END,Go to the last page.,GO_TO_END,True,"{""language_style"": ""simple""}",1.606,3.851,5.457
+gen_484,අවසන් පිටුවට පෙරලන්න,GO_TO_END,Go to the last page,GO_TO_END,True,"{""language_style"": ""simple""}",1.468,3.708,5.176
+gen_485,දෙවැනි පිටුවට යන්න,NAVIGATE_PAGE_NUMBER,Go to the second page,NEXT_PAGE,False,"{""language_style"": ""simple""}",1.38,3.717,5.096
+gen_486,පිටු අංක එකොළහ පෙරලන්න,NAVIGATE_PAGE_NUMBER,Page number one,NEXT_PAGE,False,"{""language_style"": ""simple""}",1.113,3.795,4.908
+gen_487,මේකේ මොනවද අන්තර්ගත වෙලා තියෙන්නේ,IDENTIFY_CONTENT,What's in this?,READ_ARTICLE,False,"{""language_style"": ""simple""}",1.777,3.766,5.542
+gen_488,මේ පිටුවේ තියෙන මාතෘකා මොනවද කියලා කියන්න,IDENTIFY_CONTENT,Tell me what the topics on this page are,IDENTIFY_CONTENT,True,"{""language_style"": ""simple""}",2.798,4.002,6.799
+gen_489,මේ ප්‍රවෘත්තිය ඇතුලේ තියෙන දේවල් මොනවද,IDENTIFY_CONTENT,What's in this news?,READ_ARTICLE,False,"{""language_style"": ""simple""}",1.898,3.811,5.709
+gen_490,මෙතන අඩංගු වෙලා තියෙන්නේ මොනවද,IDENTIFY_CONTENT,What's in here?,READ_ARTICLE,False,"{""language_style"": ""simple""}",1.855,3.855,5.71
+gen_491,මේ සම්පූර්ණ ප්‍රවෘත්තියම කියවන්න පටන් ගන්න,READ_ARTICLE,Start reading the full news.,READ_ARTICLE,True,"{""speed"": ""fast""}",1.781,3.822,5.603
+gen_492,හ්ම්... මට මේකේ දිග විස්තර අහන්න වෙලාවක් නෑ ඒ නිසා සාරාංශයක් විතරක් කියන්න,SUMMARIZE,Um... I don't have time to ask for details on this so just give a summary,SUMMARIZE,True,"{""language_style"": ""simple""}",4.411,4.21,8.621
+gen_493,මේක නම් මට හරියටම තේරුනේ නෑ කරුණාකරලා මේක තව ටිකක් පැහැදිලි කරලා දෙනවද,EXPLAIN,"If this is it, I don't understand. Please explain this a little more.",EXPLAIN,True,"{""language_style"": ""simple""}",4.02,4.006,8.026
+gen_494,ඇත්තටම මට ඕනේ අද පත්තරේ තියෙන ප්‍රධානම ක්‍රීඩා සිරස්තල ටික විතරක් අහගන්න,READ_HEADLINES,I really just want to hear some of the main sports headlines in today's paper.,READ_HEADLINES,True,"{""language_style"": ""simple""}",4.298,4.102,8.399
+gen_495,මට මේ වචන ටිකක් අමාරුයි වගේ පුළුවන් නම් මේක ඉතාමත් සරලව මට කියල දෙන්න,SIMPLIFY,I find these words a little difficult if I can explain it very simply.,EXPLAIN,False,"{""language_style"": ""simple""}",3.237,3.923,7.161
+gen_496,අර කලින් කියවපු ප්‍රවෘත්තියට ආපහු ගිහිල්ලා ඒකේ ඉතුරු ටික කියවන්න පුළුවන්ද,PREVIOUS_ARTICLE,Go back to the news you read before and read the rest of it.,NEXT_ARTICLE,False,"{""language_style"": ""simple""}",3.136,3.978,7.114
+gen_497,ඔතනින් පොඩ්ඩක් නවත්වලා මට කියන්න අර කියපු දේ වෙනස් විදිහකට කොහොමද කියන්නේ කියලා,REPHRASE,Stop there and tell me how to say what he said differently,EXPLAIN,False,"{""language_style"": ""simple""}",2.989,3.889,6.878
+gen_498,මේ පිටුව නම් කියවලා ඉවරයි අපි දැන් ඊළඟ පිටුවට යමු නේද,NEXT_PAGE,This page is finished. Let's go to the next page.,NEXT_PAGE,True,"{""language_style"": ""simple""}",2.82,3.86,6.68
+gen_499,මොකක්ද ඒ කිව්වේ මට හරියට ඇහුනේ නෑ ආයෙත් මුල ඉඳන් කියවන්න පුළුවන්ද,REPEAT,What did that mean I didn't hear it? Can I read it again?,REPEAT,True,{},3.601,3.754,7.355
+gen_500,මට මේ ප්‍රවෘත්තිය ඇතුලේ තියෙන දේවල් මොනවද කියලා කෙටියෙන් හඳුන්වලා දෙන්න,IDENTIFY_CONTENT,Let me know what's in this news.,IDENTIFY_CONTENT,True,"{""language_style"": ""simple""}",2.426,3.91,6.336

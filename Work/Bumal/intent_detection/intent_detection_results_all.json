@@ -1,0 +1,401 @@
+{
+  "summary": {
+    "a1": {
+      "label": "Approach 1 (NLLB+Llama)",
+      "accuracy": 85.71,
+      "avg_latency": 7.383
+    },
+    "a2": {
+      "label": "Approach 2 (Qwen direct)",
+      "accuracy": 0.0,
+      "avg_latency": 8.206
+    },
+    "a3": {
+      "label": "Approach 3 (trained)",
+      "accuracy": 57.14,
+      "avg_latency": 1.418
+    },
+    "hybrid": {
+      "label": "Hybrid",
+      "accuracy": 71.43,
+      "avg_latency": 2.792
+    }
+  },
+  "detailed_results": {
+    "a1": [
+      {
+        "approach": "Approach 1 — NLLB + Llama3.2:1b",
+        "sinhala_input": "මෙය සාරාංශ කරන්න",
+        "english_translation": "Summarize this",
+        "intent": "SUMMARIZE",
+        "personalization_flags": {
+          "detail_level": "brief"
+        },
+        "translation_time_sec": 2.142,
+        "llm_time_sec": 17.918,
+        "total_time_sec": 20.061,
+        "correct": true
+      },
+      {
+        "approach": "Approach 1 — NLLB + Llama3.2:1b",
+        "sinhala_input": "මෙය තව ටිකක් විස්තර කරන්න පුළුවන්ද",
+        "english_translation": "Can you explain this a little more?",
+        "intent": "EXPLAIN",
+        "personalization_flags": {
+          "language_style": "simple"
+        },
+        "translation_time_sec": 0.972,
+        "llm_time_sec": 3.905,
+        "total_time_sec": 4.877,
+        "correct": true
+      },
+      {
+        "approach": "Approach 1 — NLLB + Llama3.2:1b",
+        "sinhala_input": "කරුණාකර මෙය ඉතාමත් සරලව සහ කෙටියෙන් මට තේරෙන විදිහට පහදා දෙන්න",
+        "english_translation": "Please explain this very simply and briefly as I understand it.",
+        "intent": "EXPLAIN",
+        "personalization_flags": {
+          "language_style": "simple"
+        },
+        "translation_time_sec": 1.315,
+        "llm_time_sec": 3.85,
+        "total_time_sec": 5.165,
+        "correct": true
+      },
+      {
+        "approach": "Approach 1 — NLLB + Llama3.2:1b",
+        "sinhala_input": "ඔයා ඔයා මට මෙහි ඇත්තේ කුමක්දැයි කියන්න පුළුවන්ද",
+        "english_translation": "You can you tell me what I have here?",
+        "intent": "IDENTIFY_CONTENT",
+        "personalization_flags": {
+          "language_style": "simple"
+        },
+        "translation_time_sec": 1.074,
+        "llm_time_sec": 3.805,
+        "total_time_sec": 4.879,
+        "correct": true
+      },
+      {
+        "approach": "Approach 1 — NLLB + Llama3.2:1b",
+        "sinhala_input": "මට ඕනේ හ්ම් ඉතාමත් දිගු විස්තර නොමැතිව කෙටියෙන් වේගයෙන් මෙය පහදන්න",
+        "english_translation": "I want to get this down without any details .",
+        "intent": "Simplify",
+        "personalization_flags": {
+          "detail_level": "brief"
+        },
+        "translation_time_sec": 1.125,
+        "llm_time_sec": 3.849,
+        "total_time_sec": 4.974,
+        "correct": true
+      },
+      {
+        "approach": "Approach 1 — NLLB + Llama3.2:1b",
+        "sinhala_input": "ඒක හරියට තේරෙන්නේ නෑ වෙනත් විදිහකට කියන්න",
+        "english_translation": "It's just not clear.",
+        "intent": "express emotion",
+        "personalization_flags": {
+          "language_style": "simple"
+        },
+        "translation_time_sec": 0.86,
+        "llm_time_sec": 3.801,
+        "total_time_sec": 4.661,
+        "correct": false
+      },
+      {
+        "approach": "Approach 1 — NLLB + Llama3.2:1b",
+        "sinhala_input": "ඇත්තටම මට මේ සම්පූර්ණ ලියවිල්ලම අහගෙන ඉන්න වෙලාවක් නැහැ, ඒ නිසා මේකෙ තියෙන වැදගත්ම කරුණු ටික විතරක් තෝරලා අරගෙන මට පැහැදිලිව කියවන්න පුළුවන්ද",
+        "english_translation": "Actually, I don't have time to listen to this whole document, so can I just pick out the most important points in it and read it clearly?",
+        "intent": "SUMMARIZE",
+        "personalization_flags": {
+          "detail_level": "brief"
+        },
+        "translation_time_sec": 2.926,
+        "llm_time_sec": 4.139,
+        "total_time_sec": 7.064,
+        "correct": true
+      }
+    ],
+    "a2": [
+      {
+        "approach": "Approach 2 — Direct Qwen2.5:1.5b",
+        "sinhala_input": "මෙය සාරාංශ කරන්න",
+        "english_translation": "N/A — no translation step",
+        "intent": "ANALYZE_COMMAND",
+        "personalization_flags": {
+          "language_style": "technical"
+        },
+        "translation_time_sec": 0,
+        "llm_time_sec": 19.082,
+        "total_time_sec": 19.082,
+        "correct": false
+      },
+      {
+        "approach": "Approach 2 — Direct Qwen2.5:1.5b",
+        "sinhala_input": "මෙය තව ටිකක් විස්තර කරන්න පුළුවන්ද",
+        "english_translation": "N/A — no translation step",
+        "intent": "ANALYZE",
+        "personalization_flags": {
+          "language_style": "technical"
+        },
+        "translation_time_sec": 0,
+        "llm_time_sec": 5.239,
+        "total_time_sec": 5.239,
+        "correct": false
+      },
+      {
+        "approach": "Approach 2 — Direct Qwen2.5:1.5b",
+        "sinhala_input": "කරුණාකර මෙය ඉතාමත් සරලව සහ කෙටියෙන් මට තේරෙන විදිහට පහදා දෙන්න",
+        "english_translation": "N/A — no translation step",
+        "intent": "ANALYZE",
+        "personalization_flags": {
+          "language_style": "technical"
+        },
+        "translation_time_sec": 0,
+        "llm_time_sec": 5.922,
+        "total_time_sec": 5.922,
+        "correct": false
+      },
+      {
+        "approach": "Approach 2 — Direct Qwen2.5:1.5b",
+        "sinhala_input": "ඔයා ඔයා මට මෙහි ඇත්තේ කුමක්දැයි කියන්න පුළුවන්ද",
+        "english_translation": "N/A — no translation step",
+        "intent": "REPHRASE",
+        "personalization_flags": {
+          "language_style": "simple"
+        },
+        "translation_time_sec": 0,
+        "llm_time_sec": 5.386,
+        "total_time_sec": 5.386,
+        "correct": false
+      },
+      {
+        "approach": "Approach 2 — Direct Qwen2.5:1.5b",
+        "sinhala_input": "මට ඕනේ හ්ම් ඉතාමත් දිගු විස්තර නොමැතිව කෙටියෙන් වේගයෙන් මෙය පහදන්න",
+        "english_translation": "N/A — no translation step",
+        "intent": "ANALYZE",
+        "personalization_flags": {
+          "language_style": "technical"
+        },
+        "translation_time_sec": 0,
+        "llm_time_sec": 6.182,
+        "total_time_sec": 6.182,
+        "correct": false
+      },
+      {
+        "approach": "Approach 2 — Direct Qwen2.5:1.5b",
+        "sinhala_input": "ඒක හරියට තේරෙන්නේ නෑ වෙනත් විදිහකට කියන්න",
+        "english_translation": "N/A — no translation step",
+        "intent": "ANALYZE",
+        "personalization_flags": {
+          "language_style": "technical"
+        },
+        "translation_time_sec": 0,
+        "llm_time_sec": 5.599,
+        "total_time_sec": 5.599,
+        "correct": false
+      },
+      {
+        "approach": "Approach 2 — Direct Qwen2.5:1.5b",
+        "sinhala_input": "ඇත්තටම මට මේ සම්පූර්ණ ලියවිල්ලම අහගෙන ඉන්න වෙලාවක් නැහැ, ඒ නිසා මේකෙ තියෙන වැදගත්ම කරුණු ටික විතරක් තෝරලා අරගෙන මට පැහැදිලිව කියවන්න පුළුවන්ද",
+        "english_translation": "N/A — no translation step",
+        "intent": "ANALYZE",
+        "personalization_flags": {
+          "detail_level": "brief",
+          "language_style": "simple"
+        },
+        "translation_time_sec": 0,
+        "llm_time_sec": 10.033,
+        "total_time_sec": 10.033,
+        "correct": false
+      }
+    ],
+    "a3": [
+      {
+        "approach": "Approach 3 — Trained TF-IDF+LinearSVC",
+        "sinhala_input": "මෙය සාරාංශ කරන්න",
+        "english_translation": "Summarize this",
+        "intent": "SUMMARIZE",
+        "confidence": 0.838,
+        "personalization_flags": {},
+        "translation_time_sec": 1.533,
+        "classify_time_sec": 0.179,
+        "total_time_sec": 1.712,
+        "correct": true
+      },
+      {
+        "approach": "Approach 3 — Trained TF-IDF+LinearSVC",
+        "sinhala_input": "මෙය තව ටිකක් විස්තර කරන්න පුළුවන්ද",
+        "english_translation": "Can you explain this a little more?",
+        "intent": "EXPLAIN",
+        "confidence": 0.853,
+        "personalization_flags": {},
+        "translation_time_sec": 0.945,
+        "classify_time_sec": 0.02,
+        "total_time_sec": 0.964,
+        "correct": true
+      },
+      {
+        "approach": "Approach 3 — Trained TF-IDF+LinearSVC",
+        "sinhala_input": "කරුණාකර මෙය ඉතාමත් සරලව සහ කෙටියෙන් මට තේරෙන විදිහට පහදා දෙන්න",
+        "english_translation": "Please explain this very simply and briefly as I understand it.",
+        "intent": "SIMPLIFY",
+        "confidence": 0.632,
+        "personalization_flags": {},
+        "translation_time_sec": 1.317,
+        "classify_time_sec": 0.023,
+        "total_time_sec": 1.339,
+        "correct": false
+      },
+      {
+        "approach": "Approach 3 — Trained TF-IDF+LinearSVC",
+        "sinhala_input": "ඔයා ඔයා මට මෙහි ඇත්තේ කුමක්දැයි කියන්න පුළුවන්ද",
+        "english_translation": "You can you tell me what I have here?",
+        "intent": "IDENTIFY_CONTENT",
+        "confidence": 0.386,
+        "personalization_flags": {},
+        "translation_time_sec": 1.03,
+        "classify_time_sec": 0.018,
+        "total_time_sec": 1.048,
+        "correct": true
+      },
+      {
+        "approach": "Approach 3 — Trained TF-IDF+LinearSVC",
+        "sinhala_input": "මට ඕනේ හ්ම් ඉතාමත් දිගු විස්තර නොමැතිව කෙටියෙන් වේගයෙන් මෙය පහදන්න",
+        "english_translation": "I want to get this down without any details .",
+        "intent": "SUMMARIZE",
+        "confidence": 0.395,
+        "personalization_flags": {},
+        "translation_time_sec": 1.142,
+        "classify_time_sec": 0.01,
+        "total_time_sec": 1.152,
+        "correct": false
+      },
+      {
+        "approach": "Approach 3 — Trained TF-IDF+LinearSVC",
+        "sinhala_input": "ඒක හරියට තේරෙන්නේ නෑ වෙනත් විදිහකට කියන්න",
+        "english_translation": "It's just not clear.",
+        "intent": "SUMMARIZE",
+        "confidence": 0.312,
+        "personalization_flags": {},
+        "translation_time_sec": 0.798,
+        "classify_time_sec": 0.006,
+        "total_time_sec": 0.804,
+        "correct": false
+      },
+      {
+        "approach": "Approach 3 — Trained TF-IDF+LinearSVC",
+        "sinhala_input": "ඇත්තටම මට මේ සම්පූර්ණ ලියවිල්ලම අහගෙන ඉන්න වෙලාවක් නැහැ, ඒ නිසා මේකෙ තියෙන වැදගත්ම කරුණු ටික විතරක් තෝරලා අරගෙන මට පැහැදිලිව කියවන්න පුළුවන්ද",
+        "english_translation": "Actually, I don't have time to listen to this whole document, so can I just pick out the most important points in it and read it clearly?",
+        "intent": "SUMMARIZE",
+        "confidence": 0.682,
+        "personalization_flags": {},
+        "translation_time_sec": 2.901,
+        "classify_time_sec": 0.008,
+        "total_time_sec": 2.909,
+        "correct": true
+      }
+    ],
+    "hybrid": [
+      {
+        "approach": "Hybrid — Trained model (high confidence)",
+        "sinhala_input": "මෙය සාරාංශ කරන්න",
+        "english_translation": "Summarize this",
+        "intent": "SUMMARIZE",
+        "confidence": 0.838,
+        "personalization_flags": {},
+        "translation_time_sec": 0.59,
+        "classify_time_sec": 0.006,
+        "total_time_sec": 0.596,
+        "route": "TRAINED_MODEL",
+        "correct": true
+      },
+      {
+        "approach": "Hybrid — Trained model (high confidence)",
+        "sinhala_input": "මෙය තව ටිකක් විස්තර කරන්න පුළුවන්ද",
+        "english_translation": "Can you explain this a little more?",
+        "intent": "EXPLAIN",
+        "confidence": 0.853,
+        "personalization_flags": {},
+        "translation_time_sec": 0.801,
+        "classify_time_sec": 0.005,
+        "total_time_sec": 0.806,
+        "route": "TRAINED_MODEL",
+        "correct": true
+      },
+      {
+        "approach": "Hybrid — Trained model (high confidence)",
+        "sinhala_input": "කරුණාකර මෙය ඉතාමත් සරලව සහ කෙටියෙන් මට තේරෙන විදිහට පහදා දෙන්න",
+        "english_translation": "Please explain this very simply and briefly as I understand it.",
+        "intent": "SIMPLIFY",
+        "confidence": 0.632,
+        "personalization_flags": {},
+        "translation_time_sec": 1.232,
+        "classify_time_sec": 0.006,
+        "total_time_sec": 1.238,
+        "route": "TRAINED_MODEL",
+        "correct": false
+      },
+      {
+        "approach": "Hybrid — Llama3.2:1b fallback (low confidence)",
+        "sinhala_input": "ඔයා ඔයා මට මෙහි ඇත්තේ කුමක්දැයි කියන්න පුළුවන්ද",
+        "english_translation": "You can you tell me what I have here?",
+        "intent": "IDENTIFY_CONTENT",
+        "personalization_flags": {
+          "language_style": "simple"
+        },
+        "trained_model_guess": "IDENTIFY_CONTENT",
+        "trained_model_confidence": 0.386,
+        "route": "LLM_FALLBACK",
+        "translation_time_sec": 1.008,
+        "llm_time_sec": 3.717,
+        "total_time_sec": 4.729,
+        "correct": true
+      },
+      {
+        "approach": "Hybrid — Llama3.2:1b fallback (low confidence)",
+        "sinhala_input": "මට ඕනේ හ්ම් ඉතාමත් දිගු විස්තර නොමැතිව කෙටියෙන් වේගයෙන් මෙය පහදන්න",
+        "english_translation": "I want to get this down without any details .",
+        "intent": "Simplify",
+        "personalization_flags": {
+          "detail_level": "brief"
+        },
+        "trained_model_guess": "SUMMARIZE",
+        "trained_model_confidence": 0.395,
+        "route": "LLM_FALLBACK",
+        "translation_time_sec": 1.023,
+        "llm_time_sec": 3.779,
+        "total_time_sec": 4.808,
+        "correct": true
+      },
+      {
+        "approach": "Hybrid — Llama3.2:1b fallback (low confidence)",
+        "sinhala_input": "ඒක හරියට තේරෙන්නේ නෑ වෙනත් විදිහකට කියන්න",
+        "english_translation": "It's just not clear.",
+        "intent": "express emotion",
+        "personalization_flags": {
+          "language_style": "simple"
+        },
+        "trained_model_guess": "SUMMARIZE",
+        "trained_model_confidence": 0.312,
+        "route": "LLM_FALLBACK",
+        "translation_time_sec": 0.815,
+        "llm_time_sec": 3.555,
+        "total_time_sec": 4.376,
+        "correct": false
+      },
+      {
+        "approach": "Hybrid — Trained model (high confidence)",
+        "sinhala_input": "ඇත්තටම මට මේ සම්පූර්ණ ලියවිල්ලම අහගෙන ඉන්න වෙලාවක් නැහැ, ඒ නිසා මේකෙ තියෙන වැදගත්ම කරුණු ටික විතරක් තෝරලා අරගෙන මට පැහැදිලිව කියවන්න පුළුවන්ද",
+        "english_translation": "Actually, I don't have time to listen to this whole document, so can I just pick out the most important points in it and read it clearly?",
+        "intent": "SUMMARIZE",
+        "confidence": 0.682,
+        "personalization_flags": {},
+        "translation_time_sec": 2.983,
+        "classify_time_sec": 0.006,
+        "total_time_sec": 2.989,
+        "route": "TRAINED_MODEL",
+        "correct": true
+      }
+    ]
+  }
+}

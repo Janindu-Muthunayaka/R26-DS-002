@@ -1,9 +1,9 @@
 system/
 └── layers/
     ├── l0_voice/
-    │   # ── Voice Interaction (Component 4) ──
-    │   # Runs before everything else in the question path: what the
-    │   # user said decides whether anything downstream runs at all.
+    │   # ── Voice Interaction Client ──
+    │   # Runs before everything else in the question path. Acts as the routing plumbing
+    │   # that connects the transcribed voice input to Component 4 (L7 Personalization).
     │
     ├── l2_select/
     │   # ── Quality Control ──
@@ -48,6 +48,7 @@ system/
     ├── l4c_polish/
     │   # ── LLM Post-Editing ──
     │   # Optional component to polish/repair extracted text using an LLM.
+    │   # Discards "dud" articles without valid bodies and generates missing titles.
     │   # Off by default.
     │
     ├── l5_assemble/
@@ -61,12 +62,15 @@ system/
     │   # and answers user questions or summarizes the content.
     │
     ├── l7_personalization/
-    │   # ── Personalization ──
-    │   # Future placeholder for personalization pipelines.
+    │   # ── Personalization (Component 4) ──
+    │   # Intent detection (via NLLB translation + LLM) and style personalization.
+    │   # Analyzes user history to pick the best explanation style (Simple, Detailed, etc.).
+    │   # Runs as a standalone FastAPI microservice (`svc-voice`) due to strict dependency needs.
     │
     ├── l8a_listen/
-    │   # ── Listen ──
-    │   # Future placeholder for audio listening functionality.
+    │   # ── Listen (STT) ──
+    │   # Speech-to-Text functionality (e.g., Google Web Speech API `si-LK`).
+    │   # Captures user audio from the microphone and converts it to Sinhala text.
     │
     └── l8b_speech/
         # ── RAG + TTS ──

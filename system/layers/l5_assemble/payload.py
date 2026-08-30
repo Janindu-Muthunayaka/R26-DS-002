@@ -94,16 +94,18 @@ def article_text(article) -> str:
     Precedence: the accepted LLM post-edit if there is one, else the mT5
     correction, else the raw OCR.
     """
-    return ((article.body_polished or '').strip()
-            or (article.body or '').strip()
-            or (article.body_raw or '').strip())
+    cand = (article.body_polished or '').strip()
+    if cand == "[DISCARD]":
+        return ""
+    return cand or (article.body or '').strip() or (article.body_raw or '').strip()
 
 
 def article_title(article) -> str:
     """The title to use, preferring the polished output."""
-    return ((article.title_polished or '').strip()
-            or (article.title or '').strip()
-            or (article.title_raw or '').strip())
+    cand = (article.title_polished or '').strip()
+    if cand == "[DISCARD]":
+        return ""
+    return cand or (article.title or '').strip() or (article.title_raw or '').strip()
 
 
 def rag_payload(document: Document, with_tokens: bool = True) -> dict:
