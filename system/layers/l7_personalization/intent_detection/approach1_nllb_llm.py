@@ -5,6 +5,7 @@ import time
 import json
 import requests
 from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
+from layers.l7_personalization.intent_detection.fallback_ollama_openai import extract_intent_fallback
 
 # ─── Load NLLB Translation Model ───────────────────────
 print("Loading NLLB translation model...")
@@ -80,23 +81,7 @@ Example output: {"intent": "SUMMARIZE", "personalization_flags": {"detail_level"
 
     user_prompt = f"User command: '{english_text}'"
 
-    response = requests.post(
-        "http://localhost:11434/api/chat",
-        json={
-            "model": "llama3.2:1b",
-            "messages": [
-                {"role": "system", "content": system_prompt},
-                {"role": "user",   "content": user_prompt}
-            ],
-            "stream": False,
-            "options": {
-                "temperature": 0,
-                "num_predict": 100
-            }
-        }
-    )
-
-    raw = response.json()["message"]["content"].strip()
+    raw = extract_intent_fallback(system_prompt, user_prompt)
 
     # Clean response — remove markdown if model adds it
     if "```json" in raw:

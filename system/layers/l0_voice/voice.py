@@ -168,7 +168,7 @@ def interpret(text: str, user_id: str = None,
 def get_profile(user_id: str) -> dict:
     mode = (VOICE_MODE or 'stub').lower()
     if mode == 'http':
-        reply, _ = svc.get_json(f'{VOICE_URL.rstrip("/")}/profile/{user_id}', timeout_s=2)
+        reply, _ = svc.get_json(f'{VOICE_URL.rstrip("/")}/profile/{user_id}', timeout_s=5)
         if reply: return reply
     return {
         'n_confirmed': 0,

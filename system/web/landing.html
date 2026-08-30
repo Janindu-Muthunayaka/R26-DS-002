@@ -494,7 +494,7 @@
 <body>
     <a href="/reader" class="manual-btn">Test Capture API</a>
     <button class="manual-btn" id="test-voice-btn" style="top: 64px; cursor: pointer; border: none; font-family: inherit;">Test Voice API</button>
-    <button class="manual-btn" id="switch-user-btn" style="top: 104px; cursor: pointer; border: none; font-family: inherit;">Switch: user_001</button>
+    <button class="manual-btn" id="switch-user-btn" style="top: 104px; cursor: pointer; border: none; font-family: inherit;">User 001</button>
 
     <div id="voice-test-panel" style="display: none; position: absolute; top: 144px; right: 24px; background: var(--card); padding: 15px; border-radius: 8px; border: 1px solid var(--card-border); z-index: 100; box-shadow: 0 4px 12px rgba(0,0,0,0.3); width: 300px;">
         <h4 style="margin: 0 0 10px; font-size: 13px; color: var(--ink);">Simulate Voice Input</h4>
@@ -1244,7 +1244,8 @@
             const users = ['user_001', 'user_002', 'user_003'];
             let idx = users.indexOf(activeUser);
             activeUser = users[(idx + 1) % users.length];
-            document.getElementById('switch-user-btn').textContent = `Switch: ${activeUser}`;
+            const displayUser = activeUser.replace('user_0', 'User 0');
+            document.getElementById('switch-user-btn').textContent = displayUser;
             
             try {
                 const res = await fetch(`/profile/${activeUser}`);

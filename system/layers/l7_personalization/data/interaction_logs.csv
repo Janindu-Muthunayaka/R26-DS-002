@@ -27,3 +27,7 @@
 26,user_003,2026-08-30T10:16:57.523736,ගැඹුරින් පැහැදිලි කරන්න,Explain in depth,EXPLAIN IN DEPTH,"{""language_style"": ""technical""}",,Simple,False
 27,user_003,2026-08-30T10:18:38.936470,ගැඹුරින් පහදන්න,Go down deep,GO_DOWN_DEEP,"{""speed"": ""slow"", ""language_style"": ""simple""}",,Simple,False
 28,user_002,2026-08-30T10:34:10.475269,මේකේ මොනවද තියෙන්නේ,What's in this?,IDENTIFY_CONTENT,"{""language_style"": ""simple""}",,Simple,False
+29,user_001,2026-08-30T21:23:36.847800,මට 'ලිපිය 1: බෝක්කුව කැඩිලා' ගැන විස්තර කරන්න.,"Describe to me the ""Lippie 1: Boccowa Cadila"".",IDENTIFY_CONTENT,{},,Simple,False
+30,user_001,2026-08-30T21:24:02.043672,එය සැකවින් හා සරලව සාරාංශ කරන්න.,Summarize it in a simple and accurate way.,SUMMARIZE,"{""language_style"": ""simple""}",,Simple,False
+31,user_001,2026-08-30T22:04:32.935348,මට 'ලිපිය 1: බෝක්කුව කැඩිලා' ගැන විස්තර කරන්න.,"Describe to me the ""Lippie 1: Boccowa Cadila"".",IDENTIFY_CONTENT,{},,Simple,False
+32,user_001,2026-08-30T22:04:59.354880,එය සැකවින් හා සරලව සාරාංශ කරන්න.,Summarize it in a simple and accurate way.,SUMMARIZE,"{""language_style"": ""simple""}",,Simple,False
