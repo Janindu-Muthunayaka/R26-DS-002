@@ -25,7 +25,7 @@ import urllib.request
 from typing import Optional, Tuple
 
 
-def post_json(url: str, body: dict, timeout_s: float = 20.0
+def post_json(url: str, body: dict, timeout_s: float = 120.0
               ) -> Tuple[Optional[dict], str]:
     """POST `body` as JSON to `url`.
 

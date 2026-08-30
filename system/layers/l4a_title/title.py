@@ -93,7 +93,7 @@ def read_title_region(img, box, band_h: float = 0.0) -> tuple:
         r = subprocess.run(
             ['tesseract', tmp, 'stdout', '--oem', '1',
              '--psm', '13', '-l', 'sin_raw'],
-            capture_output=True, encoding='utf-8', env=env, timeout=30)
+            capture_output=True, encoding='utf-8', env=env, timeout=120)
         if r.returncode != 0:
             return '', f'tesseract failed: {(r.stderr or "").strip()[:120]}'
         return ' '.join(r.stdout.split()), ''

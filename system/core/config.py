@@ -265,12 +265,12 @@ WORK_DIR = Path(os.getenv('SINHALA_WORK', './work')).resolve()
 
 VOICE_MODE      = os.getenv('SINHALA_VOICE_MODE', 'stub')     # stub | http
 VOICE_URL       = os.getenv('SINHALA_VOICE_URL', 'http://127.0.0.1:8101')
-VOICE_TIMEOUT_S = float(os.getenv('SINHALA_VOICE_TIMEOUT', '20'))
+VOICE_TIMEOUT_S = float(os.getenv('SINHALA_VOICE_TIMEOUT', '1200'))
 VOICE_USER_ID   = os.getenv('SINHALA_USER_ID', 'user_001')
 
 RAG_MODE      = os.getenv('SINHALA_RAG_MODE', 'off')          # off | http
 RAG_URL       = os.getenv('SINHALA_RAG_URL', 'http://127.0.0.1:8102')
-RAG_TIMEOUT_S = float(os.getenv('SINHALA_RAG_TIMEOUT', '60'))
+RAG_TIMEOUT_S = float(os.getenv('SINHALA_RAG_TIMEOUT', '3000'))
 
 # 'stub' keeps Layer 4A returning the article unchanged; 'mat' reads the
 # headline with Janindu's sin_raw model. See layers/l4a_title/title.py.
