@@ -445,6 +445,10 @@ def build(pipeline, web_dir: Path):
             
         return reply
 
+    @app.get('/profile/{user_id}')
+    def get_profile(user_id: str):
+        return l0.get_profile(user_id)
+
     @app.get('/audio/{job}')
     def audio(job: str):
         """Reserved for Layer 6. Routed now so the phone's fallback path is

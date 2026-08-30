@@ -493,6 +493,14 @@
 
 <body>
     <a href="/reader" class="manual-btn">Test Capture API</a>
+    <button class="manual-btn" id="test-voice-btn" style="top: 64px; cursor: pointer; border: none; font-family: inherit;">Test Voice API</button>
+    <button class="manual-btn" id="switch-user-btn" style="top: 104px; cursor: pointer; border: none; font-family: inherit;">Switch: user_001</button>
+
+    <div id="voice-test-panel" style="display: none; position: absolute; top: 144px; right: 24px; background: var(--card); padding: 15px; border-radius: 8px; border: 1px solid var(--card-border); z-index: 100; box-shadow: 0 4px 12px rgba(0,0,0,0.3); width: 300px;">
+        <h4 style="margin: 0 0 10px; font-size: 13px; color: var(--ink);">Simulate Voice Input</h4>
+        <textarea id="voice-input-text" rows="3" style="width: 100%; box-sizing: border-box; background: var(--bg-soft); color: var(--ink); border: 1px solid var(--line); border-radius: 4px; padding: 8px; font-family: inherit; font-size: 12px; margin-bottom: 10px;" placeholder="Type Sinhala sentence here..."></textarea>
+        <button id="voice-submit-btn" style="background: var(--accent); color: var(--bg); padding: 6px 12px; border-radius: 4px; border: none; font-weight: 600; cursor: pointer; width: 100%; font-family: inherit;">Submit</button>
+    </div>
 
     <div class="header">
         <h1>System Pipeline — Layer Flow</h1>
@@ -732,6 +740,9 @@
     <script>
         let lastJob = null;
         let lastGenCount = -1;
+        
+        let activeUser = 'user_001';
+        let activeUserProfile = null;
 
         function closeLightbox(e) {
             document.getElementById('lightbox').classList.remove('active');
@@ -1063,9 +1074,6 @@
                         updateData('voice', `Route: ${latest.route}\nIntent: ${latest.intent}`);
 
                         let persHtml = `<b>Style:</b> ${latest.style_class || 'Default'}<br>`;
-                        if (latest.prompt_modifier) {
-                            persHtml += `<div style="margin-top: 4px; margin-bottom: 6px; padding: 4px 6px; background: rgba(0,0,0,0.03); border-radius: 4px; font-family: monospace; font-size: 9.5px; border-left: 2px solid var(--accent); white-space: pre-wrap; word-break: break-word;">"${latest.prompt_modifier}"</div>`;
-                        }
                         if (latest.style_source) {
                             let srcName = latest.style_source;
                             if (srcName === 'model') srcName = 'Model Confident Prediction';
@@ -1076,8 +1084,9 @@
                             else if (srcName === 'text_keywords') srcName = 'Text Keywords';
                             persHtml += `<b style="font-size:10px;">Source:</b> <span style="font-size:10.5px;color:var(--accent-deep);">${srcName}</span><br>`;
                         }
-                        if (latest.user_profile) {
-                            const prof = latest.user_profile;
+                        
+                        const prof = activeUserProfile || latest.user_profile;
+                        if (prof) {
                             persHtml += `<div style="margin-top: 6px; font-size: 9.5px; border-top: 1px dashed var(--card-border); padding-top: 6px;">`;
                             persHtml += `<b>Confirmed Turns:</b> ${prof.n_confirmed || 0}<br>`;
                             if (prof.history_weights) {
@@ -1092,6 +1101,19 @@
                         if (latest.correction_applied) {
                             persHtml += `<div style="margin-top: 4px; font-size: 9.5px; color: #ef4444;"><b>Correction Applied:</b> ${latest.correction_applied}</div>`;
                         }
+
+                        // Show intent and prompt for every turn
+                        persHtml += `<div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line);">`;
+                        generations.forEach((turn) => {
+                            persHtml += `<div style="margin-bottom: 8px;">`;
+                            persHtml += `<b>Turn ${turn.index} Intent:</b> <span style="color:var(--accent-deep);">${turn.intent || 'NONE'}</span><br>`;
+                            if (turn.prompt_modifier) {
+                                persHtml += `<div style="margin-top: 4px; padding: 4px 6px; background: rgba(0,0,0,0.03); border-radius: 4px; font-family: monospace; font-size: 9.5px; border-left: 2px solid var(--accent); white-space: pre-wrap; word-break: break-word;">"${turn.prompt_modifier}"</div>`;
+                            }
+                            persHtml += `</div>`;
+                        });
+                        persHtml += `</div>`;
+
                         updateData('personalization', persHtml, true);
 
                         let listenHtml = ``;
@@ -1119,9 +1141,6 @@
                         updateData('generator', genHtml, true);
                         
                         let persHtml = `<b>Style:</b> ${ans.style_class || 'Default'}<br>`;
-                        if (ans.prompt_modifier) {
-                            persHtml += `<div style="margin-top: 4px; margin-bottom: 6px; padding: 4px 6px; background: rgba(0,0,0,0.03); border-radius: 4px; font-family: monospace; font-size: 9.5px; border-left: 2px solid var(--accent); white-space: pre-wrap; word-break: break-word;">"${ans.prompt_modifier}"</div>`;
-                        }
                         if (ans.style_source) {
                             let srcName = ans.style_source;
                             if (srcName === 'model') srcName = 'Model Confident Prediction';
@@ -1132,8 +1151,9 @@
                             else if (srcName === 'text_keywords') srcName = 'Text Keywords';
                             persHtml += `<b style="font-size:10px;">Source:</b> <span style="font-size:10.5px;color:var(--accent-deep);">${srcName}</span><br>`;
                         }
-                        if (ans.user_profile) {
-                            const prof = ans.user_profile;
+                        
+                        const prof = activeUserProfile || ans.user_profile;
+                        if (prof) {
                             persHtml += `<div style="margin-top: 6px; font-size: 9.5px; border-top: 1px dashed var(--card-border); padding-top: 6px;">`;
                             persHtml += `<b>Confirmed Turns:</b> ${prof.n_confirmed || 0}<br>`;
                             if (prof.history_weights) {
@@ -1148,6 +1168,16 @@
                         if (ans.correction_applied) {
                             persHtml += `<div style="margin-top: 4px; font-size: 9.5px; color: #ef4444;"><b>Correction Applied:</b> ${ans.correction_applied}</div>`;
                         }
+
+                        // Show intent and prompt for this turn
+                        persHtml += `<div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line);">`;
+                        persHtml += `<div style="margin-bottom: 8px;">`;
+                        persHtml += `<b>Turn 1 Intent:</b> <span style="color:var(--accent-deep);">${ans.intent || 'NONE'}</span><br>`;
+                        if (ans.prompt_modifier) {
+                            persHtml += `<div style="margin-top: 4px; padding: 4px 6px; background: rgba(0,0,0,0.03); border-radius: 4px; font-family: monospace; font-size: 9.5px; border-left: 2px solid var(--accent); white-space: pre-wrap; word-break: break-word;">"${ans.prompt_modifier}"</div>`;
+                        }
+                        persHtml += `</div></div>`;
+
                         updateData('personalization', persHtml, true);
                         
                         updateData('listen', '<b>STT / Voice Input</b><br>Received and processed.', true);
@@ -1166,6 +1196,73 @@
                 // Silently ignore network errors to keep polling alive
             }
         }
+
+        document.getElementById('test-voice-btn').addEventListener('click', () => {
+            const p = document.getElementById('voice-test-panel');
+            p.style.display = p.style.display === 'none' ? 'block' : 'none';
+        });
+
+        document.getElementById('voice-submit-btn').addEventListener('click', async () => {
+            if (!lastJob) {
+                alert("No active session. Please test the capture API first so a document is loaded.");
+                return;
+            }
+            const txt = document.getElementById('voice-input-text').value.trim();
+            if (!txt) return;
+
+            const btn = document.getElementById('voice-submit-btn');
+            btn.textContent = "Sending...";
+            btn.disabled = true;
+            
+            try {
+                const res = await fetch('/ask', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        job: lastJob,
+                        text: txt,
+                        user_id: activeUser
+                    })
+                });
+                const data = await res.json();
+                
+                if (data.ok || !data.ok) { // It always returns some form of answer, even on failure
+                    document.getElementById('voice-input-text').value = '';
+                    document.getElementById('voice-test-panel').style.display = 'none';
+                    pollLatest();
+                }
+            } catch(e) {
+                console.error(e);
+                alert("Error sending voice request.");
+            } finally {
+                btn.textContent = "Submit";
+                btn.disabled = false;
+            }
+        });
+
+        document.getElementById('switch-user-btn').addEventListener('click', async () => {
+            const users = ['user_001', 'user_002', 'user_003'];
+            let idx = users.indexOf(activeUser);
+            activeUser = users[(idx + 1) % users.length];
+            document.getElementById('switch-user-btn').textContent = `Switch: ${activeUser}`;
+            
+            try {
+                const res = await fetch(`/profile/${activeUser}`);
+                if (res.ok) {
+                    activeUserProfile = await res.json();
+                    
+                    // Trick pollLatest to force a redraw
+                    const savedJob = lastJob;
+                    lastJob = null; 
+                    setTimeout(() => {
+                        lastJob = savedJob;
+                        pollLatest();
+                    }, 10);
+                }
+            } catch(e) {
+                console.error("Failed to load user profile", e);
+            }
+        });
 
         setInterval(pollLatest, 1500);
         pollLatest();

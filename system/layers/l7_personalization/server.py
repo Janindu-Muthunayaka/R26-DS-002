@@ -23,6 +23,7 @@ from pydantic import BaseModel
 from typing import Optional
 
 from layers.l7_personalization.personalization.main_flow import handle_voice_command
+from layers.l7_personalization.personalization.style_model import get_user_summary
 
 app = FastAPI(title="L7 Personalization Service")
 
@@ -58,6 +59,17 @@ def interpret(req: InterpretRequest):
             
         return final_prompt
         
+    except Exception as e:
+        import traceback
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/profile/{user_id}")
+def get_profile(user_id: str):
+    """
+    Returns the user's personalization profile history and model weights.
+    """
+    try:
+        return get_user_summary(user_id)
     except Exception as e:
         import traceback
         traceback.print_exc()

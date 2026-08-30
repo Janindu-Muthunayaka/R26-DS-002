@@ -164,3 +164,15 @@ def interpret(text: str, user_id: str = None,
     # stops holding for exactly the setup most likely to be used in testing.
     reply['source'] = 'stub-service' if reply.get('stub') else 'component4'
     return reply
+
+def get_profile(user_id: str) -> dict:
+    mode = (VOICE_MODE or 'stub').lower()
+    if mode == 'http':
+        reply, _ = svc.get_json(f'{VOICE_URL.rstrip("/")}/profile/{user_id}', timeout_s=2)
+        if reply: return reply
+    return {
+        'n_confirmed': 0,
+        'history_weights': {'Simple': 0.0, 'Detailed': 0.0, 'StepByStep': 0.0},
+        'dominant_preference': None
+    }
+
