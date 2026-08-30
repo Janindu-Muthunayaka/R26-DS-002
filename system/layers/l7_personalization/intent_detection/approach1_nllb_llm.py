@@ -89,7 +89,11 @@ Example output: {"intent": "SUMMARIZE", "personalization_flags": {"detail_level"
     elif "```" in raw:
         raw = raw.split("```")[1].split("```")[0].strip()
 
-    return json.loads(raw)
+    try:
+        return json.loads(raw)
+    except json.JSONDecodeError:
+        # Prevent Llama 1B hallucinated JSON from crashing the entire server
+        return {"intent": "UNKNOWN", "personalization_flags": {}}
 
 
 # ─── Full Pipeline ──────────────────────────────────────

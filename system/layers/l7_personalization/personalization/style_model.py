@@ -164,7 +164,10 @@ def learn_style(user_id, english_text, confirmed_class):
     # Features must be built BEFORE updating history, so the model learns
     # "given the history so far, this was the right answer".
     features = _build_features(state, english_text)
-    state["model"].learn_one(features, confirmed_class)
+    try:
+        state["model"].learn_one(features, confirmed_class)
+    except Exception as e:
+        print(f"Warning: Failed to update model: {e}")
 
     for cls in STYLE_CLASSES:
         state["history"][cls] *= HISTORY_DECAY

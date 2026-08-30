@@ -119,6 +119,7 @@ def _degraded(text: str, reason: str) -> dict:
     carry the reason so `/ask` can log why the personalisation is missing."""
     out = _stub(text)
     out['source'] = 'stub-fallback'
+    out['style_source'] = 'degraded_fallback'
     out['warning'] = f'voice service unavailable ({reason})'
     return out
 

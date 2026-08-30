@@ -7,21 +7,22 @@ from dotenv import load_dotenv
 sys_root = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
 load_dotenv(os.path.join(sys_root, '.env'))
 
-_OLLAMA_AVAILABLE = True
+_OLLAMA_AVAILABLE = False
 
-# Check at startup (module load)
-try:
-    print("[Intent Detection] Checking Ollama availability on startup...")
-    # A simple GET to the root endpoint checks if the Ollama daemon is running
-    res = requests.get("http://localhost:11434/", timeout=2)
-    if res.status_code == 200:
-        print("[Intent Detection] Ollama is running and available.")
-    else:
-        _OLLAMA_AVAILABLE = False
-        print("[Intent Detection] Ollama returned non-200. Will use OpenAI fallback.")
-except requests.exceptions.RequestException:
-    print("[Intent Detection] Ollama unreachable at startup. Will use OpenAI API fallback permanently.")
-    _OLLAMA_AVAILABLE = False
+# Ollama is explicitly disabled per user request
+# Check at startup (module load) is commented out
+# try:
+#     print("[Intent Detection] Checking Ollama availability on startup...")
+#     # A simple GET to the root endpoint checks if the Ollama daemon is running
+#     res = requests.get("http://localhost:11434/", timeout=2)
+#     if res.status_code == 200:
+#         print("[Intent Detection] Ollama is running and available.")
+#     else:
+#         _OLLAMA_AVAILABLE = False
+#         print("[Intent Detection] Ollama returned non-200. Will use OpenAI fallback.")
+# except requests.exceptions.RequestException:
+#     print("[Intent Detection] Ollama unreachable at startup. Will use OpenAI API fallback permanently.")
+#     _OLLAMA_AVAILABLE = False
 
 def extract_intent_fallback(system_prompt: str, user_prompt: str) -> str:
     global _OLLAMA_AVAILABLE
@@ -43,7 +44,7 @@ def extract_intent_fallback(system_prompt: str, user_prompt: str) -> str:
                     "num_predict": 100
                 }
             },
-            timeout=1.5  # quickly check if it's there
+            timeout=15.0  # Allow enough time for local generation
         )
             if response.status_code == 200:
                 return response.json()["message"]["content"].strip()

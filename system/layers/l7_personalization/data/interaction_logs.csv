@@ -31,3 +31,13 @@
 30,user_001,2026-08-30T21:24:02.043672,එය සැකවින් හා සරලව සාරාංශ කරන්න.,Summarize it in a simple and accurate way.,SUMMARIZE,"{""language_style"": ""simple""}",,Simple,False
 31,user_001,2026-08-30T22:04:32.935348,මට 'ලිපිය 1: බෝක්කුව කැඩිලා' ගැන විස්තර කරන්න.,"Describe to me the ""Lippie 1: Boccowa Cadila"".",IDENTIFY_CONTENT,{},,Simple,False
 32,user_001,2026-08-30T22:04:59.354880,එය සැකවින් හා සරලව සාරාංශ කරන්න.,Summarize it in a simple and accurate way.,SUMMARIZE,"{""language_style"": ""simple""}",,Simple,False
+33,user_001,2026-08-30T23:19:48.387913,මට 'ලිපිය 1: බෝක්කුව කැඩිලා' ගැන විස්තර කරන්න,"Tell me about the ""Lip 1: Boccowa Cadila""",IDENTIFY_CONTENT,{},,Simple,False
+34,user_001,2026-08-30T23:26:28.733733,සරල වචනවලින් පැහැදිලි කරන්න,Explain it in simple words,EXPLAIN,"{""language_style"": ""simple""}",,Simple,False
+35,user_001,2026-08-30T23:55:02.097604,මට 'ලිපිය 1: බෝක්කුව කැඩිලා' ගැන විස්තර කරන්න,"Tell me about the ""Lip 1: Boccowa Cadila""",IDENTIFY_CONTENT,{},,Simple,False
+36,user_001,2026-08-30T23:56:16.614377,සරල වචනවලින් පැහැදිලි කරන්න,Explain it in simple words,EXPLAIN,"{""language_style"": ""simple""}",,Simple,False
+37,user_001,2026-08-31T00:00:17.707378,සරල වචනවලින් පැහැදිලි කරන්න,Explain it in simple words,EXPLAIN,"{""language_style"": ""simple""}",,Simple,False
+38,user_001,2026-08-31T00:01:50.370176,explain in simple terms,explain in simple terms,EXPLAIN,"{""language_style"": ""simple""}",,Simple,False
+39,user_001,2026-08-31T00:03:23.269961,explain in simple terms,explain in simple terms,EXPLAIN,"{""language_style"": ""simple""}",,Simple,False
+40,user_001,2026-08-31T00:14:54.855607,මට 'ලිපිය 1: බෝක්කුව කැඩිලා' ගැන විස්තර කරන්න,"Tell me about the ""Lip 1: Boccowa Cadila""",IDENTIFY_CONTENT,{},,Detailed,False
+41,user_001,2026-08-31T00:15:22.723714,සරල වචනවලින් පැහැදිලි කරන්න,Explain it in simple words,EXPLAIN,"{""language_style"": ""simple""}",,StepByStep,True
+42,user_001,2026-08-31T00:30:54.183470,පියවරෙන් පියවර පැහැදිලි කරන්න.,Please explain step by step.,STEP_BY_STEP,{},,StepByStep,False
