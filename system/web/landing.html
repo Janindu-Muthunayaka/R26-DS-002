@@ -1057,6 +1057,8 @@
                         updateData('generator', genHtml, true);
 
                         const latest = generations[generations.length - 1];
+                        updateData('voice', `Route: ${latest.route}\nIntent: ${latest.intent}`);
+
                         let persHtml = `<b>Style:</b> ${latest.style_class || 'Default'}<br>`;
                         if (latest.prompt_modifier) {
                             persHtml += `<b>Prompt Modifier:</b> <span style="font-family: monospace; font-size: 10px;">"${latest.prompt_modifier}"</span><br>`;
@@ -1075,6 +1077,7 @@
 
                     } else if (doc.last_answer) {
                         const ans = doc.last_answer;
+                        updateData('voice', `Route: ${ans.route}\nIntent: ${ans.intent}`);
                         
                         let genHtml = `<b>Answer (${ans.route})</b><br>${ans.answer_si || ans.speakable}`;
                         if (ans.warnings && ans.warnings.length > 0) {
@@ -1098,6 +1101,7 @@
                         updateData('speech', `<b>Speech Output</b><br><i>Speakable:</i> ${ans.speakable}`, true);
                         
                     } else {
+                        updateData('voice', 'Waiting for /ask...');
                         updateData('generator', 'Waiting for /ask...');
                         updateData('personalization', 'Waiting for voice input...');
                         updateData('listen', 'Waiting for STT...');

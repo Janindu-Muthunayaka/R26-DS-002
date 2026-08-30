@@ -221,8 +221,63 @@ def build(pipeline, web_dir: Path):
             sessions.put(job, doc)
             doc = await run_in_threadpool(pipeline.run, paths, doc=doc)
             reply = _document_to_reply(doc, job)
-            reply['audio_url'] = l6.speak(doc)      # None until Layer 6 lands
-            if not reply['ok']:
+            
+            if reply['ok']:
+                first_scan_voice = {
+                    'route': 'GENERATE',
+                    'intent': 'FIRST_SCAN',
+                    'english_translation': 'Tell the number of articles detected,and tell the title of each article.',
+                    'style_class': 'Detailed',
+                    'prompt_modifier': '',
+                    'personalization_flags': {},
+                    'sinhala_input': 'හඳුනාගත් ලිපි සංඛ්‍යාව සහ එක් එක් ලිපියේ ශීර්ෂය පවසන්න.',
+                    'source': 'component4'
+                }
+                
+                t0_l6 = time.time()
+                res = l6gen.answer(doc, first_scan_voice)
+                t_l6 = round(time.time() - t0_l6, 2)
+                
+                if res.get('speakable'):
+                    reply['body'] = res['speakable']
+                    
+                if not hasattr(doc, 'generations') or doc.generations is None:
+                    doc.generations = []
+                    
+                turn_info = {
+                    'index': len(doc.generations) + 1,
+                    'query': first_scan_voice['sinhala_input'],
+                    'answer': res['speakable'] or res['answer_si'],
+                    'answer_si': res['answer_si'],
+                    'route': res['route'],
+                    'intent': res['intent'],
+                    'prompt_modifier': first_scan_voice.get('prompt_modifier', ''),
+                    'style_class': first_scan_voice.get('style_class', ''),
+                    'english_translation': first_scan_voice.get('english_translation', ''),
+                    'correction_applied': None,
+                    'warnings': res['warnings'],
+                    'timings': {
+                        'voice': 0.0,
+                        'generate': t_l6,
+                        'total': t_l6
+                    }
+                }
+                doc.generations.append(turn_info)
+                
+                ans_dict = Answer(
+                    ok=res['ok'], job=job, route=res['route'], intent=res['intent'],
+                    speakable=res['speakable'], answer_si=res['answer_si'],
+                    sources=res['sources'],
+                    english_translation=first_scan_voice.get('english_translation', ''),
+                    style_class=first_scan_voice.get('style_class', ''),
+                    correction_applied=None,
+                    warnings=res['warnings'],
+                    timings={'voice': 0.0, 'generate': t_l6, 'total': t_l6},
+                ).model_dump()
+                
+                sessions.set_answer(job, ans_dict)
+                sessions.put(job, doc)
+            else:
                 # A frame where no single article could be identified is a
                 # DIFFERENT failure from one where nothing was legible, and
                 # the user's next action differs too. Speak the instruction
@@ -235,11 +290,7 @@ def build(pipeline, web_dir: Path):
                 if move:
                     reply['body'] = SI_MOVE_CLOSER
                 sessions._items.pop(job, None)
-            else:
-                # ONLY on success. A job with nothing in it is not worth
-                # remembering, and "read that again" on an empty article
-                # should say so rather than replay silence.
-                sessions.put(job, doc)
+            reply['audio_url'] = l6.speak(doc)      # None until Layer 6 lands
             return reply
         except Exception as e:
             import traceback

@@ -24,7 +24,7 @@ from core import svc
 from core.config import RAG_MODE, RAG_TIMEOUT_S, RAG_URL
 from core.schemas import Document
 from core.textutils import sentences
-from layers.l5_assemble.payload import rag_payload
+from layers.l5_assemble.payload import rag_payload, article_text
 
 # Intents answerable from what is already in session. No service, no network,
 # no API key — the part of the conversation that cannot break on the day.
@@ -55,9 +55,9 @@ SI_MISSED = 'මඟ හැරුණු දේ: '
 
 
 def _text_of(document: Document) -> str:
-    """The article as it was spoken — same precedence as the phone reply, so
-    the text replayed on "again" is the text the user heard the first time."""
-    return rag_payload(document, with_tokens=False)['corrected_text'].strip()
+    """The clean article text as spoken locally."""
+    bodies = [article_text(art) for art in document.articles if article_text(art)]
+    return '\n\n'.join(bodies).strip()
 
 
 def _parts(document) -> list:
@@ -96,6 +96,23 @@ def _local(document, intent, cursor, warnings) -> dict:
     stops NEXT and PREVIOUS disagreeing about where the listener is.
     """
     text = _text_of(document)
+
+    if intent == 'FIRST_SCAN':
+        n = len(document.articles)
+        titles = []
+        for a in document.articles:
+            t = (a.title_polished or a.title or a.title_raw or '').strip()
+            if t:
+                titles.append(t)
+        if n == 0:
+            msg = "කිසිදු ලිපියක් හඳුනාගෙන නොමැත."
+        else:
+            msg = f"ලිපි {n} ක් හඳුනාගෙන ඇත."
+            if titles:
+                msg += " එම ලිපිවල ශීර්ෂයන් වන්නේ: " + ", ".join(titles)
+            else:
+                msg += " නමුත් ඒවායේ ශීර්ෂයන් හඳුනාගත නොහැක."
+        return _out(True, 'LOCAL', intent, msg, warnings=warnings, cursor=cursor)
 
     if intent == 'LENGTH':
         n = len(text.split())
@@ -181,6 +198,8 @@ def answer(document: Document, voice: dict, mode: str = None,
 
     # ---- needs Component 3 ----------------------------------------------
     if mode != 'http':
+        if intent == 'FIRST_SCAN':
+            return _local(document, intent, max(0, int(cursor or 0)), warnings)
         warnings.append('rag: disabled (SINHALA_RAG_MODE=off)')
         return _out(False, 'GENERATE', intent,
                     speakable=SI_NO_SERVICE, warnings=warnings, cursor=cursor)
@@ -189,6 +208,9 @@ def answer(document: Document, voice: dict, mode: str = None,
     reply, reason = svc.post_json(f'{RAG_URL.rstrip("/")}/answer', body,
                                   timeout_s=RAG_TIMEOUT_S)
     if reply is None:
+        if intent == 'FIRST_SCAN':
+            warnings.append(f'rag: {reason}')
+            return _local(document, intent, max(0, int(cursor or 0)), warnings)
         warnings.append(f'rag: {reason}')
         return _out(False, 'GENERATE', intent,
                     speakable=SI_FAILED, warnings=warnings, cursor=cursor)

@@ -111,7 +111,8 @@ def article_title(article) -> str:
 def rag_payload(document: Document, with_tokens: bool = True) -> dict:
     """Flatten a Document into what Component 3 consumes."""
     bodies, raws, articles = [], [], []
-    for art in document.articles:
+    formatted_bodies = []
+    for idx, art in enumerate(document.articles):
         body = article_text(art)
         raw = (art.body_raw or '').strip()
         if body:
@@ -127,8 +128,18 @@ def rag_payload(document: Document, with_tokens: bool = True) -> dict:
             'ocr_scale': art.ocr_scale,
             'verdict': art.verdict,
         })
+        
+        num = idx + 1
+        t = article_title(art)
+        header = f"Article {num}"
+        if t:
+            header += f": {t}"
+        if body:
+            formatted_bodies.append(f"{header}\n{body}")
+        else:
+            formatted_bodies.append(f"{header}\n(Empty)")
 
-    corrected_text = '\n\n'.join(bodies)
+    corrected_text = '\n\n'.join(formatted_bodies)
     return {
         'corrected_text': corrected_text,
         'tokens': (diff_tokens('\n'.join(raws), corrected_text)

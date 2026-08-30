@@ -43,7 +43,7 @@ class Pipeline:
                 import os, paddle
                 # Enforce CPU based on user request
                 dev_str = 'cpu'
-                model_dir = r"C:\Users\JANINDU\.paddlex\official_models\PP-DocLayout_plus-L"
+                model_dir = str(Path.home() / ".paddlex" / "official_models" / "PP-DocLayout_plus-L")
                 if os.path.exists(model_dir):
                     layout = LayoutDetection(model_dir=model_dir,
                                              threshold=0.20,
