@@ -90,6 +90,7 @@ class Document(BaseModel):
     timings: dict = {}
     warnings: List[str] = []
     progress_log: List[str] = []
+    generations: List[dict] = []
 
 
 class CaptureResponse(BaseModel):

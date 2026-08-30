@@ -1043,17 +1043,45 @@
                         updateData('assemble', assembleHeader + assembleHtml.join('<br><br>'), true);
                     }
 
-                    if (doc.last_answer) {
+                    const generations = doc.generations || [];
+                    if (generations.length > 0) {
+                        let genHtml = ``;
+                        generations.forEach((turn) => {
+                            genHtml += `<div style="border-bottom: 1px solid var(--card-border); padding-bottom: 8px; margin-bottom: 8px; text-align: left;">`;
+                            genHtml += `<b>Turn ${turn.index} (${turn.route})</b><br>`;
+                            genHtml += `<i>Q:</i> ${turn.query}<br>`;
+                            genHtml += `<i>A:</i> ${turn.answer || turn.answer_si}<br>`;
+                            genHtml += `<span style="font-size: 9.5px; color: var(--ink-soft);">Timings: voice=${turn.timings.voice}s, gen=${turn.timings.generate}s, total=${turn.timings.total}s</span>`;
+                            genHtml += `</div>`;
+                        });
+                        updateData('generator', genHtml, true);
+
+                        const latest = generations[generations.length - 1];
+                        let persHtml = `<b>Style:</b> ${latest.style_class || 'Default'}<br>`;
+                        if (latest.prompt_modifier) {
+                            persHtml += `<b>Prompt Modifier:</b> <span style="font-family: monospace; font-size: 10px;">"${latest.prompt_modifier}"</span><br>`;
+                        }
+                        if (latest.correction_applied) {
+                            persHtml += `<b>Correction:</b> ${latest.correction_applied}`;
+                        }
+                        updateData('personalization', persHtml, true);
+
+                        let listenHtml = `<b>Sinhala:</b> ${latest.query || '(empty)'}<br>`;
+                        listenHtml += `<b>English:</b> ${latest.english_translation || '(empty)'}`;
+                        updateData('listen', listenHtml, true);
+
+                        let speechHtml = `<b>Spoken Text:</b><br>${latest.answer}`;
+                        updateData('speech', speechHtml, true);
+
+                    } else if (doc.last_answer) {
                         const ans = doc.last_answer;
                         
-                        // Generator (L6)
                         let genHtml = `<b>Answer (${ans.route})</b><br>${ans.answer_si || ans.speakable}`;
                         if (ans.warnings && ans.warnings.length > 0) {
                             genHtml += `<br><br><i>Warnings:</i><br>${ans.warnings.join('<br>')}`;
                         }
                         updateData('generator', genHtml, true);
                         
-                        // Personalization (L7)
                         let persHtml = `<b>Intent:</b> ${ans.intent}<br>`;
                         if (ans.english_translation) {
                             persHtml += `<b>English:</b> ${ans.english_translation}<br>`;
@@ -1066,10 +1094,7 @@
                         }
                         updateData('personalization', persHtml, true);
                         
-                        // Listen (L8a)
                         updateData('listen', '<b>STT / Voice Input</b><br>Received and processed.', true);
-                        
-                        // Speech (L8b)
                         updateData('speech', `<b>Speech Output</b><br><i>Speakable:</i> ${ans.speakable}`, true);
                         
                     } else {

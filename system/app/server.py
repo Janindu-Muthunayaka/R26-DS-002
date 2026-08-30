@@ -234,6 +234,7 @@ def build(pipeline, web_dir: Path):
                     'nothing could be read from these frames'
                 if move:
                     reply['body'] = SI_MOVE_CLOSER
+                sessions._items.pop(job, None)
             else:
                 # ONLY on success. A job with nothing in it is not worth
                 # remembering, and "read that again" on an empty article
@@ -300,6 +301,28 @@ def build(pipeline, web_dir: Path):
             timings={'voice': t_voice, 'generate': t_gen,
                      'total': round(time.time() - t0, 2)},
         ).model_dump()
+        
+        if not hasattr(doc, 'generations') or doc.generations is None:
+            doc.generations = []
+        turn_info = {
+            'index': len(doc.generations) + 1,
+            'query': q.text,
+            'answer': res['speakable'] or res['answer_si'],
+            'answer_si': res['answer_si'],
+            'route': res['route'],
+            'intent': res['intent'],
+            'prompt_modifier': voice.get('prompt_modifier', ''),
+            'style_class': voice.get('style_class', ''),
+            'english_translation': voice.get('english_translation', ''),
+            'correction_applied': voice.get('correction_applied'),
+            'warnings': res['warnings'],
+            'timings': {
+                'voice': t_voice,
+                'generate': t_gen,
+                'total': round(time.time() - t0, 2)
+            }
+        }
+        doc.generations.append(turn_info)
         
         sessions.set_answer(q.job, ans_dict)
         return ans_dict

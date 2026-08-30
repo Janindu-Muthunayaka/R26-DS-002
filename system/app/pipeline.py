@@ -195,5 +195,6 @@ class Pipeline:
         new_doc.warnings = list(extra_warnings) + list(new_doc.warnings)
         new_doc.timings['total'] = round(sum(v for v in t.values() if isinstance(v, (int, float))), 2)
         new_doc.progress_log = doc.progress_log
+        new_doc.generations = getattr(doc, 'generations', [])
         
         return new_doc

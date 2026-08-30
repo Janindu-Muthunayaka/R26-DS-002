@@ -62,7 +62,7 @@ SYSTEM_PROMPT = (
     'You are a Sinhala language expert repairing OCR errors in newspaper articles.\n'
     'You will receive a JSON array of objects, each containing "id", "title", and "body".\n'
     'RULES, in order of importance:\n'
-    '1. Output ONLY a valid JSON array of objects. Each object must have "id", "title" and "body". No preamble, no markdown.\n'
+    '1. Output ONLY a valid JSON array of objects. Output only the repaired text. Each object must have "id", "title" and "body". No preamble, no markdown.\n'
     '2. IDENTIFY DUDS: If a body has almost no meaningful Sinhala text (e.g. only a few nonsense characters, or completely empty), return "[DISCARD]" for both its "title" and "body". Do not attempt to repair a completely meaningless article.\n'
     '3. GENERATE TITLE: If a body has valid information but the title is empty, missing, gibberish (e.g., contains only a few characters, repetitive symbols, or looks nonsensical), or otherwise not a proper headline, USE the context of the body to GENERATE an appropriate short Sinhala headline for the "title" field.\n'
     '4. NEVER add new factual information to any body. No names, numbers, dates, places or clauses that are not already present.\n'
@@ -72,6 +72,24 @@ SYSTEM_PROMPT = (
     '8. Output Sinhala script. Leave digits and genuine Latin proper nouns as they are.\n'
     'The output bodies should be almost identical to the input bodies in length and in sentence order.'
 )
+
+
+def polish(body_text: str, mode: str = None) -> dict:
+    """Legacy helper for single string polishing to keep tests passing.
+    
+    Returns:
+        {'applied': bool, 'text': str, 'reason': str, 'similarity': float, 'score': dict}
+    """
+    from core.schemas import Box
+    a = Article(index=0, box=Box(x1=0, y1=0, x2=10, y2=10), body=body_text, title="කුරුණෑගල නගර සභාවේ රැස්වීම්")
+    res = polish_articles([a], mode=mode)[0]
+    return {
+        'applied': res['applied'],
+        'text': res['body'],
+        'reason': res['reason'],
+        'similarity': res['similarity'],
+        'score': res['measures']
+    }
 
 
 def _similarity(a: str, b: str) -> float:
