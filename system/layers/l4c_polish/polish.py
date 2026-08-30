@@ -202,14 +202,23 @@ def polish_articles(articles: list[Article], mode: str = None) -> list[dict]:
         return results
 
     # Parse JSON from LLM
+    is_json = False
     try:
         reply_json = json.loads(reply_text.strip('` \n').removeprefix('json'))
-        if not isinstance(reply_json, list):
-            raise ValueError("LLM did not return a JSON array")
-    except (json.JSONDecodeError, ValueError) as e:
-        for p in to_process:
-            results[p['idx']] = _result(p['body'], p['title'], False, f'polish: call failed ({str(e)})')
-        return results
+        if isinstance(reply_json, list):
+            is_json = True
+    except (json.JSONDecodeError, ValueError):
+        pass
+
+    if not is_json:
+        if len(to_process) == 1:
+            p = to_process[0]
+            # Fall back to treating the entire reply_text as the polished body of that single article
+            reply_json = [{"id": p["id"], "title": p["title"], "body": reply_text.strip()}]
+        else:
+            for p in to_process:
+                results[p['idx']] = _result(p['body'], p['title'], False, f'polish: call failed (invalid JSON: {reply_text[:50]}...)')
+            return results
 
     # Map results back
     reply_map = {str(item.get("id", "")): item for item in reply_json if isinstance(item, dict)}
