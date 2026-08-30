@@ -81,11 +81,18 @@ def _stub(text: str) -> dict:
         # right and the content is visibly untranslated.
         'english_translation': t,
         'style_class': 'Detailed',
-        'prompt_modifier': '',
+        'prompt_modifier': 'Provide a thorough, in-depth explanation with full context, reasoning, and supporting detail. Do not shorten or oversimplify.',
         'personalization_flags': {},
         'retrieved_chunk_id': None,
         'correction_applied': None,
         'source': 'stub',
+        'style_source': 'cold_start',
+        'user_profile': {
+            'n_confirmed': 0,
+            'history_weights': {'Simple': 0.0, 'Detailed': 0.0, 'StepByStep': 0.0},
+            'dominant_preference': None
+        },
+        'learned': False,
     }
 
 

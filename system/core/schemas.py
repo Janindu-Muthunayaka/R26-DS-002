@@ -87,6 +87,7 @@ class Document(BaseModel):
     """Layer 5 output — the whole page, ready for RAG/TTS."""
     source_frames: List[str] = []
     articles: List[Article] = []
+
     timings: dict = {}
     warnings: List[str] = []
     progress_log: List[str] = []
@@ -160,6 +161,10 @@ class Answer(BaseModel):
     english_translation: str = ''
     style_class: str = ''
     correction_applied: Optional[str] = None
+    prompt_modifier: str = ''
+    style_source: Optional[str] = None
+    user_profile: Optional[dict] = None
+    learned: bool = False
     warnings: List[str] = []
     timings: dict = {}
     error: Optional[str] = None

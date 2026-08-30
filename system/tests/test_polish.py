@@ -123,7 +123,7 @@ def test_auto_refuses_unreadable_text(monkeypatch):
     shattered = 'ක ය ම න ද ව ග ර ත ප ල ස හ ක ය ම න ද ව ග ර'
     assert quality.score(shattered)['verdict'] == 'unreadable'
     r = P.polish(shattered, mode='auto')
-    assert r['applied'] is False and 'unreadable' in r['reason']
+    assert r['applied'] is True and r['text'] == '[DISCARD]'
 
 
 def test_the_prompt_forbids_adding_information(monkeypatch):
@@ -170,3 +170,34 @@ def test_the_polished_text_lives_in_its_own_field():
     assert article_text(a) == 'polished'
     a.body_polished = ''
     assert article_text(a) == 'mt5'
+
+
+def test_polish_discards_nonsense_title_when_regeneration_fails(monkeypatch):
+    from core.schemas import Article, Box
+    monkeypatch.setattr(P.llm, 'available', lambda: (True, ''))
+    # Simulate LLM returning a garbage title or empty title even after regeneration
+    garbage_reply = '[{"id": "0", "title": "...", "body": "මෙම ලිපිය කියවිය හැකි නමුත් ශීර්ෂය නිවැරදි නැත."}]'
+    monkeypatch.setattr(P.llm, 'chat', lambda *a, **k: (garbage_reply, ''))
+    
+    art = Article(index=0, box=Box(x1=0, y1=0, x2=1, y2=1),
+                  body="මෙම ලිපිය කියවිය හැකි නමුත් ශීර්ෂය නිවැරදි නැත.",
+                  title="...")
+    res = P.polish_articles([art], mode='on')[0]
+    # Because title returned is nonsense ("..."), it should be discarded
+    assert res['body'] == '[DISCARD]'
+    assert res['title'] == '[DISCARD]'
+
+
+def test_polish_regenerates_nonsense_title(monkeypatch):
+    from core.schemas import Article, Box
+    monkeypatch.setattr(P.llm, 'available', lambda: (True, ''))
+    # Simulate LLM successfully generating a proper title
+    good_reply = '[{"id": "0", "title": "නව රැස්වීම", "body": "මෙම ලිපිය කියවිය හැකි නමුත් ශීර්ෂය නිවැරදි නැත."}]'
+    monkeypatch.setattr(P.llm, 'chat', lambda *a, **k: (good_reply, ''))
+    
+    art = Article(index=0, box=Box(x1=0, y1=0, x2=1, y2=1),
+                  body="මෙම ලිපිය කියවිය හැකි නමුත් ශීර්ෂය නිවැරදි නැත.",
+                  title="...")
+    res = P.polish_articles([art], mode='on')[0]
+    assert res['body'] == "මෙම ලිපිය කියවිය හැකි නමුත් ශීර්ෂය නිවැරදි නැත."
+    assert res['title'] == "නව රැස්වීම"
