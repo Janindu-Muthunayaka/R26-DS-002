@@ -731,6 +731,7 @@
 
     <script>
         let lastJob = null;
+        let lastGenCount = -1;
 
         function closeLightbox(e) {
             document.getElementById('lightbox').classList.remove('active');
@@ -880,9 +881,11 @@
 
                 if (data.ok) {
                     const doc = data.document;
-                    // Update if it's a new job, OR if the current job is still processing
-                    if (data.job !== lastJob || !window.jobFinished) {
+                    const genCount = (doc.generations || []).length;
+                    // Update if it's a new job, OR if the current job is still processing, OR if generations updated
+                    if (data.job !== lastJob || !window.jobFinished || genCount !== lastGenCount) {
                         lastJob = data.job;
+                        lastGenCount = genCount;
                         window.jobFinished = !!doc.timings.total;
 
                     updateData('voice', 'Waiting for /ask...');
@@ -1091,8 +1094,15 @@
                         }
                         updateData('personalization', persHtml, true);
 
-                        let listenHtml = `<b>Sinhala:</b> ${latest.query || '(empty)'}<br>`;
-                        listenHtml += `<b>English:</b> ${latest.english_translation || '(empty)'}`;
+                        let listenHtml = ``;
+                        generations.forEach((turn) => {
+                            listenHtml += `<div style="border-bottom: 1px solid var(--card-border); padding-bottom: 6px; margin-bottom: 6px; text-align: left;">`;
+                            listenHtml += `<b>Turn ${turn.index} Input:</b><br>${turn.query || '(empty)'}`;
+                            if (turn.english_translation && turn.english_translation !== turn.query) {
+                                listenHtml += `<br><span style="font-size: 10px; color: var(--ink-soft);">En: ${turn.english_translation}</span>`;
+                            }
+                            listenHtml += `</div>`;
+                        });
                         updateData('listen', listenHtml, true);
 
                         let speechHtml = `<b>Spoken Text:</b><br>${latest.answer}`;

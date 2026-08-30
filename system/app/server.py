@@ -240,6 +240,12 @@ def build(pipeline, web_dir: Path):
                 
                 if res.get('speakable'):
                     reply['body'] = res['speakable']
+                elif getattr(doc, 'tts_text', None):
+                    reply['body'] = doc.tts_text
+                else:
+                    tts_text = l6.get_tts_text(doc)
+                    if tts_text:
+                        reply['body'] = tts_text
                     
                 if not hasattr(doc, 'generations') or doc.generations is None:
                     doc.generations = []
@@ -383,6 +389,7 @@ def build(pipeline, web_dir: Path):
         doc.generations.append(turn_info)
         
         sessions.set_answer(q.job, ans_dict)
+        sessions.put(q.job, doc)
         return ans_dict
 
     @app.get('/session/{job}')

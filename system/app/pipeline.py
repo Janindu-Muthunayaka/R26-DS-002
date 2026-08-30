@@ -197,4 +197,10 @@ class Pipeline:
         new_doc.progress_log = doc.progress_log
         new_doc.generations = getattr(doc, 'generations', [])
         
+        # 7. Layer 8B Speech / TTS data extraction for phone application
+        tts_text = l6.get_tts_text(new_doc)
+        if tts_text:
+            new_doc.tts_text = tts_text
+            new_doc.progress_log.append("TTS speech data prepared for phone app")
+        
         return new_doc

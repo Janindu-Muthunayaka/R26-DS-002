@@ -39,3 +39,14 @@ def test_stubs_do_not_break_flow():
     a = Article(index=0, box=Box(x1=0, y1=0, x2=1, y2=1))
     assert l4a.extract(None, a) is a
     assert l6.speak(Document()) is None
+
+
+def test_l8b_speech_tts_data_extraction():
+    from layers.l8b_speech import speech as l6
+    box = Box(x1=0, y1=0, x2=1, y2=1)
+    art = Article(index=0, box=box, title="ශීර්ෂය", body="ලිපියේ පෙළ", verdict="ok")
+    doc = Document(articles=[art])
+    tts = l6.get_tts_text(doc)
+    assert tts is not None
+    assert "ලිපි 1 ක් හඳුනාගෙන ඇත" in tts and "ලිපිය 1: ශීර්ෂය" in tts
+

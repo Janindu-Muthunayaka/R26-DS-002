@@ -92,6 +92,7 @@ class Document(BaseModel):
     warnings: List[str] = []
     progress_log: List[str] = []
     generations: List[dict] = []
+    tts_text: Optional[str] = None
 
 
 class CaptureResponse(BaseModel):

@@ -47,16 +47,21 @@ REQUIRED = ('route', 'intent', 'english_translation', 'style_class',
 # THE SINHALA HERE WAS NOT WRITTEN BY A NATIVE SPEAKER. The English aliases
 # work regardless, so testing is never blocked on getting the Sinhala right.
 _COMMANDS = [
-    ('STOP',     ('නවත්වන්න', 'නවතන්න', 'නවත්තන්න', 'stop', 'quiet')),
-    ('NEXT',     ('ඊළඟ', 'මීළඟ', 'next', 'continue')),
-    ('PREVIOUS', ('කලින්', 'පෙර ', 'previous', 'back', 'go back')),
-    ('FIRST',    ('මුල සිට', 'මුලින්', 'ආරම්භයේ', 'from the start',
-                  'start again', 'beginning')),
-    ('LENGTH',   ('කොපමණ', 'දිගද', 'වචන කීයද', 'how long', 'how many words')),
-    ('TITLE',    ('ශීර්ෂය', 'මාතෘකාව', 'headline', 'title')),
-    ('WARNINGS', ('මඟ හැරුණ', 'මගහැරුණ', 'what did i miss', 'did i miss',
-                  'missed')),
-    ('REPEAT',   ('නැවත', 'ආපසු', 'යළි', 'repeat', 'again')),
+    ('STOP',      ('නවත්වන්න', 'නවතන්න', 'නවත්තන්න', 'stop', 'quiet')),
+    ('NEXT',      ('ඊළඟ', 'මීළඟ', 'next', 'continue')),
+    ('PREVIOUS',  ('කලින්', 'පෙර ', 'previous', 'back', 'go back')),
+    ('FIRST',     ('මුල සිට', 'මුලින්', 'ආරම්භයේ', 'from the start',
+                   'start again', 'beginning')),
+    ('LENGTH',    ('කොපමණ', 'දිගද', 'වචන කීයද', 'how long', 'how many words')),
+    ('TITLE',     ('ශීර්ෂය', 'මාතෘකාව', 'headline', 'title')),
+    ('WARNINGS',  ('මඟ හැරුණ', 'මගහැරුණ', 'what did i miss', 'did i miss',
+                   'missed')),
+    ('REPEAT',    ('නැවත', 'ආපසු', 'යළි', 'repeat', 'again')),
+    ('ARTICLE_1', ('ලිපිය 1', 'ලිපිය එක', 'පළමු ලිපිය', 'පළමුවෙනි', '1 වන ලිපිය', 'article 1', 'article one')),
+    ('ARTICLE_2', ('ලිපිය 2', 'ලිපිය දෙක', 'දෙවන ලිපිය', 'දෙවැනි ලිපිය', '2 වන ලිපිය', 'article 2', 'article two')),
+    ('ARTICLE_3', ('ලිපිය 3', 'ලිපිය තුන', 'තුන්වන ලිපිය', 'තුන්වැනි ලිපිය', '3 වන ලිපිය', 'article 3', 'article three')),
+    ('ARTICLE_4', ('ලිපිය 4', 'ලිපිය හතර', 'සිව්වන ලිපිය', '4 වන ලිපිය', 'article 4', 'article four')),
+    ('ARTICLE_5', ('ලිපිය 5', 'ලිපිය පහ', 'පස්වන ලිපිය', '5 වන ලිපිය', 'article 5', 'article five')),
     # 'කියන්න' ("say / tell me") is NOT here, deliberately. It swallowed
     # "මේ ලිපිය ගැන කියන්න" — "tell me about this article" — and routed a real
     # question to READ_ALOUD. A word that appears in ordinary questions is not
@@ -69,10 +74,23 @@ def _stub(text: str) -> dict:
     t = (text or '').strip()
     low = t.lower()
     intent, route = 'ASK', 'GENERATE'
-    for name, words in _COMMANDS:
-        if any(w in low for w in words):
-            intent, route = name, 'LOCAL'
-            break
+    
+    # Prefix / exact word check for article numbers in Sinhala
+    if low.startswith('තුන') or low == '3' or ' 3' in low:
+        intent, route = 'ARTICLE_3', 'LOCAL'
+    elif low.startswith('එක') or low == '1' or ' 1' in low:
+        intent, route = 'ARTICLE_1', 'LOCAL'
+    elif low.startswith('දෙක') or low == '2' or ' 2' in low:
+        intent, route = 'ARTICLE_2', 'LOCAL'
+    elif low.startswith('හතර') or low == '4' or ' 4' in low:
+        intent, route = 'ARTICLE_4', 'LOCAL'
+    elif low.startswith('පහ') or low == '5' or ' 5' in low:
+        intent, route = 'ARTICLE_5', 'LOCAL'
+    else:
+        for name, words in _COMMANDS:
+            if any(w in low for w in words):
+                intent, route = name, 'LOCAL'
+                break
     return {
         'route': route,
         'intent': intent,

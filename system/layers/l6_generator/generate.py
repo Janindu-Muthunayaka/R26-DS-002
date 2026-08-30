@@ -33,6 +33,8 @@ LOCAL_INTENTS = {
     'REPEAT', 'READ_ALOUD', 'REPLAY',    # the whole article again
     'NEXT', 'PREVIOUS', 'FIRST',         # walk through it in parts
     'LENGTH', 'TITLE', 'WARNINGS',       # ask about it
+    'FIRST_SCAN',
+    'ARTICLE_1', 'ARTICLE_2', 'ARTICLE_3', 'ARTICLE_4', 'ARTICLE_5'
 }
 
 # An article read start to finish is two or three thousand characters. A
@@ -113,6 +115,28 @@ def _local(document, intent, cursor, warnings) -> dict:
             else:
                 msg += " නමුත් ඒවායේ ශීර්ෂයන් හඳුනාගත නොහැක."
         return _out(True, 'LOCAL', intent, msg, warnings=warnings, cursor=cursor)
+
+    if intent and intent.startswith('ARTICLE_'):
+        try:
+            art_num = int(intent.replace('ARTICLE_', ''))
+            idx = art_num - 1
+            if 0 <= idx < len(document.articles):
+                art = document.articles[idx]
+                t = (art.title_polished or art.title or art.title_raw or '').strip()
+                b = article_text(art).strip()
+                if t and b:
+                    text_out = f"ලිපිය {art_num}: {t}\n\n{b}"
+                elif b:
+                    text_out = b
+                elif t:
+                    text_out = t
+                else:
+                    text_out = f"ලිපිය {art_num} හි පෙළ හඳුනාගත නොහැක."
+                return _out(True, 'LOCAL', intent, text_out, warnings=warnings, cursor=cursor)
+            else:
+                return _out(False, 'LOCAL', intent, f"ලිපිය {art_num} සොයාගත නොහැක. පිටුවේ ඇත්තේ ලිපි {len(document.articles)} ක් පමණි.", warnings=warnings, cursor=cursor)
+        except ValueError:
+            pass
 
     if intent == 'LENGTH':
         n = len(text.split())
@@ -239,10 +263,19 @@ def answer(document: Document, voice: dict, mode: str = None,
     for n in reply.get('notes') or []:
         warnings.append(f'rag: {n}')
     if not service_ok:
-        if intent == 'FIRST_SCAN':
-            warnings.append('rag: the service reported a failure')
-            return _local(document, intent, max(0, int(cursor or 0)), warnings)
         warnings.append('rag: the service reported a failure')
+        # Check if the query refers to an article number or fallback to local article reading
+        q_raw = (voice.get('english_translation') or voice.get('sinhala_input') or voice.get('query') or '').strip().lower()
+        if '3' in q_raw or 'තුන' in q_raw or 'third' in q_raw:
+            return _local(document, 'ARTICLE_3', max(0, int(cursor or 0)), warnings)
+        elif '2' in q_raw or 'දෙක' in q_raw or 'second' in q_raw:
+            return _local(document, 'ARTICLE_2', max(0, int(cursor or 0)), warnings)
+        elif '1' in q_raw or 'එක' in q_raw or 'first' in q_raw:
+            return _local(document, 'ARTICLE_1', max(0, int(cursor or 0)), warnings)
+        elif document.articles:
+            res_loc = _local(document, 'REPEAT', max(0, int(cursor or 0)), warnings)
+            res_loc['ok'] = False
+            return res_loc
 
     sources = reply.get('retrieved_sources') or []
     if not isinstance(sources, list):
