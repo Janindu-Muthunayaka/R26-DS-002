@@ -273,7 +273,7 @@ def answer(document: Document, voice: dict, mode: str = None,
         elif '1' in q_raw or 'එක' in q_raw or 'first' in q_raw:
             return _local(document, 'ARTICLE_1', max(0, int(cursor or 0)), warnings)
         elif document.articles:
-            res_loc = _local(document, 'REPEAT', max(0, int(cursor or 0)), warnings)
+            res_loc = _local(document, intent, max(0, int(cursor or 0)), warnings)
             res_loc['ok'] = False
             return res_loc
 

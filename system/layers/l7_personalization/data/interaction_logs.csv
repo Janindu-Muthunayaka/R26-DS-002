@@ -41,3 +41,8 @@
 40,user_001,2026-08-31T00:14:54.855607,මට 'ලිපිය 1: බෝක්කුව කැඩිලා' ගැන විස්තර කරන්න,"Tell me about the ""Lip 1: Boccowa Cadila""",IDENTIFY_CONTENT,{},,Detailed,False
 41,user_001,2026-08-31T00:15:22.723714,සරල වචනවලින් පැහැදිලි කරන්න,Explain it in simple words,EXPLAIN,"{""language_style"": ""simple""}",,StepByStep,True
 42,user_001,2026-08-31T00:30:54.183470,පියවරෙන් පියවර පැහැදිලි කරන්න.,Please explain step by step.,STEP_BY_STEP,{},,StepByStep,False
+43,user_001,2026-08-31T06:27:06.703308,මට 'ලිපිය 1: බෝක්කුව කැඩිලා' ගැන විස්තර කරන්න.,"Describe to me the ""Lippie 1: Boccowa Cadila"".",IDENTIFY_CONTENT,{},,StepByStep,False
+44,user_001,2026-08-31T06:28:45.889508,එය සරල වචනවලින් පැහැදිලි කරන්න.,Explain it in simple words.,EXPLAIN,"{""language_style"": ""simple""}",,Simple,False
+45,user_001,2026-08-31T06:29:04.899467,පියවරෙන් පියවර පැහැදිලි කරන්න.,Please explain step by step.,EXPLAIN,"{""detail_level"": ""step_by_step""}",,StepByStep,False
+46,user_002,2026-08-31T06:44:28.061902,පියවරෙන් පියවර පැහැදිලි කරන්න.,Please explain step by step.,EXPLAIN,"{""detail_level"": ""step_by_step""}",,StepByStep,False
+47,user_002,2026-08-31T06:45:07.375403,එය සරල වචනවලින් පැහැදිලි කරන්න.,Explain it in simple words.,EXPLAIN,"{""language_style"": ""simple""}",,Simple,False

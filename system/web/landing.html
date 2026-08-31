@@ -1106,7 +1106,10 @@
                         persHtml += `<div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line);">`;
                         generations.forEach((turn) => {
                             persHtml += `<div style="margin-bottom: 8px;">`;
-                            persHtml += `<b>Turn ${turn.index} Intent:</b> <span style="color:var(--accent-deep);">${turn.intent || 'NONE'}</span><br>`;
+                            persHtml += `<b>Turn ${turn.index} Detected Intent:</b> <span style="color:var(--accent-deep);">${turn.intent || 'NONE'}</span><br>`;
+                            if (turn.style_class) {
+                                persHtml += `<b>Turn ${turn.index} Applied Style:</b> <span style="color:var(--accent-deep);">${turn.style_class}</span><br>`;
+                            }
                             if (turn.prompt_modifier) {
                                 persHtml += `<div style="margin-top: 4px; padding: 4px 6px; background: rgba(0,0,0,0.03); border-radius: 4px; font-family: monospace; font-size: 9.5px; border-left: 2px solid var(--accent); white-space: pre-wrap; word-break: break-word;">"${turn.prompt_modifier}"</div>`;
                             }
