@@ -1,0 +1,50 @@
+{
+  "n_total": 72,
+  "n_errors": 0,
+  "n_answerable": 56,
+  "n_unanswerable": 16,
+  "retrieval": {
+    "article_hit@1": 0.589,
+    "article_hit@3": 0.804,
+    "article_hit@5": 0.821,
+    "article_hit@any": 0.821,
+    "evidence_hit@1": 0.393,
+    "evidence_hit@3": 0.696,
+    "evidence_hit@5": 0.75,
+    "evidence_hit@any": 0.75,
+    "article_MRR": 0.686,
+    "evidence_MRR": 0.534
+  },
+  "generation": {
+    "key_fact_in_answer_rate": 0.536,
+    "correctness_mean_0to2": 1.339,
+    "faithfulness_rate": 0.902,
+    "false_refusal_rate": 0.268,
+    "correct_abstention_rate": 0.938,
+    "correct_abstention_far": 1.0,
+    "correct_abstention_near": 0.875
+  },
+  "format": {
+    "sinhala_purity_mean": 0.986,
+    "purity_ge_0.85_rate": 0.986,
+    "within_word_limit_rate": 1.0
+  },
+  "perplexity_answered_questions": {
+    "mean": 1.143,
+    "median": 1.138,
+    "by_intent": {
+      "direct_answer": 1.107,
+      "elaborate": 1.179,
+      "simplify": 1.233,
+      "summarize": 1.112
+    },
+    "correct_answers_only": 1.143,
+    "wrong_or_partial_only": 1.141
+  },
+  "by_intent_correctness": {
+    "direct_answer": 1.208,
+    "elaborate": 1.455,
+    "simplify": 1.2,
+    "summarize": 1.636
+  }
+}
