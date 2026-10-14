@@ -75,3 +75,5 @@
 74,user_001,2026-10-14T19:37:39.493675,මෙය පිහිටා ඇත්තේ කුමන මාර්ගයේද?,Which way is this located?,IDENTIFY_CONTENT,{},,Simple,False
 75,user_001,2026-10-14T20:00:49.838151,මෙය පිහිටා ඇත්තේ කුමන මාර්ගයේද?,Which way is this located?,IDENTIFY_CONTENT,{},,Simple,False
 76,user_001,2026-10-14T20:02:36.343271,මේකේ තත්වේ කොහොමද?,How's the situation?,IDENTIFY_CONTENT,{},,Simple,False
+77,user_001,2026-10-14T20:06:38.116654,මේ තත්ත්වය ගැන ඔබ මොකද හිතන්නේ?,What do you think about this situation?,EXPLAIN,{},,Simple,False
+78,user_001,2026-10-14T20:10:06.432632,මෙයින් ඇතිවිය හැකි අනතුර කුමක්ද?,What is the potential danger?,IDENTIFY_CONTENT,{},,Simple,False

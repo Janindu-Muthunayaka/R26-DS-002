@@ -195,9 +195,12 @@ def polish_articles(articles: list[Article], mode: str = None) -> list[dict]:
             results[i] = _result(orig_body, orig_title, False, 'polish: off')
             continue
 
-        # If body doesn't make sense -> give up and discard.
+        # If body doesn't make sense -> skip polish, keep original text unless it's pure nonsense/fatal
         if not _body_makes_sense(orig_body):
-            results[i] = _result("[DISCARD]", "[DISCARD]", True, 'polish: discarded, body does not make sense')
+            if _is_nonsense(orig_body) or (quality.score(orig_body)['verdict'] == 'unreadable' and quality.score(orig_body)['fatal']):
+                results[i] = _result("[DISCARD]", "[DISCARD]", True, 'polish: discarded, body does not make sense')
+            else:
+                results[i] = _result(orig_body, orig_title, False, 'polish: skipped (body below quality threshold, keeping unpolished)')
             continue
 
         # If none of the title candidates make sense, signal regeneration
@@ -305,18 +308,23 @@ def polish_articles(articles: list[Article], mode: str = None) -> list[dict]:
         cand_body = str(reply_item.get('body', '')).strip()
 
         if cand_body == "[DISCARD]" or cand_title == "[DISCARD]":
-            results[i] = _result("[DISCARD]", "[DISCARD]", True, 'polish: applied, article discarded by LLM as a dud', 1.0)
+            if len(orig_body.replace(' ', '')) >= 20:
+                results[i] = _result(orig_body, orig_title, False, 'polish: LLM flagged as dud but text is present, keeping unpolished')
+            else:
+                results[i] = _result("[DISCARD]", "[DISCARD]", True, 'polish: applied, article discarded by LLM as a dud', 1.0)
             continue
 
         # Check if the candidate body makes sense
         if not _body_makes_sense(cand_body):
-            results[i] = _result("[DISCARD]", "[DISCARD]", True, 'polish: discarded, LLM candidate body does not make sense', 1.0)
+            results[i] = _result(orig_body, orig_title, False, 'polish: candidate body below quality threshold, keeping unpolished', 1.0)
             continue
 
         # Check if the candidate title makes sense
         if not _title_makes_sense(cand_title):
-            results[i] = _result("[DISCARD]", "[DISCARD]", True, 'polish: discarded, LLM candidate title does not make sense', 1.0)
-            continue
+            if _is_nonsense(orig_title) and not _title_makes_sense(orig_title):
+                results[i] = _result("[DISCARD]", "[DISCARD]", True, 'polish: discarded, LLM candidate title does not make sense', 1.0)
+                continue
+            cand_title = orig_title
 
         accepted, why, sim = check(orig_body, cand_body)
         if not accepted:
