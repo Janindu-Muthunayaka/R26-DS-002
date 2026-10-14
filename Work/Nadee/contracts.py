@@ -878,5 +878,4 @@ RAG_OUTPUT_SCHEMA = {
     "intent": None,
     "answer_si": None,
     "retrieved_sources": [],
-    "speakable_text": None,
 }
