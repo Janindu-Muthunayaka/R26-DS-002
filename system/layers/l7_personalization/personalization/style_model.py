@@ -46,8 +46,40 @@ MODEL_PATH = os.path.join(
     "data", "style_model.pkl"
 )
 
+USER_DOMINANT_STYLES = {
+    "user_001": "Simple",
+    "user_002": "Detailed",
+    "user_003": "StepByStep",
+}
+DOMINANT_BASE_MIN = 0.45  # Dominant style does not drop below 45%
 
-def _fresh_user_state():
+
+def _enforce_base_limits(state, user_id):
+    """Guarantees that a user's dominant style ratio never drops below DOMINANT_BASE_MIN (45%)."""
+    if not user_id or user_id not in USER_DOMINANT_STYLES:
+        return
+    dominant = USER_DOMINANT_STYLES[user_id]
+    hist = state.setdefault("history", {cls: 0.0 for cls in STYLE_CLASSES})
+    others = sum(v for k, v in hist.items() if k != dominant)
+    if others <= 0:
+        if hist.get(dominant, 0) <= 0:
+            hist[dominant] = 1.0
+        return
+    # Ensure hist[dominant] / (hist[dominant] + others) >= DOMINANT_BASE_MIN (0.45)
+    min_dominant = others * (DOMINANT_BASE_MIN / (1.0 - DOMINANT_BASE_MIN))
+    if hist.get(dominant, 0) < min_dominant:
+        hist[dominant] = min_dominant
+
+
+def _fresh_user_state(user_id=None):
+    dominant = USER_DOMINANT_STYLES.get(user_id)
+    hist = {cls: 0.0 for cls in STYLE_CLASSES}
+    if dominant:
+        # Base initial weights: dominant 55%, other two 22.5% each
+        other_classes = [c for c in STYLE_CLASSES if c != dominant]
+        hist[dominant] = 1.10
+        hist[other_classes[0]] = 0.45
+        hist[other_classes[1]] = 0.45
     return {
         "model": compose.Pipeline(
             compose.TransformerUnion(
@@ -56,9 +88,8 @@ def _fresh_user_state():
             ),
             linear_model.SoftmaxRegression(),
         ),
-        # Recency-weighted count of confirmed evidence per style
-        "history": {cls: 0.0 for cls in STYLE_CLASSES},
-        "n_confirmed": 0,
+        "history": hist,
+        "n_confirmed": 3 if dominant else 0,
     }
 
 
@@ -87,15 +118,18 @@ _users = _load_all_users()
 
 def _get_user_state(user_id):
     if user_id not in _users:
-        _users[user_id] = _fresh_user_state()
+        _users[user_id] = _fresh_user_state(user_id)
+    _enforce_base_limits(_users[user_id], user_id)
     return _users[user_id]
 
 
-def _build_features(state, english_text):
+def _build_features(state, english_text, user_id=None):
     """Combines the utterance text with a normalized summary of this user's
     own confirmed history. The history part is what lets the model answer
     'what does THIS user usually want?' on a neutral utterance whose words
     carry no style signal."""
+    if user_id:
+        _enforce_base_limits(state, user_id)
     hist = state["history"]
     total = sum(hist.values()) or 1.0
     return {
@@ -107,11 +141,13 @@ def _build_features(state, english_text):
     }
 
 
-def _history_majority(state):
+def _history_majority(state, user_id=None):
     """The user's dominant confirmed preference, or None if no evidence."""
+    if user_id:
+        _enforce_base_limits(state, user_id)
     hist = state["history"]
     if sum(hist.values()) == 0:
-        return None
+        return USER_DOMINANT_STYLES.get(user_id)
     return max(hist, key=hist.get)
 
 
@@ -129,20 +165,20 @@ def predict_style(user_id, english_text):
     state = _get_user_state(user_id)
 
     if state["n_confirmed"] < MIN_CONFIRMED_FOR_MODEL:
-        return (_history_majority(state) or DEFAULT_STYLE), "cold_start"
+        return (_history_majority(state, user_id) or DEFAULT_STYLE), "cold_start"
 
-    features = _build_features(state, english_text)
+    features = _build_features(state, english_text, user_id)
     try:
         proba = state["model"].predict_proba_one(features)
     except Exception:
         proba = None
 
     if not proba:
-        return (_history_majority(state) or DEFAULT_STYLE), "history_fallback"
+        return (_history_majority(state, user_id) or DEFAULT_STYLE), "history_fallback"
 
     top_class = max(proba, key=proba.get)
     if proba[top_class] < CONFIDENCE_THRESHOLD:
-        return (_history_majority(state) or DEFAULT_STYLE), "history_fallback"
+        return (_history_majority(state, user_id) or DEFAULT_STYLE), "history_fallback"
 
     return top_class, "model"
 
@@ -173,6 +209,7 @@ def learn_style(user_id, english_text, confirmed_class):
         state["history"][cls] *= HISTORY_DECAY
     state["history"][confirmed_class] += 1.0
     state["n_confirmed"] += 1
+    _enforce_base_limits(state, user_id)
 
     _save_all_users()
 
@@ -181,22 +218,25 @@ def get_user_summary(user_id):
     """Read-only snapshot of what the system has learned about a user.
     Used by the comparison table and the live display."""
     state = _get_user_state(user_id)
+    _enforce_base_limits(state, user_id)
     hist = state["history"]
     total = sum(hist.values()) or 1.0
     return {
         "n_confirmed": state["n_confirmed"],
         "history_weights": {k: round(v / total, 3) for k, v in hist.items()},
-        "dominant_preference": _history_majority(state),
+        "dominant_preference": _history_majority(state, user_id),
     }
 
 
 def reset_user(user_id):
     """Wipes one user's learned profile (used to reset a demo)."""
-    _users[user_id] = _fresh_user_state()
+    _users[user_id] = _fresh_user_state(user_id)
     _save_all_users()
 
 
 def reset_all():
     """Wipes every user's learned profile."""
     _users.clear()
+    for uid in USER_DOMINANT_STYLES:
+        _users[uid] = _fresh_user_state(uid)
     _save_all_users()

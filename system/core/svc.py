@@ -63,3 +63,26 @@ def post_json(url: str, body: dict, timeout_s: float = 120.0
     if not isinstance(parsed, dict):
         return None, f'reply was {type(parsed).__name__}, expected an object'
     return parsed, ''
+
+
+def get_json(url: str, timeout_s: float = 10.0) -> Tuple[Optional[dict], str]:
+    """GET from `url` and parse JSON. Never raises."""
+    req = urllib.request.Request(url, method='GET', headers={'Accept': 'application/json'})
+    try:
+        with urllib.request.urlopen(req, timeout=timeout_s) as resp:
+            payload = resp.read().decode('utf-8', errors='replace')
+    except urllib.error.HTTPError as e:
+        return None, f'HTTP {e.code}'
+    except urllib.error.URLError as e:
+        return None, f'unreachable: {e.reason}'
+    except Exception as e:
+        return None, f'{type(e).__name__}: {e}'
+
+    try:
+        parsed = json.loads(payload)
+    except ValueError:
+        return None, f'reply was not JSON: {payload[:120]!r}'
+    if not isinstance(parsed, dict):
+        return None, f'reply was {type(parsed).__name__}, expected an object'
+    return parsed, ''
+
