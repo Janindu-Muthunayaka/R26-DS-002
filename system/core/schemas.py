@@ -60,7 +60,9 @@ class Article(BaseModel):
     crop_path: Optional[str] = None
 
     # ---- Layer 4A writes these (OTHER MEMBER) ----
-    title_raw: str = ''
+    title_raw: str = ''                          # RAW OCR output (sin_raw)
+    title_mat: str = ''                          # MAT OCR output (sin_custom)
+    title_hybrid: str = ''                       # Approach 1: confidence-routed hybrid selection
     title: str = ''
 
     # ---- Layer 4B writes these (Component 2 — correction) ----

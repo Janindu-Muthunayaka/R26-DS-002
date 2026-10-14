@@ -46,3 +46,27 @@
 45,user_001,2026-08-31T06:29:04.899467,පියවරෙන් පියවර පැහැදිලි කරන්න.,Please explain step by step.,EXPLAIN,"{""detail_level"": ""step_by_step""}",,StepByStep,False
 46,user_002,2026-08-31T06:44:28.061902,පියවරෙන් පියවර පැහැදිලි කරන්න.,Please explain step by step.,EXPLAIN,"{""detail_level"": ""step_by_step""}",,StepByStep,False
 47,user_002,2026-08-31T06:45:07.375403,එය සරල වචනවලින් පැහැදිලි කරන්න.,Explain it in simple words.,EXPLAIN,"{""language_style"": ""simple""}",,Simple,False
+48,user_003,2026-08-31T08:11:22.870412,මට 'ලිපිය 1: බෝක්කුව කැඩිලා' ගැන විස්තර කරන්න.,"Describe to me the ""Lippie 1: Boccowa Cadila"".",IDENTIFY_CONTENT,{},,Detailed,False
+49,user_003,2026-08-31T08:11:47.293235,එය සරල වචනවලින් පැහැදිලි කරන්න.,Explain it in simple words.,EXPLAIN,"{""language_style"": ""simple""}",,Simple,False
+50,user_003,2026-08-31T08:12:07.888143,පියවරෙන් පියවර පැහැදිලි කරන්න.,Please explain step by step.,EXPLAIN,"{""detail_level"": ""step_by_step""}",,StepByStep,False
+51,user_003,2026-08-31T08:13:00.148657,මට ලිපිය 2 ගැන විස්තර කරන්න.,Tell me about Article 2.,IDENTIFY_CONTENT,{},,StepByStep,False
+52,user_001,2026-08-31T08:34:44.197353,මට 'ලිපිය 1: බෝක්කුව කැඩිලා' ගැන විස්තර කරන්න.,"Describe to me the ""Lippie 1: Boccowa Cadila"".",IDENTIFY_CONTENT,{},,StepByStep,False
+53,user_001,2026-08-31T08:35:23.789113,එය සරල වචනවලින් පැහැදිලි කරන්න.,Explain it in simple words.,EXPLAIN,"{""language_style"": ""simple""}",,StepByStep,True
+54,user_001,2026-08-31T08:36:04.382208,පියවරෙන් පියවර පැහැදිලි කරන්න.,Please explain step by step.,STEP_BY_STEP,"{""detail_level"": ""step_by_step""}",,StepByStep,False
+55,user_001,2026-08-31T08:36:25.348296,මට ලිපිය 2 ගැන විස්තර කරන්න.,Tell me about Article 2.,IDENTIFY_CONTENT,{},,StepByStep,False
+56,user_001,2026-08-31T08:37:06.743589,විස්තරාත්මකව පැහැදිලි කරන්න.,Please explain in detail.,EXPLAIN,"{""detail_level"": ""detailed""}",,Detailed,False
+57,user_001,2026-08-31T08:45:13.346000,ලිපිය දෙක දේශීය නිෂ්පාදකයන් තිරිකන් වන බදු සහන දෙන්න,Article 2 Tax relief to local producers,IDENTIFY_CONTENT,{},,StepByStep,False
+58,user_001,2026-08-31T08:50:55.807391,ලිපිය දෙක ගුවන් කකා දීපු පොරොන්දු,The letter is two air stories,IDENTIFY_CONTENT,{},,StepByStep,False
+59,user_001,2026-08-31T08:51:24.016372,තව ටිකක් ගැඹුරින් පැහැදිලි කරන්න,Explain it a little more in depth .,EXPLAIN,"{""detail_level"": ""detailed""}",,StepByStep,True
+60,user_001,2026-08-31T08:52:04.023297,පියවරෙන් පියවර කියන්න,Step by step tell me,STEP_BY_STEP,"{""detail_level"": ""step_by_step""}",,Simple,True
+61,user_001,2026-08-31T08:52:23.571340,එම ලිපිය සාරාංශ කරන්න,Summarize the article,SUMMARIZE,{},,Simple,False
+62,user_001,2026-08-31T08:52:34.198586,ලිපිය එක කියවන්න,Read the article.,READ_ALOUD,{},,StepByStep,False
+63,user_001,2026-08-31T08:53:05.191109,අපේ දෙක කියලා,Our two were called,READ_ALOUD,{},,StepByStep,False
+64,user_001,2026-08-31T09:12:22.044361,ලිපිය දෙක කියන්න,Let me tell you two,READ_ALOUD,{},,StepByStep,False
+65,user_001,2026-08-31T09:21:42.491389,ලිපිය දෙක කියවන්න,Read the article,READ_ALOUD,{},,Simple,True
+66,user_001,2026-08-31T09:22:42.362710,සාරාංශ කරන්න,Summary,SUMMARIZE,{},,Simple,False
+67,user_001,2026-08-31T10:26:52.344711,රෝගීන් ගණන කීයද,How many patients?,IDENTIFY_CONTENT,{},,Simple,False
+68,user_001,2026-08-31T10:29:00.656053,තරුණ තරුණියන්ට මෙයට මොකක්ද කරන්න පුළුවන්?,What can young girls do with this?,IDENTIFY_CONTENT,{},,StepByStep,True
+69,user_001,2026-08-31T10:30:14.997265,පියවරෙන් පියවර පැහැදිලි කරන්න.,Please explain step by step.,STEP_BY_STEP,"{""detail_level"": ""step_by_step""}",,StepByStep,False
+70,user_001,2026-08-31T10:35:09.879248,පියවරෙන් පියවර පැහැදිලි කරන්න.,Please explain step by step.,STEP_BY_STEP,"{""detail_level"": ""step_by_step""}",,StepByStep,False
+71,user_001,2026-10-14T18:42:06.970561,දිගන සිදුවූයේ කුමක්ද?,What happened next?,NEXT,{},,,False

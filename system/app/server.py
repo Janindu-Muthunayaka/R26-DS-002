@@ -240,6 +240,7 @@ def build(pipeline, web_dir: Path):
                 
                 if res.get('speakable'):
                     reply['body'] = res['speakable']
+                    reply['title'] = ''  # Clear raw title so it isn't spoken before the scan
                 elif getattr(doc, 'tts_text', None):
                     reply['body'] = doc.tts_text
                 else:

@@ -60,17 +60,22 @@ from core.schemas import Article
 
 SYSTEM_PROMPT = (
     'You are a Sinhala language expert repairing OCR errors in newspaper articles.\n'
-    'You will receive a JSON array of objects, each containing "id", "title", and "body".\n'
+    'You will receive a JSON array of objects, each containing "id", "title", "title_raw", "title_mat", "title_hybrid", and "body".\n'
     'RULES, in order of importance:\n'
     '1. Output ONLY a valid JSON array of objects. Output only the repaired text. Each object must have "id", "title" and "body". No preamble, no markdown.\n'
     '2. IDENTIFY DUDS: If a body has almost no meaningful Sinhala text (e.g. only a few nonsense characters, or completely empty), return "[DISCARD]" for both its "title" and "body". Do not attempt to repair a completely meaningless article.\n'
-    '3. GENERATE TITLE: If a body has valid information but the title is empty, missing, gibberish (e.g., contains only a few characters, repetitive symbols, or looks nonsensical), or otherwise not a proper headline, USE the context of the body to GENERATE an appropriate short Sinhala headline for the "title" field.\n'
-    '4. NEVER add new factual information to any body. No names, numbers, dates, places or clauses that are not already present.\n'
-    '5. NEVER remove, summarise, reorder, translate or explain anything in any body.\n'
-    '6. Repair only what is clearly an OCR error in the body: a broken word, a wrong dependent vowel sign, a split/merged word, a stray Latin fragment.\n'
-    '7. If the title is present and meaningful, repair its OCR errors using the context of the body.\n'
-    '8. Output Sinhala script. Leave digits and genuine Latin proper nouns as they are.\n'
-    'The output bodies should be almost identical to the input bodies in length and in sentence order.'
+    '3. DUAL-HYPOTHESIS TITLE FUSION (APPROACH 3): For each article, you are provided with candidate OCR title hypotheses:\n'
+    '   - "title_raw": OCR from raw binarized pixels (preserves delicate Sinhala dependent vowels/pilla).\n'
+    '   - "title_mat": OCR from Medial Axis Transform skeletonized strokes (preserves thick/decorative font structures).\n'
+    '   - "title_hybrid": Confidence-selected baseline.\n'
+    '   Compare these hypotheses against each other and against the article body. Fuse their strengths to reconstruct the single most accurate, fluent, and coherent Sinhala headline for "title". If all title hypotheses are missing, unreadable, or gibberish, generate an appropriate short headline for "title" based solely on the body context.\n'
+    '4. REMOVE UNWANTED CHARACTERS: Clean the text by removing all unwanted characters, stray punctuation, repetitive symbols, meaningless artifacts, and nonsense fragments that are clearly products of bad OCR.\n'
+    '5. NEVER add new factual information to any body. NEVER remove essential factual information that is already present. No names, numbers, dates, places or clauses that are not already present.\n'
+    '6. NEVER summarise, reorder, translate or explain anything in any body.\n'
+    '7. REPAIR AND CORRECT GRAMMAR: Fix obvious OCR errors (broken words, wrong dependent vowel signs, split/merged words) and correct grammar mistakes in the body while looking at the surrounding context to ensure the sentence flows naturally.\n'
+    '8. Repair OCR errors in the headline using the context of the body.\n'
+    '9. Output Sinhala script. Leave digits and genuine Latin proper nouns as they are.\n'
+    'The output bodies should be almost identical to the input bodies in length and in sentence order, just without the OCR noise, unwanted characters, and grammar mistakes.'
 )
 
 
@@ -180,7 +185,10 @@ def polish_articles(articles: list[Article], mode: str = None) -> list[dict]:
     to_process = []
     
     for i, article in enumerate(articles):
-        orig_title = (article.title or article.title_raw or '').strip()
+        orig_raw = (getattr(article, 'title_raw', '') or '').strip()
+        orig_mat = (getattr(article, 'title_mat', '') or '').strip()
+        orig_hybrid = (getattr(article, 'title_hybrid', '') or '').strip()
+        orig_title = (article.title or orig_hybrid or orig_raw or orig_mat or '').strip()
         orig_body = (article.body or article.body_raw or '').strip()
 
         if mode == 'off':
@@ -192,9 +200,11 @@ def polish_articles(articles: list[Article], mode: str = None) -> list[dict]:
             results[i] = _result("[DISCARD]", "[DISCARD]", True, 'polish: discarded, body does not make sense')
             continue
 
-        # If the body makes sense, let's see if the title is sensible.
-        # If the title is NOT sensible, we will instruct the LLM to regenerate it by sending title=""
-        needs_title_generation = not _title_makes_sense(orig_title)
+        # If none of the title candidates make sense, signal regeneration
+        has_sensible_title = (_title_makes_sense(orig_title) or
+                              _title_makes_sense(orig_raw) or
+                              _title_makes_sense(orig_mat))
+        needs_title_generation = not has_sensible_title
 
         verdict = quality.score(orig_body)['verdict']
         if mode == 'auto':
@@ -212,6 +222,9 @@ def polish_articles(articles: list[Article], mode: str = None) -> list[dict]:
             'idx': i,
             'id': str(i),
             'title': "" if needs_title_generation else orig_title,
+            'title_raw': "" if needs_title_generation else orig_raw,
+            'title_mat': "" if needs_title_generation else orig_mat,
+            'title_hybrid': "" if needs_title_generation else orig_hybrid,
             'body': orig_body,
             'verdict': verdict,
             'needs_title_generation': needs_title_generation
@@ -226,8 +239,15 @@ def polish_articles(articles: list[Article], mode: str = None) -> list[dict]:
             results[p['idx']] = _result(p['body'], p['title'], False, f'polish: unavailable ({why})')
         return results
 
-    # Batch LLM Call
-    payload_json = [{"id": p["id"], "title": p["title"], "body": p["body"]} for p in to_process]
+    # Batch LLM Call with Dual-Hypothesis Title Candidate Payload
+    payload_json = [{
+        "id": p["id"],
+        "title": p["title"],
+        "title_raw": p["title_raw"],
+        "title_mat": p["title_mat"],
+        "title_hybrid": p["title_hybrid"],
+        "body": p["body"]
+    } for p in to_process]
     prompt_payload = json.dumps(payload_json, ensure_ascii=False)
     
     reply_text, reason = llm.chat(
@@ -243,7 +263,16 @@ def polish_articles(articles: list[Article], mode: str = None) -> list[dict]:
     # Parse JSON from LLM
     is_json = False
     try:
-        reply_json = json.loads(reply_text.strip('` \n').removeprefix('json'))
+        cleaned = reply_text.strip('` \n')
+        if cleaned.lower().startswith('json'):
+            cleaned = cleaned[4:].strip()
+            
+        if '[' in cleaned and ']' in cleaned:
+            start = cleaned.find('[')
+            end = cleaned.rfind(']') + 1
+            cleaned = cleaned[start:end]
+            
+        reply_json = json.loads(cleaned, strict=False)
         if isinstance(reply_json, list):
             is_json = True
     except (json.JSONDecodeError, ValueError):

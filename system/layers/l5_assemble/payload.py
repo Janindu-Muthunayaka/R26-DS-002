@@ -101,11 +101,11 @@ def article_text(article) -> str:
 
 
 def article_title(article) -> str:
-    """The title to use, preferring the polished output."""
-    cand = (article.title_polished or '').strip()
+    """The title to use, preferring the polished output, then hybrid, then default."""
+    cand = (getattr(article, 'title_polished', '') or '').strip()
     if cand == "[DISCARD]":
         return ""
-    return cand or (article.title or '').strip() or (article.title_raw or '').strip()
+    return cand or (getattr(article, 'title_hybrid', '') or '').strip() or (article.title or '').strip() or (getattr(article, 'title_raw', '') or '').strip()
 
 
 def rag_payload(document: Document, with_tokens: bool = True) -> dict:
@@ -122,6 +122,10 @@ def rag_payload(document: Document, with_tokens: bool = True) -> dict:
         articles.append({
             'index': art.index,
             'title': article_title(art),
+            'title_raw': getattr(art, 'title_raw', ''),
+            'title_mat': getattr(art, 'title_mat', ''),
+            'title_hybrid': getattr(art, 'title_hybrid', ''),
+            'title_polished': getattr(art, 'title_polished', ''),
             'body': body,
             'polished': bool((art.body_polished or '').strip()),
             'glyph_p75': art.glyph_p75,
