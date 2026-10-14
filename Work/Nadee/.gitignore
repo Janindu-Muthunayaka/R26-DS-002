@@ -186,3 +186,4 @@ chroma_db/
 
 last_result.json
 dump_result.py
+chat_sessions/

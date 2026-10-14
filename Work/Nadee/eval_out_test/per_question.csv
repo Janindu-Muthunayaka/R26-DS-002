@@ -1,0 +1,2 @@
+﻿qid,answer,article_id,article_rank,correctness,detail_level,error,evidence_rank,faithfulness,intent,judge_reason,key_fact_in_answer,max_words,n_retrieved,n_words,perplexity,purity,query_lang,question,refused,type,within_word_limit
+q01,"නාමල් රාජපක්ෂ මහතා කියා සිටියේ, එම සත්‍යය රටට හෙළි කිරීමට **ඊබ්රාහිම්ට** අවස්ථාව තිබෙන බවයි.",0022721777a14006,1,,brief,,1,,direct_answer,,True,80,4,14,1.1264914781835125,1.0,en,Who did Namal Rajapaksa say has the opportunity to reveal the truth about the Easter attack to the country?,False,answerable,True
