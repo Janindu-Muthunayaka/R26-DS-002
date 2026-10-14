@@ -22,10 +22,14 @@ def assemble(articles, source_frames, timings=None) -> Document:
         title = article_title(a).strip()
         
         if not body or body == "[DISCARD]" or title == "[DISCARD]":
+            reason = getattr(a, 'polish_reason', '') or getattr(a, 'note', '') or 'discarded'
+            warnings.append(f'Article {a.index + 1} excluded: {reason}')
             continue
             
         keep.append(a)
     for i, a in enumerate(keep):
         a.index = i
-    return Document(source_frames=source_frames, articles=keep,
-                    timings=timings or {}, warnings=warnings)
+    doc = Document(source_frames=source_frames, articles=keep,
+                   timings=timings or {}, warnings=warnings)
+    doc.all_articles = articles
+    return doc

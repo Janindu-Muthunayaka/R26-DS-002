@@ -939,20 +939,22 @@
                         segHtml += `<div style="margin-bottom: 4px; font-size: 11px; color: var(--ink-soft); width: 100%; text-align: center;">Mode: ${mode}\n${segTime}</div>`;
                     }
 
-                    if (frames.length > 0 && doc.articles && doc.articles.length > 0) {
+                    const segArts = (doc.all_articles && doc.all_articles.length > 0) ? doc.all_articles : (doc.articles || []);
+                    if (frames.length > 0 && segArts.length > 0) {
                         const parts = frames[0].replace(/\\/g, '/').split('/');
                         const filename = parts[parts.length - 1];
                         const url = `/work/${data.job}/${filename}`;
-                        const artsStr = encodeURIComponent(JSON.stringify(doc.articles || [])).replace(/'/g, "%27");
-                        segHtml += `<button class="manual-btn" style="position:relative; top:0; right:0; margin-bottom: 5px; display: block; width: 100%; text-align: center;" onclick="openLightboxWithData('${url}', 'main', '${artsStr}')">Full Image</button>`;
+                        const artsStr = encodeURIComponent(JSON.stringify(segArts)).replace(/'/g, "%27");
+                        segHtml += `<button class="manual-btn" style="position:relative; top:0; right:0; margin-bottom: 5px; display: block; width: 100%; text-align: center;" onclick="openLightboxWithData('${url}', 'main', '${artsStr}')">Full Image (${segArts.length} detected)</button>`;
                     }
 
-                    if (doc.articles) {
-                        doc.articles.forEach((art, idx) => {
+                    if (segArts.length > 0) {
+                        segArts.forEach((art, idx) => {
                             if (art.crop_path) {
                                 const artUrl = `/work/${data.job}/${art.crop_path}`;
                                 const artStr = encodeURIComponent(JSON.stringify(art)).replace(/'/g, "%27");
-                                segHtml += `<button class="manual-btn" style="position:relative; top:0; right:0; margin-bottom: 5px; display: block; width: 100%; text-align: center;" onclick="openLightboxWithData('${artUrl}', 'crop', '${artStr}')">Article ${idx + 1}</button>`;
+                                const disc = (art.body_polished === '[DISCARD]' || art.title_polished === '[DISCARD]') ? ' (excluded)' : '';
+                                segHtml += `<button class="manual-btn" style="position:relative; top:0; right:0; margin-bottom: 5px; display: block; width: 100%; text-align: center;" onclick="openLightboxWithData('${artUrl}', 'crop', '${artStr}')">Article ${idx + 1}${disc}</button>`;
                             }
                         });
                     }

@@ -63,7 +63,7 @@ SYSTEM_PROMPT = (
     'You will receive a JSON array of objects, each containing "id", "title", "title_raw", "title_mat", "title_hybrid", and "body".\n'
     'RULES, in order of importance:\n'
     '1. Output ONLY a valid JSON array of objects. Output only the repaired text. Each object must have "id", "title" and "body". No preamble, no markdown.\n'
-    '2. IDENTIFY DUDS: If a body has almost no meaningful Sinhala text (e.g. only a few nonsense characters, or completely empty), return "[DISCARD]" for both its "title" and "body". Do not attempt to repair a completely meaningless article.\n'
+    '2. IDENTIFY DUDS: ONLY return "[DISCARD]" for "title" and "body" if the crop contains NO readable news text at all (e.g. completely blank, graphical noise, or just 1-2 stray symbols). If any real news sentence or headline exists, DO NOT discard it: repair and preserve it.\n'
     '3. DUAL-HYPOTHESIS TITLE FUSION (APPROACH 3): For each article, you are provided with candidate OCR title hypotheses:\n'
     '   - "title_raw": OCR from raw binarized pixels (preserves delicate Sinhala dependent vowels/pilla).\n'
     '   - "title_mat": OCR from Medial Axis Transform skeletonized strokes (preserves thick/decorative font structures).\n'
@@ -125,7 +125,7 @@ def check(original: str, candidate: str) -> tuple:
         return False, 'the reply is less Sinhala than the input', sim
 
     ow, cw = quality.word_count(o), quality.word_count(c)
-    if cw > ow * 1.2 + 2:
+    if cw > ow * 1.5 + 4:
         return False, f'word count grew {ow} -> {cw}', sim
 
     return True, '', sim
@@ -152,8 +152,8 @@ def _body_makes_sense(body: str) -> bool:
     # If the text is marked as unreadable and is fatal, it does not make sense.
     if m['verdict'] == 'unreadable' and m['fatal']:
         return False
-    # If less than 65% of the letters are Sinhala, or more than 50% are short tokens, it's gibberish.
-    if m['sinhala_ratio'] < 0.65 or m['short_ratio'] > 0.50:
+    # Loosened: allow articles that have numbers, dates, Latin acronyms, or fragmented OCR tokens
+    if m['sinhala_ratio'] < 0.35 or m['short_ratio'] > 0.65:
         return False
         
     return True
@@ -165,13 +165,13 @@ def _title_makes_sense(title: str) -> bool:
         return False
         
     from core import quality
-    # A sensible title should be in Sinhala (high Sinhala ratio)
-    if quality.sinhala_ratio(title) < 0.65:
+    # Loosened: allow titles with English or mixed text (sinhala_ratio >= 0.35)
+    if quality.sinhala_ratio(title) < 0.35:
         return False
         
-    # A title should not be too short in terms of letters (less than 4 characters is probably gibberish/fragment)
+    # A title should not be too short in terms of letters (less than 3 characters is probably gibberish/fragment)
     alphanumeric = re.sub(r'[^\w\s]', '', title)
-    if len(alphanumeric.replace(' ', '')) < 4:
+    if len(alphanumeric.replace(' ', '')) < 3:
         return False
         
     return True

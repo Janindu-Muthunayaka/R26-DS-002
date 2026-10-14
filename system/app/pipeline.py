@@ -133,16 +133,31 @@ class Pipeline:
                         cv2.imwrite(str(r_path), r_crop)
                         r.crop_path = str(r_path.name)
 
-                # 3. Title OCR
-                art = l4a.extract(ref, art)
+                # 3. Parallel Title OCR & Body OCR
+                # Title extraction (CRAFT + MAT + Tesseract) and Body extraction (Tesseract)
+                # operate on disjoint regions and are run concurrently.
+                with concurrent.futures.ThreadPoolExecutor(max_workers=2) as sub_exec:
+                    fut_title = sub_exec.submit(l4a.extract, ref, art)
+                    if single_article:
+                        fut_body = sub_exec.submit(self.body.read_page, imgs, art)
+                    else:
+                        fut_body = sub_exec.submit(self.body.read, imgs, art)
 
-                # 4. Body OCR
-                if single_article:
-                    art = self.body.read_page(imgs, art)
-                else:
-                    art = self.body.read(imgs, art)
+                    art_title = fut_title.result()
+                    art_body = fut_body.result()
 
-                # 5. Correct OCR
+                art.title = art_title.title
+                art.title_raw = art_title.title_raw
+                art.title_mat = art_title.title_mat
+                art.title_hybrid = art_title.title_hybrid
+                if getattr(art_title, 'note', None):
+                    art.note = (art.note + '; ' if art.note else '') + art_title.note
+
+                art.body_raw = art_body.body_raw
+                art.glyph_p90 = art_body.glyph_p90 or art.glyph_p90
+                art.ocr_scale = art_body.ocr_scale
+
+                # 4. Correct OCR via mT5
                 if correct:
                     art = self.body.correct(art)
                 else:
@@ -160,7 +175,8 @@ class Pipeline:
         # Process all articles in parallel
         t0 = time.time()
         final_arts = []
-        with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
+        n_workers = min(4, max(1, len(art_groups)))
+        with concurrent.futures.ThreadPoolExecutor(max_workers=n_workers) as executor:
             futures = []
             for art, group in art_groups:
                 futures.append(executor.submit(process_article, art, group))

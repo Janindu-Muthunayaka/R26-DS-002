@@ -328,6 +328,7 @@ def build(pipeline, web_dir: Path):
 
         try:
             voice = l0.interpret(q.text, user_id=q.user_id or VOICE_USER_ID)
+            voice.setdefault('sinhala_input', q.text)
             t_voice = round(time.time() - t0, 2)
 
             t1 = time.time()

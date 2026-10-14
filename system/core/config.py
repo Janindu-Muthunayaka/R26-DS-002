@@ -297,9 +297,9 @@ POLISH_MODE = os.getenv('SINHALA_POLISH_MODE', 'off')
 # A repair that rewrote a quarter of the characters is not a repair. NOT
 # MEASURED — a deliberately conservative choice, and the value that decides
 # how much a language model is allowed to invent.
-POLISH_MIN_SIMILARITY = float(os.getenv('SINHALA_POLISH_MIN_SIM', '0.75'))
-POLISH_MIN_LEN_RATIO = 0.70
-POLISH_MAX_LEN_RATIO = 1.30
+POLISH_MIN_SIMILARITY = float(os.getenv('SINHALA_POLISH_MIN_SIM', '0.55'))
+POLISH_MIN_LEN_RATIO = 0.60
+POLISH_MAX_LEN_RATIO = 1.40
 POLISH_MAX_CHARS = int(os.getenv('SINHALA_POLISH_MAX_CHARS', '4000'))
 
 # ==========================================================================

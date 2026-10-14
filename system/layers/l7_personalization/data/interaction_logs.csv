@@ -70,3 +70,8 @@
 69,user_001,2026-08-31T10:30:14.997265,පියවරෙන් පියවර පැහැදිලි කරන්න.,Please explain step by step.,STEP_BY_STEP,"{""detail_level"": ""step_by_step""}",,StepByStep,False
 70,user_001,2026-08-31T10:35:09.879248,පියවරෙන් පියවර පැහැදිලි කරන්න.,Please explain step by step.,STEP_BY_STEP,"{""detail_level"": ""step_by_step""}",,StepByStep,False
 71,user_001,2026-10-14T18:42:06.970561,දිගන සිදුවූයේ කුමක්ද?,What happened next?,NEXT,{},,,False
+72,user_001,2026-10-14T19:23:16.033441,මෙය පිහිටා ඇත්තේ කුමන මාර්ගයේද?,Which way is this located?,IDENTIFY_CONTENT,{},,Simple,True
+73,user_001,2026-10-14T19:26:27.157335,මෙම ලිපියේ සඳහන් ප්‍රධාන කරුණ කුමක්ද?,What is the main point of this article?,SUMMARIZE,"{""detail_level"": ""brief""}",,Simple,False
+74,user_001,2026-10-14T19:37:39.493675,මෙය පිහිටා ඇත්තේ කුමන මාර්ගයේද?,Which way is this located?,IDENTIFY_CONTENT,{},,Simple,False
+75,user_001,2026-10-14T20:00:49.838151,මෙය පිහිටා ඇත්තේ කුමන මාර්ගයේද?,Which way is this located?,IDENTIFY_CONTENT,{},,Simple,False
+76,user_001,2026-10-14T20:02:36.343271,මේකේ තත්වේ කොහොමද?,How's the situation?,IDENTIFY_CONTENT,{},,Simple,False

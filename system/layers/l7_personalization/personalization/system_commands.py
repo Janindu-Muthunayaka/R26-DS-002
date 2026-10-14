@@ -92,16 +92,32 @@ def detect_system_command(intent, english_text):
     """
     intent_key = _normalize_intent(intent)
     phrase = _normalize(english_text)
+    words = phrase.split() if phrase else []
+
+    # If the user utterance is an explanatory request or interrogative question,
+    # do NOT hijack it as a system navigation command.
+    question_starters = {"what", "who", "where", "why", "when", "how", "which", "tell", "explain", "describe"}
+    is_question = (
+        ("?" in str(english_text or "")) or
+        (bool(words) and words[0] in question_starters) or
+        (len(words) >= 2 and words[0] in {"can", "could", "is", "are", "do", "does"} and words[1] in {"you", "it", "there", "this", "that"})
+    )
+    if is_question:
+        return None
 
     for name, spec in SYSTEM_COMMANDS.items():
-        if intent_key in spec["intents"]:
-            return name
         if phrase and phrase in spec["phrases"]:
             return name
         if phrase:
             for fragment in spec.get("contains", ()):
-                if fragment in phrase:
+                if fragment in phrase and len(words) <= 5:
                     return name
+        if intent_key in spec["intents"]:
+            # Generic navigation intents only apply if the utterance is short / imperative
+            if intent_key in {"NEXT", "CONTINUE", "PROCEED", "ADVANCE", "FORWARD", "GO_ON", "GO_AHEAD"}:
+                if len(words) > 3:
+                    continue
+            return name
 
     return None
 

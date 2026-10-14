@@ -95,6 +95,7 @@ class Document(BaseModel):
     progress_log: List[str] = []
     generations: List[dict] = []
     tts_text: Optional[str] = None
+    all_articles: List[Article] = []
 
 
 class CaptureResponse(BaseModel):

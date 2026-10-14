@@ -94,6 +94,7 @@ def _stub(text: str) -> dict:
     return {
         'route': route,
         'intent': intent,
+        'sinhala_input': t,
         # NOT a translation. The stub does not translate; it passes the
         # Sinhala through under the contract's field name, so the shape is
         # right and the content is visibly untranslated.
@@ -151,6 +152,20 @@ def interpret(text: str, user_id: str = None,
     if reply is None:
         return _degraded(text, reason)
 
+    # For SYSTEM_COMMAND or navigation routes, personalization style fields
+    # do not apply; populate sensible defaults so validation succeeds and
+    # the command is mapped for local session handling.
+    if reply.get('route') == 'SYSTEM_COMMAND':
+        reply.setdefault('style_class', 'Detailed')
+        reply.setdefault('prompt_modifier', 'Provide a thorough, in-depth explanation with full context, reasoning, and supporting detail. Do not shorten or oversimplify.')
+        reply.setdefault('personalization_flags', {})
+        reply['route'] = 'LOCAL'
+        cmd = reply.get('command')
+        if cmd == 'GO_FORWARD':
+            reply['intent'] = 'NEXT'
+        elif cmd == 'STOP':
+            reply['intent'] = 'STOP'
+
     missing = [k for k in REQUIRED if k not in reply]
     if missing:
         # Loudly, rather than half-using a reply that will fail two layers
@@ -159,6 +174,7 @@ def interpret(text: str, user_id: str = None,
 
     reply.setdefault('retrieved_chunk_id', retrieved_chunk_id)
     reply.setdefault('correction_applied', None)
+    reply['sinhala_input'] = text
     # tools/stub_services.py answers this endpoint with `stub: true`. Without
     # this line a stub service passes validation and is stamped 'component4',
     # and the "nothing routed through a stub is a result" guarantee quietly

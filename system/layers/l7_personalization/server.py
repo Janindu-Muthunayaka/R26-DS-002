@@ -53,10 +53,16 @@ def interpret(req: InterpretRequest):
         final_prompt["user_profile"] = pers_stage.get("user_profile")
         final_prompt["learned"] = pers_stage.get("learned")
         
+        # Ensure default personalization fields are present even for system commands
+        final_prompt.setdefault("style_class", pers_stage.get("style_class") or "Detailed")
+        final_prompt.setdefault("prompt_modifier", "Provide a thorough, in-depth explanation with full context, reasoning, and supporting detail. Do not shorten or oversimplify.")
+        final_prompt.setdefault("personalization_flags", {})
+        
         # Ensure we add the retrieved_chunk_id back into the response if provided
         if req.retrieved_chunk_id:
             final_prompt["retrieved_chunk_id"] = req.retrieved_chunk_id
             
+        final_prompt["sinhala_input"] = req.text
         return final_prompt
         
     except Exception as e:

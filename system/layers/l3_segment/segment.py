@@ -34,9 +34,21 @@ class Segmenter:
             # Fallback (no layout model): treat whole page as one article
             return [(a, []) for a in self._create_single_article(img, [[0, 0, W, H]])]
 
-        # 1. First Pass: Detect all layout blocks on full image
-        res = list(self.layout.predict(img, batch_size=1, layout_nms=True))[0]
-        regs = [{'label': b['label'], 'box': [float(v) for v in b['coordinate']]} for b in res['boxes']]
+        # 1. First Pass: Detect all layout blocks on image
+        # Dynamically downscale very large camera frames to MAX_DET_DIM to accelerate inference on CPU
+        MAX_DET_DIM = 1600
+        scale = 1.0
+        if max(H, W) > MAX_DET_DIM:
+            scale = MAX_DET_DIM / float(max(H, W))
+            det_img = cv2.resize(img, (int(W * scale), int(H * scale)), interpolation=cv2.INTER_AREA)
+        else:
+            det_img = img
+
+        res = list(self.layout.predict(det_img, batch_size=1, layout_nms=True))[0]
+        regs = []
+        for b in res['boxes']:
+            c = [float(v) / scale for v in b['coordinate']]
+            regs.append({'label': b['label'], 'box': c, 'score': float(b.get('score', 1.0))})
         
         # Filter valid regions (text and titles)
         valid_regs = [r for r in regs if r['label'] in TITLE_LABELS | {'text', 'image_caption', 'aside_text'}]
@@ -142,38 +154,40 @@ class Segmenter:
             art_groups.append((art, group))
         return art_groups
 
-    def extract_regions(self, img, art, group=None):
+    def extract_regions(self, img, art, group=None, force_pass2=False):
         if self.layout is None:
             return art
-            
-        x1, y1, x2, y2 = int(art.box.x1), int(art.box.y1), int(art.box.x2), int(art.box.y2)
-        crop = img[y1:y2, x1:x2]
-        final_regs = []
-        if crop.size > 0:
-            # 3. Second Pass: Re-run PaddleOCR on the crop
-            crop_res = list(self.layout.predict(crop, batch_size=1, layout_nms=True))[0]
-            crop_regs = [{'label': b['label'], 'box': [float(v) for v in b['coordinate']]} for b in crop_res['boxes']]
-            
-            # Map coordinates back to full image
-            for cr in crop_regs:
-                if cr['label'] in TITLE_LABELS | {'text'}:
-                    cx1, cy1, cx2, cy2 = cr['box']
-                    mapped_box = Box(x1=cx1 + x1, y1=cy1 + y1, x2=cx2 + x1, y2=cy2 + y1)
-                    label = 'title' if cr['label'] in TITLE_LABELS else 'text'
-                    final_regs.append(Region(box=mapped_box, label=label))
-            
-            # Sort final regions
-            if final_regs:
-                title_regs = [r for r in final_regs if r.label == 'title']
-                text_regs = order_columns([ [r.box.x1, r.box.y1, r.box.x2, r.box.y2] for r in final_regs if r.label == 'text' ])
-                final_regs = title_regs + [Region(box=Box(x1=r_[0], y1=r_[1], x2=r_[2], y2=r_[3]), label='text') for r_ in text_regs]
 
-        # If second pass failed to find anything, fallback to first pass regions
-        if not final_regs and group:
+        final_regs = []
+        # Fast path: Use layout regions already detected in Pass 1 to avoid redundant heavy CPU model inference
+        if group and not force_pass2:
             for gr in group:
-                mapped_box = Box(x1=gr['box'][0], y1=gr['box'][1], x2=gr['box'][2], y2=gr['box'][3])
-                label = 'title' if gr['label'] in TITLE_LABELS else 'text'
-                final_regs.append(Region(box=mapped_box, label=label))
+                if gr['label'] in TITLE_LABELS | {'text', 'image_caption', 'aside_text'}:
+                    mapped_box = Box(x1=gr['box'][0], y1=gr['box'][1], x2=gr['box'][2], y2=gr['box'][3])
+                    label = 'title' if gr['label'] in TITLE_LABELS else 'text'
+                    final_regs.append(Region(box=mapped_box, label=label))
+
+        # Fallback to crop-level detection if Pass 1 had no regions for this article
+        if not final_regs:
+            x1, y1, x2, y2 = int(art.box.x1), int(art.box.y1), int(art.box.x2), int(art.box.y2)
+            crop = img[y1:y2, x1:x2]
+            if crop.size > 0:
+                crop_res = list(self.layout.predict(crop, batch_size=1, layout_nms=True))[0]
+                crop_regs = [{'label': b['label'], 'box': [float(v) for v in b['coordinate']]} for b in crop_res['boxes']]
+                
+                # Map coordinates back to full image
+                for cr in crop_regs:
+                    if cr['label'] in TITLE_LABELS | {'text'}:
+                        cx1, cy1, cx2, cy2 = cr['box']
+                        mapped_box = Box(x1=cx1 + x1, y1=cy1 + y1, x2=cx2 + x1, y2=cy2 + y1)
+                        label = 'title' if cr['label'] in TITLE_LABELS else 'text'
+                        final_regs.append(Region(box=mapped_box, label=label))
+
+        # Sort final regions: titles first, then text columns in proper reading order
+        if final_regs:
+            title_regs = [r for r in final_regs if r.label == 'title']
+            text_regs = order_columns([[r.box.x1, r.box.y1, r.box.x2, r.box.y2] for r in final_regs if r.label == 'text'])
+            final_regs = title_regs + [Region(box=Box(x1=r_[0], y1=r_[1], x2=r_[2], y2=r_[3]), label='text') for r_ in text_regs]
 
         art.regions = final_regs
         return art

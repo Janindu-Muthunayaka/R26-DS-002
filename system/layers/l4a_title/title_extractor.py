@@ -34,129 +34,218 @@ MIN_LINE_H   = 8      # px – skip lines shorter than this (degenerate guard)
 MIN_LINE_W   = 20     # px – skip lines narrower than this
 
 # ── CRAFT Logic ───────────────────────────────────────────────────────────────
+from threading import Lock
+
 _text_detector = None
+_detector_lock = Lock()
 
 def _get_text_detector():
     global _text_detector
-    if _text_detector is None:
-        try:
+    with _detector_lock:
+        if _text_detector is None:
             try:
-                import torchvision.models.vgg
-                if not hasattr(torchvision.models.vgg, 'model_urls'):
-                    torchvision.models.vgg.model_urls = {
-                        'vgg16_bn': 'https://download.pytorch.org/models/vgg16_bn-6c64b313.pth'
-                    }
-            except Exception:
-                pass
-            from craft_text_detector import Craft
-            import torch
-            print("  [CRAFT] Loading CRAFT TextDetection model …")
-            cuda = torch.cuda.is_available()
-            _text_detector = Craft(output_dir=None, crop_type="poly", cuda=cuda)
-            print("  [CRAFT] CRAFT TextDetection model ready.")
-        except ImportError:
-            print("  [CRAFT] ERROR: craft-text-detector not installed!")
-            _text_detector = None
+                try:
+                    import torchvision.models.vgg
+                    if not hasattr(torchvision.models.vgg, 'model_urls'):
+                        torchvision.models.vgg.model_urls = {
+                            'vgg16_bn': 'https://download.pytorch.org/models/vgg16_bn-6c64b313.pth'
+                        }
+                except Exception:
+                    pass
+                from craft_text_detector import Craft
+                import torch
+                print("  [CRAFT] Loading CRAFT TextDetection model …")
+                cuda = torch.cuda.is_available()
+                _text_detector = Craft(output_dir=None, crop_type="poly", cuda=cuda)
+                print("  [CRAFT] CRAFT TextDetection model ready.")
+            except ImportError:
+                print("  [CRAFT] ERROR: craft-text-detector not installed!")
+                _text_detector = None
     return _text_detector
 
 def _poly_to_bbox(poly: list | np.ndarray) -> tuple[int, int, int, int]:
     """Convert a polygon to an axis-aligned bounding box [x1,y1,x2,y2]."""
-    poly = np.array(poly)
+    poly = np.asarray(poly, dtype=np.float32)
     return (int(np.min(poly[:, 0])), int(np.min(poly[:, 1])),
             int(np.max(poly[:, 0])), int(np.max(poly[:, 1])))
 
-def perspective_warp(img: np.ndarray, points: np.ndarray, expand_pct: float = 0.02) -> np.ndarray:
-    """Warp a 4-point polygon into a perfectly straightened rectangle, slightly expanded."""
-    points = np.array(points, dtype=np.float32)
-    center = np.mean(points, axis=0)
-    points = points + (points - center) * expand_pct
-    
-    width_top = np.linalg.norm(points[0] - points[1])
-    width_bottom = np.linalg.norm(points[2] - points[3])
-    max_width = int(max(width_top, width_bottom))
-
-    height_left = np.linalg.norm(points[0] - points[3])
-    height_right = np.linalg.norm(points[1] - points[2])
-    max_height = int(max(height_left, height_right))
-    
-    if max_width == 0 or max_height == 0:
-        return np.zeros((1, 1, 3), dtype=np.uint8)
-
-    dst_pts = np.array([
-        [0, 0],
-        [max_width - 1, 0],
-        [max_width - 1, max_height - 1],
-        [0, max_height - 1]
-    ], dtype=np.float32)
-
-    M = cv2.getPerspectiveTransform(points, dst_pts)
-    warped = cv2.warpPerspective(img, M, (max_width, max_height), flags=cv2.INTER_CUBIC, borderMode=cv2.BORDER_REPLICATE)
-    return warped
-
-def extract_lines_with_craft(img: np.ndarray) -> list[np.ndarray]:
-    """Uses CRAFT to detect text polygons, warps them into straight line crops, and sorts them."""
-    detector = _get_text_detector()
-    if detector is None:
-        return [img]  # Fallback if CRAFT not available
-        
-    det_result = detector.detect_text(img)
-    dt_polys = det_result.get("boxes", [])
-    if len(dt_polys) == 0:
+def split_lines_fast(img: np.ndarray) -> list[np.ndarray]:
+    """Extremely fast (<2ms) line splitting using horizontal projection profiling.
+    Handles single-line and multi-line titles without needing a heavy neural network."""
+    h, w = img.shape[:2]
+    if h < 15 or w < 15:
         return [img]
-        
-    # Extract heatmaps for background polarity (optional, simplifying for title extraction)
-    # 2D Reading Order Sort (Top-to-Bottom, Left-to-Right)
-    poly_data = []
-    for p in dt_polys:
-        arr = np.array(p)
-        cx, cy = np.mean(arr, axis=0)
-        h = np.max(arr[:, 1]) - np.min(arr[:, 1])
-        poly_data.append({'poly': p, 'cx': cx, 'cy': cy, 'h': h})
-        
-    if poly_data:
-        poly_data.sort(key=lambda d: d['cy'])
-        avg_h = np.mean([d['h'] for d in poly_data])
-        y_threshold = avg_h * 0.5
-        
-        lines = []
-        current_line = [poly_data[0]]
-        for d in poly_data[1:]:
-            if abs(d['cy'] - current_line[-1]['cy']) < y_threshold:
-                current_line.append(d)
-            else:
-                lines.append(current_line)
-                current_line = [d]
-        lines.append(current_line)
-        
-        dt_polys = []
-        for line in lines:
-            line.sort(key=lambda d: d['cx'])
-            dt_polys.extend([d['poly'] for d in line])
 
+    # Quick check: if aspect ratio is very wide and height is modest, it's already a single line
+    if (w / float(h)) >= 3.0 and h <= 200:
+        return [img]
+
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY) if img.ndim == 3 else img
+    # Otsu threshold inverted (text=255, bg=0)
+    _, bin_inv = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
+
+    # Horizontal projection profile: sum active text pixels across rows
+    proj = np.sum(bin_inv > 0, axis=1)
+    min_text_px = max(6, int(w * 0.02))
+
+    is_text = proj > min_text_px
+    lines_y = []
+    in_line = False
+    start_y = 0
+    for y, active in enumerate(is_text):
+        if active and not in_line:
+            in_line = True
+            start_y = y
+        elif not active and in_line:
+            in_line = False
+            if (y - start_y) >= 14:  # minimum plausible headline line height
+                lines_y.append((start_y, y))
+    if in_line and (h - start_y) >= 14:
+        lines_y.append((start_y, h))
+
+    # If only 1 line or no lines found, return the original image
+    if len(lines_y) <= 1:
+        return [img]
+
+    # Extract horizontal slices with slight padding
     line_crops = []
-    for poly in dt_polys:
-        # Vertical Filter
-        pts = np.array(poly, dtype=np.float32)
+    pad = 4
+    for y1, y2 in lines_y:
+        py1 = max(0, y1 - pad)
+        py2 = min(h, y2 + pad)
+        c = img[py1:py2, :]
+        if c.shape[0] >= MIN_LINE_H and c.shape[1] >= MIN_LINE_W:
+            line_crops.append(c)
+
+    return line_crops if line_crops else [img]
+
+def perspective_warp(img: np.ndarray, points, expand_pct: float = 0.02) -> np.ndarray:
+    """Warp a 4-point polygon into a straightened rectangle. Falls back to bounding rect if irregular."""
+    try:
+        pts = np.asarray(points, dtype=np.float32)
+        if pts.shape[0] != 4:
+            x, y, w, h = cv2.boundingRect(pts.astype(np.int32))
+            crop = img[max(0, y):min(img.shape[0], y + h), max(0, x):min(img.shape[1], x + w)]
+            return crop if crop.size > 0 else np.zeros((1, 1, 3), dtype=np.uint8)
+
+        center = np.mean(pts, axis=0)
+        pts = pts + (pts - center) * expand_pct
+
         width_top = np.linalg.norm(pts[0] - pts[1])
         width_bottom = np.linalg.norm(pts[2] - pts[3])
-        max_w = int(max(width_top, width_bottom))
+        max_width = int(max(width_top, width_bottom))
+
         height_left = np.linalg.norm(pts[0] - pts[3])
         height_right = np.linalg.norm(pts[1] - pts[2])
-        max_h = int(max(height_left, height_right))
-        
-        if max_w < max_h:
-            continue # skip vertical words
-            
+        max_height = int(max(height_left, height_right))
+
+        if max_width <= 0 or max_height <= 0:
+            return np.zeros((1, 1, 3), dtype=np.uint8)
+
+        dst_pts = np.array([
+            [0, 0],
+            [max_width - 1, 0],
+            [max_width - 1, max_height - 1],
+            [0, max_height - 1]
+        ], dtype=np.float32)
+
+        M = cv2.getPerspectiveTransform(pts, dst_pts)
+        warped = cv2.warpPerspective(img, M, (max_width, max_height), flags=cv2.INTER_CUBIC, borderMode=cv2.BORDER_REPLICATE)
+        return warped
+    except Exception:
+        return img
+
+def extract_lines_with_craft(img: np.ndarray) -> list[np.ndarray]:
+    """Uses Fast Projection first (<2ms). Falls back to CRAFT only if needed, with resolution scaling."""
+    # Fast Path: Check if horizontal projection profiling cleanly detects the headline line(s)
+    fast_lines = split_lines_fast(img)
+    if len(fast_lines) > 1 or (img.shape[1] / max(1, img.shape[0]) >= 2.5):
+        return fast_lines
+
+    detector = _get_text_detector()
+    if detector is None:
+        return fast_lines
+
+    # Downscale large title crops before passing to CRAFT on CPU
+    h, w = img.shape[:2]
+    max_dim = max(h, w)
+    scale = 1.0
+    if max_dim > 960:
+        scale = 960.0 / max_dim
+        craft_img = cv2.resize(img, (int(w * scale), int(h * scale)), interpolation=cv2.INTER_AREA)
+    else:
+        craft_img = img
+
+    try:
+        det_result = detector.detect_text(craft_img)
+    except Exception:
+        return fast_lines
+
+    dt_polys = det_result.get("boxes", [])
+    if len(dt_polys) == 0:
+        return fast_lines
+
+    poly_data = []
+    for p in dt_polys:
+        try:
+            # Safely handle irregular point arrays to prevent inhomogeneous shape crash
+            pts = []
+            for pt in p:
+                if hasattr(pt, '__iter__') and len(pt) >= 2:
+                    pts.append([float(pt[0]) / scale, float(pt[1]) / scale])
+            if len(pts) < 3:
+                continue
+            arr = np.array(pts, dtype=np.float32)
+            cx, cy = np.mean(arr, axis=0)
+            lh = np.max(arr[:, 1]) - np.min(arr[:, 1])
+            poly_data.append({'poly': arr, 'cx': cx, 'cy': cy, 'h': lh})
+        except Exception:
+            continue
+
+    if not poly_data:
+        return fast_lines
+
+    poly_data.sort(key=lambda d: d['cy'])
+    avg_h = np.mean([d['h'] for d in poly_data])
+    y_threshold = avg_h * 0.5
+
+    lines = []
+    current_line = [poly_data[0]]
+    for d in poly_data[1:]:
+        if abs(d['cy'] - current_line[-1]['cy']) < y_threshold:
+            current_line.append(d)
+        else:
+            lines.append(current_line)
+            current_line = [d]
+    lines.append(current_line)
+
+    sorted_polys = []
+    for line in lines:
+        line.sort(key=lambda d: d['cx'])
+        sorted_polys.extend([d['poly'] for d in line])
+
+    line_crops = []
+    for poly in sorted_polys:
+        pts = np.asarray(poly, dtype=np.float32)
+        if len(pts) >= 4:
+            width_top = np.linalg.norm(pts[0] - pts[1])
+            width_bottom = np.linalg.norm(pts[2] - pts[3])
+            max_w = int(max(width_top, width_bottom))
+            height_left = np.linalg.norm(pts[0] - pts[3])
+            height_right = np.linalg.norm(pts[1] - pts[2])
+            max_h = int(max(height_left, height_right))
+            if max_w < max_h:
+                continue  # skip vertical words
+
         line_crop = perspective_warp(img, poly)
         lh, lw = line_crop.shape[:2]
         if lh < MIN_LINE_H or lw < MIN_LINE_W:
             continue
-            
-        # Pad slightly with white background (simplifying background color logic for titles)
+
         line_crop = cv2.copyMakeBorder(line_crop, 10, 10, 10, 10, cv2.BORDER_CONSTANT, value=[255, 255, 255])
         line_crops.append(line_crop)
-        
-    return line_crops if line_crops else [img]
+
+    return line_crops if line_crops else fast_lines
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 def _resize_to_height(img: np.ndarray, target_h: int) -> np.ndarray:

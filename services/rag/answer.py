@@ -148,33 +148,44 @@ def retrieve(store: VectorStore, query_text: str, retrieved_chunk_id=None,
         return [], reason
     q = qvec[0]
 
-    add(store.search(q, k=2, where={'source_type': 'ocr_current'}))
+    # 1. Retrieve all relevant chunks from the current article being read
+    current_docs = store.search(q, k=top_k, where={'source_type': 'ocr_current'})
+    add(current_docs)
 
+    # 2. Honour an anchor chunk if specified
     if retrieved_chunk_id:
         add([c for c in store.get_where('chunk_id', retrieved_chunk_id)])
 
+    # 3. Only look into past articles if current article has no content or if specifically needed
+    # and require a meaningful similarity score (>= 0.35) to prevent polluting context with unrelated scraps.
     remaining = top_k - len(collected)
-    if remaining > 0:
+    if remaining > 0 and not current_docs:
         pool = store.search(q, k=remaining + len(collected))
         add([d for d in pool
              if d.get('metadata', {}).get('source_type') != 'ocr_current'
+             and d.get('score', 0) >= 0.35
              ][:remaining])
 
     return collected[:top_k], ''
 
 
 def generate(query_text, intent, style_class, prompt_modifier, max_words,
-             evidence_docs) -> tuple:
+             evidence_docs, sinhala_query: str = '') -> tuple:
     """(answer, reason). Never raises."""
     evidence = '\n---\n'.join(d['text'] for d in evidence_docs)
     if not evidence.strip():
         return NO_EVIDENCE, ''
 
+    if sinhala_query and sinhala_query.strip() != (query_text or '').strip():
+        display_question = f"{sinhala_query}\n(English translation: {query_text})"
+    else:
+        display_question = query_text or sinhala_query or ''
+
     def ask(modifier):
         filled = PROMPT.format(
             prompt_modifier=modifier or '', max_words=max_words,
             intent=intent or '', style_class=style_class or '',
-            evidence=evidence, query_text=query_text or '')
+            evidence=evidence, query_text=display_question)
         return llm.chat([{'role': 'user', 'content': filled}],
                         temperature=0.2)
 
@@ -226,7 +237,9 @@ def run(store: VectorStore, ocr: dict, voice: dict, remember: bool = True
                 notes.append(f'remembered {kept} chunk(s) from this article')
 
     query = voice.get('english_translation') or ''
-    docs, reason = retrieve(store, query, voice.get('retrieved_chunk_id'))
+    sinhala_query = voice.get('sinhala_input') or voice.get('text') or ''
+    retrieval_query = sinhala_query or query
+    docs, reason = retrieve(store, retrieval_query, voice.get('retrieved_chunk_id'))
     if reason:
         return {'ok': False, 'intent': intent, 'answer_si': FAILED,
                 'retrieved_sources': [], 'speakable_text': FAILED,
@@ -238,7 +251,8 @@ def run(store: VectorStore, ocr: dict, voice: dict, remember: bool = True
         prompt_modifier=voice.get('prompt_modifier'),
         max_words=resolve_max_words(voice.get('style_class'),
                                     voice.get('personalization_flags')),
-        evidence_docs=docs)
+        evidence_docs=docs,
+        sinhala_query=sinhala_query)
     if answer is None:
         return {'ok': False, 'intent': intent, 'answer_si': FAILED,
                 'retrieved_sources': [], 'speakable_text': FAILED,

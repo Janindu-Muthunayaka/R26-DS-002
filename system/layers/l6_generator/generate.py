@@ -272,6 +272,11 @@ def answer(document: Document, voice: dict, mode: str = None,
             return _local(document, 'ARTICLE_2', max(0, int(cursor or 0)), warnings)
         elif '1' in q_raw or 'එක' in q_raw or 'first' in q_raw:
             return _local(document, 'ARTICLE_1', max(0, int(cursor or 0)), warnings)
+        if speakable and speakable != SI_FAILED:
+            return _out(False, 'GENERATE', str(reply.get('intent') or intent),
+                        speakable=speakable, answer_si=answer_si,
+                        sources=[s for s in (reply.get('retrieved_sources') or []) if isinstance(s, dict)],
+                        warnings=warnings, cursor=cursor)
         elif document.articles:
             res_loc = _local(document, intent, max(0, int(cursor or 0)), warnings)
             res_loc['ok'] = False
