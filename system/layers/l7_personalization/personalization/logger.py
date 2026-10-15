@@ -7,7 +7,7 @@ import json
 from datetime import datetime
 from tinydb import TinyDB, Query
 
-# data/ is a sibling of personalization/, both under voice_interaction/
+# data/ is a sibling of personalization/, both under l7_personalization/
 DATA_DIR = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
     "data"
@@ -17,6 +17,10 @@ CSV_PATH = os.path.join(DATA_DIR, "interaction_logs.csv")
 
 db = TinyDB(DB_PATH)
 interaction_logs = db.table("interaction_logs")
+# Sentences whose modifiers came only from the LLM intent (no Sinhala or
+# English word matched) — material for growing the word lists in
+# intent_detection/modifiers.py. Not exported to the CSV.
+UNMATCHED_TABLE = "unmatched_modifiers"
 
 CSV_COLUMNS = [
     "id",
@@ -98,12 +102,17 @@ def import_csv_to_db(csv_path=CSV_PATH):
     return len(records)
 
 
-def log_interaction(user_id, result, style_class=None):
+def log_interaction(user_id, result, retrieved_chunk_id=None, style_class=None):
     """
     Takes the dict returned by detect_intent_approach1() and appends a full
     record to interaction_logs in db.json AND syncs to interaction_logs.csv.
     Returns the record.
+    Supports backward compatibility for callers passing style_class as 3rd arg.
     """
+    if style_class is None and isinstance(retrieved_chunk_id, str) and retrieved_chunk_id in ("Simple", "Detailed", "StepByStep"):
+        style_class = retrieved_chunk_id
+        retrieved_chunk_id = None
+
     record = {
         "user_id": user_id,
         "timestamp": datetime.now().isoformat(),
@@ -111,15 +120,37 @@ def log_interaction(user_id, result, style_class=None):
         "english_translation": result.get("english_translation"),
         "intent": result.get("intent"),
         "personalization_flags": result.get("personalization_flags", {}),
-        # Placeholder — Component 3 will populate this once integrated.
-        # No longer supplied by the user; the reader knows which chunk is
-        # loaded, the user should never have to say so.
-        "retrieved_chunk_id": None,
+        "retrieved_chunk_id": retrieved_chunk_id or result.get("retrieved_chunk_id"),
         "style_class": style_class,
         "corrected": False   # flips to True if Step 4 later relabels this record
     }
     interaction_logs.insert(record)
     export_logs_to_csv()
+    return record
+
+
+def log_unmatched_modifiers(user_id, sinhala_text, english_text, frame, db_path=None):
+    """
+    Saves the sentence + frame to the "unmatched_modifiers" table when
+    frame["evidence"]["unmatched"] is non-empty. Returns the record, or None
+    when every modifier was found by a word (nothing saved).
+    """
+    unmatched = frame.get("evidence", {}).get("unmatched") or []
+    if not unmatched:
+        return None
+    record = {
+        "user_id": user_id,
+        "timestamp": datetime.now().isoformat(),
+        "sinhala_input": sinhala_text,
+        "english_translation": english_text,
+        "unmatched": unmatched,
+        "frame": frame,
+    }
+    if db_path:
+        with TinyDB(db_path) as other:
+            other.table(UNMATCHED_TABLE).insert(record)
+    else:
+        db.table(UNMATCHED_TABLE).insert(record)
     return record
 
 
@@ -188,5 +219,3 @@ if __name__ == "__main__":
         print(f"  Flags:       {log.get('personalization_flags')}")
         print(f"  Corrected:   {log.get('corrected')}")
         print("-" * 60)
-
-

@@ -11,33 +11,24 @@
 #
 # MATCHING IS DELIBERATELY REDUNDANT. Llama 3.2:1b invents its own intent
 # names, so a registry keyed only on intent labels will always have gaps.
-# Observed on the real stack: "ඉදිරියට යන්න" produced intent GO_AHEAD, which
-# was not in the original registry, so a navigation command leaked through
-# and received a full RAG generation prompt. We therefore match on THREE
-# signals, any one of which is sufficient:
+# We match on THREE signals:
 #     1. the intent label
 #     2. the whole normalized utterance (exact)
 #     3. a distinctive multi-word phrase contained in the utterance
 #
-# Single words like "next" or "continue" are matched ONLY as a whole
-# utterance, never as substrings — otherwise "continue explaining this
-# simply" would be misread as a navigation command.
-#
-# To add a command later, add one entry to SYSTEM_COMMANDS below.
+# Question guards protect explanatory / interrogative content requests
+# from being hijacked by generic command words.
 
 import re
 
 SYSTEM_COMMANDS = {
     "GO_FORWARD": {
         "action": "Advance to the next item",
-        # Matched against the ENTIRE normalized utterance
         "phrases": {
             "go forward", "go forwards", "forward", "move forward",
             "next", "go next", "continue", "go ahead", "go on",
             "proceed", "carry on", "keep going", "onwards",
         },
-        # Matched anywhere inside the utterance (multi-word only, to avoid
-        # hijacking content requests that happen to contain one of these)
         "contains": {
             "go forward", "go ahead", "move forward", "carry on",
             "keep going", "next page", "next article", "go to the next",
@@ -63,16 +54,57 @@ SYSTEM_COMMANDS = {
             "HALT", "CANCEL", "QUIET",
         },
     },
+    "GO_BACK": {
+        "action": "Go back to the previous item",
+        "phrases": {
+            "go back", "back", "previous", "previous one", "previous page",
+            "previous article", "previous news", "the previous one",
+        },
+        "contains": {
+            "previous page", "previous article", "previous news",
+            "go back to the previous",
+        },
+        "intents": {
+            "PREVIOUS", "GO_BACK", "BACK", "PREVIOUS_PAGE",
+            "PREVIOUS_ARTICLE", "GO_PREVIOUS",
+        },
+    },
+    "GO_TO_PAGE": {
+        "action": "Jump to a specific page (number, first or last)",
+        "phrases": {
+            "first page", "go to the first page", "last page",
+            "go to the last page",
+        },
+        "contains": set(),
+        "intents": {
+            "GO_TO_PAGE", "NAVIGATE_PAGE_NUMBER", "GO_TO_START", "GO_TO_END",
+            "PAGE_NUMBER", "GO_TO_FIRST_PAGE", "GO_TO_LAST_PAGE",
+        },
+    },
+    "GO_TO_SECTION": {
+        "action": "Jump to a named section of the newspaper",
+        "phrases": set(),
+        "contains": set(),
+        "intents": {
+            "GO_TO_SECTION", "NAVIGATE_SECTION", "OPEN_SECTION",
+        },
+    },
+    "READ_HEADLINES": {
+        "action": "Read out the list of headlines",
+        "phrases": {
+            "headlines", "read the headlines", "read headlines",
+            "what are the headlines",
+        },
+        "contains": set(),
+        "intents": {
+            "READ_HEADLINES", "HEADLINES", "LIST_HEADLINES",
+        },
+    },
 }
 
 
 def _normalize(text):
-    """Lowercase, remove ALL punctuation, collapse whitespace.
-
-    Removing punctuation globally (not just trailing) matters because NLLB
-    emits detached punctuation — "Go ahead ." — which a simple rstrip leaves
-    as "go ahead " and fails to match.
-    """
+    """Lowercase, remove ALL punctuation, collapse whitespace."""
     if not text:
         return ""
     cleaned = re.sub(r"[^\w\s]", " ", str(text).lower())
@@ -99,7 +131,7 @@ def detect_system_command(intent, english_text):
     question_starters = {"what", "who", "where", "why", "when", "how", "which", "tell", "explain", "describe"}
     is_question = (
         ("?" in str(english_text or "")) or
-        (bool(words) and words[0] in question_starters) or
+        (bool(words) and words[0] in question_starters and intent_key not in {"READ_HEADLINES"}) or
         (len(words) >= 2 and words[0] in {"can", "could", "is", "are", "do", "does"} and words[1] in {"you", "it", "there", "this", "that"})
     )
     if is_question:

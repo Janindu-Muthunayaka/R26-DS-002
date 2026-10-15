@@ -45,8 +45,9 @@ class SessionStore:
             return
         self.purge()
         existing_answer = self.get_answer(job)
+        existing_cursor = self.cursor(job)
         self._items.pop(job, None)          # re-inserting moves it to newest
-        self._items[job] = [self._clock(), document, 0, existing_answer]
+        self._items[job] = [self._clock(), document, existing_cursor, existing_answer]
         while len(self._items) > self.max_items:
             self._items.popitem(last=False)
 

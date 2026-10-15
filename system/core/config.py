@@ -272,9 +272,13 @@ RAG_MODE      = os.getenv('SINHALA_RAG_MODE', 'off')          # off | http
 RAG_URL       = os.getenv('SINHALA_RAG_URL', 'http://127.0.0.1:8102')
 RAG_TIMEOUT_S = float(os.getenv('SINHALA_RAG_TIMEOUT', '3000'))
 
-# 'stub' keeps Layer 4A returning the article unchanged; 'mat' reads the
-# headline with Janindu's sin_raw model. See layers/l4a_title/title.py.
+# 'stub' keeps Layer 4A returning the article unchanged; 'mat' or other values enable it.
+# See layers/l4a_title/title.py.
 TITLE_MODE = os.getenv('SINHALA_TITLE_MODE', 'mat')
+# Headline extraction engine: 'raw' (default, fast direct OCR without MAT skeletonization),
+# 'hybrid' (runs RAW and MAT in parallel with confidence gate), or 'mat' (MAT skeletonized only).
+TITLE_ENGINE = os.getenv('SINHALA_TITLE_ENGINE', 'raw').lower()
+
 
 # See core/session.py. Neither number is measured; both are design choices.
 SESSION_TTL_S = float(os.getenv('SINHALA_SESSION_TTL', '1800'))   # 30 min

@@ -1,6 +1,6 @@
 # personalization/main_flow.py
 # Full personalization flow: Sinhala input -> personalized prompt for
-# Component 3 (RAG generation).
+# Component 3 (RAG generation) + Adaptive Speed & Delivery determination.
 #
 # Pure pipeline logic — no printing. Returns one structured result broken
 # into stages so any caller (app.py, compare_users.py, a future backend)
@@ -8,24 +8,46 @@
 #
 # DECISION ORDER for this turn's style:
 #   1. Explicit intent      (SIMPLIFY / ELABORATE / STEP_BY_STEP)  -> obey outright
-#   2. Explicit flags       (language_style / detail_level)        -> obey outright
+#   2. Style words in the English translation (text keywords)      -> obey outright
 #   3. The user's own model (prediction from their history)        -> only if 1 & 2 silent
 #
-# LEARNING RULE: only cases 1 and 2 (plus corrections) are real user
-# evidence, and only they train the model. Case 3 is a prediction and is
-# NEVER learned from — learning from your own guess is the self-training
-# loop that made the previous version a majority-class predictor.
+# SPEED RATE:
+#   Determined dynamically per user profile and clamped strictly between 0.8 and 1.3.
 
-from intent_detection.approach1_nllb_llm import detect_intent_approach1
-from personalization.logger import (
-    log_interaction, get_last_interaction,
-    update_last_interaction_style, update_interaction_style_by_timestamp
-)
-from personalization.diagnostic import (
-    style_from_intent, style_from_flags, style_from_keywords, detect_correction_signal
-)
-from personalization.style_model import predict_style, learn_style, get_user_summary
-from personalization.system_commands import detect_system_command, get_command_action
+from datetime import datetime
+
+try:
+    from intent_detection.approach1_nllb_llm import detect_intent_approach1
+    from intent_detection.modifiers import build_frame
+    from personalization.logger import (
+        log_interaction, log_unmatched_modifiers, get_last_interaction,
+        update_last_interaction_style, update_interaction_style_by_timestamp
+    )
+    from personalization.diagnostic import (
+        style_from_intent, style_from_keywords, detect_correction_signal
+    )
+    from personalization.style_model import predict_style, learn_style, get_user_summary
+    from personalization.system_commands import detect_system_command, get_command_action
+    from delivery.voice_profile import (
+        get_profile as get_delivery_profile, save_profile as save_delivery_profile
+    )
+    from delivery.feedback import apply_turn as apply_delivery_turn
+except ImportError:
+    from layers.l7_personalization.intent_detection.approach1_nllb_llm import detect_intent_approach1
+    from layers.l7_personalization.intent_detection.modifiers import build_frame
+    from layers.l7_personalization.personalization.logger import (
+        log_interaction, log_unmatched_modifiers, get_last_interaction,
+        update_last_interaction_style, update_interaction_style_by_timestamp
+    )
+    from layers.l7_personalization.personalization.diagnostic import (
+        style_from_intent, style_from_keywords, detect_correction_signal
+    )
+    from layers.l7_personalization.personalization.style_model import predict_style, learn_style, get_user_summary
+    from layers.l7_personalization.personalization.system_commands import detect_system_command, get_command_action
+    from layers.l7_personalization.delivery.voice_profile import (
+        get_profile as get_delivery_profile, save_profile as save_delivery_profile
+    )
+    from layers.l7_personalization.delivery.feedback import apply_turn as apply_delivery_turn
 
 STYLE_PROMPT_MODIFIERS = {
     "Simple": "Use very simple everyday words, short sentences, avoid technical terms.",
@@ -34,18 +56,23 @@ STYLE_PROMPT_MODIFIERS = {
 }
 
 
-def handle_voice_command(sinhala_text, user_id):
+def handle_voice_command(sinhala_text, user_id, retrieved_chunk_id=None):
     """
     Runs one full turn.
+    retrieved_chunk_id: optional chunk identifier from Component 3.
 
     Returns:
       {
         "stt_stage":             {...},
         "intent_stage":          <detect_intent_approach1() output>,
         "personalization_stage": {...decisions and why...},
-        "final_prompt":          <payload for Component 3>
+        "final_prompt":          <payload for Component 3 and Reader App>,
+        "frame":                 <intent_detection.modifiers.build_frame() output:
+                                  {intent, modifiers, evidence}>
       }
     """
+    now = datetime.now()
+
     # ── Stage 1: STT output ──
     stt_stage = {"sinhala_input": sinhala_text}
 
@@ -53,24 +80,38 @@ def handle_voice_command(sinhala_text, user_id):
     intent_stage = detect_intent_approach1(sinhala_text)
     intent = intent_stage["intent"]
     english_text = intent_stage["english_translation"]
-    flags = intent_stage.get("personalization_flags", {})
+    frame = build_frame(sinhala_text, english_text, intent)
+    log_unmatched_modifiers(user_id, sinhala_text, english_text, frame)
+
+    # ── Delivery & Speed determination (0.8 - 1.3) ──
+    delivery_profile = get_delivery_profile(user_id)
+    mods = frame.get("modifiers", {})
+    if mods.get("speed") or mods.get("repeat"):
+        delivery_profile, _ = apply_delivery_turn(delivery_profile, frame, now)
+        save_delivery_profile(user_id, delivery_profile)
+
+    # Ensure rate is strictly clamped between 0.8 and 1.3
+    user_speed = round(max(0.8, min(1.3, float(delivery_profile.get("rate", 1.0)))), 2)
 
     # ── Stage 3: System command check (before anything personalization) ──
     # Navigation commands carry no style information, so they bypass the
     # model entirely and are never used as training evidence.
     command = detect_system_command(intent, english_text)
     if command:
-        log_interaction(user_id, intent_stage, style_class=None)
+        log_interaction(user_id, intent_stage, retrieved_chunk_id=retrieved_chunk_id, style_class=None)
         return {
             "stt_stage": stt_stage,
             "intent_stage": intent_stage,
             "personalization_stage": {
                 "is_system_command": True,
                 "command": command,
-                "style_class": None,
+                "style_class": "Detailed",
                 "style_source": None,
                 "learned": False,
                 "correction_applied": None,
+                "user_profile": get_user_summary(user_id),
+                "speed": user_speed,
+                "delivery_profile": delivery_profile,
             },
             "final_prompt": {
                 "route": "SYSTEM_COMMAND",
@@ -78,7 +119,15 @@ def handle_voice_command(sinhala_text, user_id):
                 "action": get_command_action(command),
                 "intent": intent,
                 "english_translation": english_text,
+                "style_class": "Detailed",
+                "prompt_modifier": STYLE_PROMPT_MODIFIERS["Detailed"],
+                "personalization_flags": {},
+                "retrieved_chunk_id": retrieved_chunk_id,
+                "correction_applied": None,
+                "speed": user_speed,
+                "speech_rate": user_speed,
             },
+            "frame": frame,
         }
 
     # ── Stage 4: Personalization ──
@@ -92,19 +141,14 @@ def handle_voice_command(sinhala_text, user_id):
         learn_style(user_id, last["english_translation"], corrected_style)
 
     # 4b. Log this turn (style filled in below)
-    log_interaction(user_id, intent_stage)
+    log_interaction(user_id, intent_stage, retrieved_chunk_id=retrieved_chunk_id)
 
     # 4c. Decide this turn's style, in strict priority order
     intent_style = style_from_intent(intent)
-    # Flags are grounded against the translation — an unsupported flag from
-    # the 1B model is rejected rather than trusted (see diagnostic.py).
-    flag_style = style_from_flags(flags, english_text)
     keyword_style = style_from_keywords(english_text)
 
     if intent_style:
         style, style_source, is_evidence = intent_style, "explicit_intent", True
-    elif flag_style:
-        style, style_source, is_evidence = flag_style, "explicit_flag", True
     elif keyword_style:
         style, style_source, is_evidence = keyword_style, "text_keywords", True
     else:
@@ -132,6 +176,8 @@ def handle_voice_command(sinhala_text, user_id):
             "learned": is_evidence,
             "correction_applied": corrected_style,
             "user_profile": get_user_summary(user_id),
+            "speed": user_speed,
+            "delivery_profile": delivery_profile,
         },
         "final_prompt": {
             "route": "GENERATE",
@@ -139,7 +185,11 @@ def handle_voice_command(sinhala_text, user_id):
             "english_translation": english_text,
             "style_class": style,
             "prompt_modifier": prompt_modifier,
-            "personalization_flags": flags,
+            "personalization_flags": {},   # kept for the Component 3 contract
+            "retrieved_chunk_id": retrieved_chunk_id,
             "correction_applied": corrected_style,
+            "speed": user_speed,
+            "speech_rate": user_speed,
         },
+        "frame": frame,
     }

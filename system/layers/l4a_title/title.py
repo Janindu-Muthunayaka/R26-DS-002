@@ -34,20 +34,19 @@ OFF BY DEFAULT (`SINHALA_TITLE_MODE`). `stub` keeps the previous behaviour.
 """
 from __future__ import annotations
 
+import concurrent.futures
 import os
 import subprocess
-import tempfile
 
 import cv2
+import numpy as np
 
-from core.config import (TITLE_MODE, TITLE_TARGET_BAND_PX, TITLE_TESS_LANG,
+from core.config import (TITLE_ENGINE, TITLE_MODE, TITLE_TARGET_BAND_PX, TITLE_TESS_LANG,
                          TITLE_TESS_PSM, TITLE_TESSDATA)
 from core.schemas import Article
 
 MAX_REGION_PX = 4000 * 1500
 
-
-import concurrent.futures
 from .title_extractor import extract_and_stitch_title, binarize_strip, mat_process
 
 
@@ -59,27 +58,29 @@ class TitleResult(tuple):
         instance = super().__new__(cls, (hybrid, why))
         instance.hybrid = hybrid
         instance.why = why
-        instance.raw = raw or hybrid
-        instance.mat = mat or hybrid
+        instance.raw = raw
+        instance.mat = mat
         instance.conf_raw = conf_raw
         instance.conf_mat = conf_mat
         return instance
 
 
 def _ocr_strip(img_bgr: np.ndarray, lang: str, psm: str = '13') -> tuple[str, float]:
-    """Runs Tesseract on an image strip and returns (text, mean_confidence)."""
-    tmp = None
+    """Runs Tesseract directly in-memory via stdin streaming and returns (text, mean_confidence)."""
     try:
-        with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as t:
-            tmp = t.name
-        cv2.imwrite(tmp, img_bgr)
+        ok, buf = cv2.imencode('.png', img_bgr)
+        if not ok:
+            return '', 0.0
+        img_bytes = buf.tobytes()
+
         env = dict(os.environ)
         env['TESSDATA_PREFIX'] = str(TITLE_TESSDATA)
 
         # Run TSV to extract word-level text and confidences
         r_tsv = subprocess.run(
-            ['tesseract', tmp, 'stdout', '--oem', '1',
+            ['tesseract', 'stdin', 'stdout', '--oem', '1',
              '--psm', psm, '-l', lang, '-c', 'tessedit_create_tsv=1'],
+            input=img_bytes,
             capture_output=True, encoding='utf-8', errors='replace', env=env, timeout=120)
 
         words = []
@@ -103,8 +104,9 @@ def _ocr_strip(img_bgr: np.ndarray, lang: str, psm: str = '13') -> tuple[str, fl
         # Fallback to plain stdout if TSV parsing returned empty text
         if not text:
             r_plain = subprocess.run(
-                ['tesseract', tmp, 'stdout', '--oem', '1',
+                ['tesseract', 'stdin', 'stdout', '--oem', '1',
                  '--psm', psm, '-l', lang],
+                input=img_bytes,
                 capture_output=True, encoding='utf-8', errors='replace', env=env, timeout=120)
             if r_plain.returncode == 0 and r_plain.stdout:
                 text = ' '.join(r_plain.stdout.split()).strip()
@@ -113,17 +115,10 @@ def _ocr_strip(img_bgr: np.ndarray, lang: str, psm: str = '13') -> tuple[str, fl
         return text, avg_conf
     except Exception:
         return '', 0.0
-    finally:
-        if tmp:
-            try:
-                os.unlink(tmp)
-            except OSError:
-                pass
 
 
 def read_title_region(img, box, band_h: float = 0.0) -> TitleResult:
-    """OCR one headline region running RAW and MAT models in parallel
-    with a confidence-driven hybrid decision gate."""
+    """OCR one headline region according to TITLE_ENGINE ('raw', 'hybrid', or 'mat')."""
     x0, y0, x1, y1 = (int(v) for v in box)
     h, w = img.shape[:2]
     x0, y0 = max(0, x0 - 8), max(0, y0 - 8)
@@ -136,7 +131,7 @@ def read_title_region(img, box, band_h: float = 0.0) -> TitleResult:
     if crop.shape[0] * crop.shape[1] > MAX_REGION_PX:
         return TitleResult('', 'region too large to be a headline')
 
-    # Stage 3: CRAFT Line Extraction + Stitching
+    # Stage 3: Fast Line Extraction + Stitching
     try:
         stitched_strip = extract_and_stitch_title(crop)
     except Exception as e:
@@ -145,7 +140,7 @@ def read_title_region(img, box, band_h: float = 0.0) -> TitleResult:
     if stitched_strip is None:
         return TitleResult('', 'CRAFT could not extract/stitch any text lines')
 
-    # Stage 4: Binarization + Morphological Smoothing (MAT)
+    # Stage 4: Binarization
     try:
         _, binarized_bgr = binarize_strip(stitched_strip, is_dark_bg=False)
     except Exception as e:
@@ -154,13 +149,43 @@ def read_title_region(img, box, band_h: float = 0.0) -> TitleResult:
     if not TITLE_TESSDATA.is_dir():
         return TitleResult('', f'tessdata not found at {TITLE_TESSDATA}')
 
-    # Generate Medial Axis Transform (MAT) skeletonized strip
+    engine = (TITLE_ENGINE or 'raw').lower()
+
+    # Fast RAW path: Bypasses MAT skeletonization and runs single in-memory sin_raw OCR
+    if engine == 'raw':
+        text_raw, conf_raw = _ocr_strip(binarized_bgr, 'sin_raw', '13')
+        return TitleResult(
+            hybrid=text_raw,
+            why='' if text_raw else 'raw OCR produced empty text',
+            raw=text_raw,
+            mat='',
+            conf_raw=conf_raw,
+            conf_mat=0.0
+        )
+
+    # MAT-only path: Computes MAT skeleton and runs sin_custom
+    if engine == 'mat':
+        try:
+            mat_bgr, _ = mat_process(binarized_bgr)
+        except Exception:
+            mat_bgr = binarized_bgr
+        text_mat, conf_mat = _ocr_strip(mat_bgr, 'sin_custom', '13')
+        return TitleResult(
+            hybrid=text_mat,
+            why='' if text_mat else 'mat OCR produced empty text',
+            raw='',
+            mat=text_mat,
+            conf_raw=0.0,
+            conf_mat=conf_mat
+        )
+
+    # Hybrid path (configurable mode for research / benchmark evaluation):
+    # Runs RAW and MAT pipelines in parallel with confidence gate
     try:
         mat_bgr, _ = mat_process(binarized_bgr)
     except Exception:
         mat_bgr = binarized_bgr
 
-    # Approach 1: Run RAW and MAT pipelines in parallel
     text_raw, conf_raw = '', 0.0
     text_mat, conf_mat = '', 0.0
     with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
@@ -175,7 +200,7 @@ def read_title_region(img, box, band_h: float = 0.0) -> TitleResult:
         except Exception:
             text_mat, conf_mat = '', 0.0
 
-    # Dynamic Confidence-based Selection (Approach 1)
+    # Dynamic Confidence-based Selection
     if text_mat and text_raw:
         if conf_mat > conf_raw:
             text_hybrid = text_mat
@@ -253,5 +278,13 @@ def extract(img, article: Article) -> Article:
     if hybrid_texts:
         article.title_hybrid = ' '.join(hybrid_texts)
 
-    article.title = article.title_hybrid or article.title_raw or article.title_mat
+    engine = (TITLE_ENGINE or 'raw').lower()
+    if engine == 'raw':
+        article.title = article.title_raw
+    elif engine == 'mat':
+        article.title = article.title_mat
+    else:
+        article.title = article.title_hybrid or article.title_raw or article.title_mat
+
     return article
+
