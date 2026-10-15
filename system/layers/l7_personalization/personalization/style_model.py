@@ -9,8 +9,6 @@
 #    gave explicit evidence of their preference (an explicit SIMPLIFY /
 #    ELABORATE / STEP_BY_STEP intent, an explicit personalization flag, or a
 #    correction of a previous turn). It NEVER learns from its own prediction.
-#    Previously every turn was learned from, including the model's own
-#    guesses, so the model just reinforced whatever it already believed.
 #
 # 2. PER-USER MODELS. Each user_id gets its own independent pipeline. One
 #    user's evidence never influences another user's predictions.
@@ -51,7 +49,7 @@ USER_DOMINANT_STYLES = {
     "user_002": "Detailed",
     "user_003": "StepByStep",
 }
-DOMINANT_BASE_MIN = 0.45  # Dominant style does not drop below 45%
+DOMINANT_BASE_MIN = 0.45
 
 
 def _enforce_base_limits(state, user_id):
@@ -65,7 +63,6 @@ def _enforce_base_limits(state, user_id):
         if hist.get(dominant, 0) <= 0:
             hist[dominant] = 1.0
         return
-    # Ensure hist[dominant] / (hist[dominant] + others) >= DOMINANT_BASE_MIN (0.45)
     min_dominant = others * (DOMINANT_BASE_MIN / (1.0 - DOMINANT_BASE_MIN))
     if hist.get(dominant, 0) < min_dominant:
         hist[dominant] = min_dominant
@@ -75,7 +72,6 @@ def _fresh_user_state(user_id=None):
     dominant = USER_DOMINANT_STYLES.get(user_id)
     hist = {cls: 0.0 for cls in STYLE_CLASSES}
     if dominant:
-        # Base initial weights: dominant 55%, other two 22.5% each
         other_classes = [c for c in STYLE_CLASSES if c != dominant]
         hist[dominant] = 1.10
         hist[other_classes[0]] = 0.45
@@ -147,7 +143,7 @@ def _history_majority(state, user_id=None):
         _enforce_base_limits(state, user_id)
     hist = state["history"]
     if sum(hist.values()) == 0:
-        return USER_DOMINANT_STYLES.get(user_id)
+        return USER_DOMINANT_STYLES.get(user_id, DEFAULT_STYLE)
     return max(hist, key=hist.get)
 
 
@@ -235,7 +231,7 @@ def reset_user(user_id):
 
 
 def reset_all():
-    """Wipes every user's learned profile."""
+    """Wipes every user's learned profile and restores baseline profiles."""
     _users.clear()
     for uid in USER_DOMINANT_STYLES:
         _users[uid] = _fresh_user_state(uid)

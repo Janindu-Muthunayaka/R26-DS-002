@@ -111,6 +111,8 @@ def _stub(text: str) -> dict:
             'history_weights': {'Simple': 0.0, 'Detailed': 0.0, 'StepByStep': 0.0},
             'dominant_preference': None
         },
+        'speed': 1.0,
+        'speech_rate': 1.0,
         'learned': False,
     }
 
@@ -174,6 +176,8 @@ def interpret(text: str, user_id: str = None,
 
     reply.setdefault('retrieved_chunk_id', retrieved_chunk_id)
     reply.setdefault('correction_applied', None)
+    reply.setdefault('speed', 1.0)
+    reply.setdefault('speech_rate', 1.0)
     reply['sinhala_input'] = text
     # tools/stub_services.py answers this endpoint with `stub: true`. Without
     # this line a stub service passes validation and is stamped 'component4',

@@ -45,7 +45,7 @@
 44,user_001,2026-08-31T06:28:45.889508,එය සරල වචනවලින් පැහැදිලි කරන්න.,Explain it in simple words.,EXPLAIN,"{""language_style"": ""simple""}",,Simple,False
 45,user_001,2026-08-31T06:29:04.899467,පියවරෙන් පියවර පැහැදිලි කරන්න.,Please explain step by step.,EXPLAIN,"{""detail_level"": ""step_by_step""}",,StepByStep,False
 46,user_002,2026-08-31T06:44:28.061902,පියවරෙන් පියවර පැහැදිලි කරන්න.,Please explain step by step.,EXPLAIN,"{""detail_level"": ""step_by_step""}",,StepByStep,False
-47,user_002,2026-08-31T06:45:07.375403,එය සරල වචනවලින් පැහැදිලි කරන්න.,Explain it in simple words.,EXPLAIN,"{""language_style"": ""simple""}",,Simple,False
+47,user_002,2026-08-31T06:45:07.375403,එය සරල වචනවලින් පැහැදිලි කරන්න.,Explain it in simple words.,EXPLAIN,"{""language_style"": ""simple""}",,Detailed,True
 48,user_003,2026-08-31T08:11:22.870412,මට 'ලිපිය 1: බෝක්කුව කැඩිලා' ගැන විස්තර කරන්න.,"Describe to me the ""Lippie 1: Boccowa Cadila"".",IDENTIFY_CONTENT,{},,Detailed,False
 49,user_003,2026-08-31T08:11:47.293235,එය සරල වචනවලින් පැහැදිලි කරන්න.,Explain it in simple words.,EXPLAIN,"{""language_style"": ""simple""}",,Simple,False
 50,user_003,2026-08-31T08:12:07.888143,පියවරෙන් පියවර පැහැදිලි කරන්න.,Please explain step by step.,EXPLAIN,"{""detail_level"": ""step_by_step""}",,StepByStep,False
@@ -86,3 +86,72 @@
 85,user_001,2026-10-15T06:20:33.449118,මේක ගාල්ලේ කොහෙද තියෙන්නේ?,Where's this in the garage?,IDENTIFY_CONTENT,{},,Simple,False
 86,user_001,2026-10-15T06:21:27.689795,2 වන ලිපිය පදනම් වී ඇත්තේ කොහේද?,Where is Article 2 based?,IDENTIFY_CONTENT,{},,Simple,False
 87,user_001,2026-10-15T06:21:46.633246,මේක ගාල්ලේ කොහෙද තියෙන්නේ?,Where's this in the garage?,IDENTIFY_CONTENT,{},,Simple,False
+88,user_test_verify,2026-10-15T14:12:54.144848,ටෙස්ට් විමසුම,test query,EXPLAIN,{},,Simple,False
+89,user_001,2026-10-15T14:16:07.525949,නවත්වන්න,Stop it,STOP,{},,,False
+90,user_001,2026-10-15T14:16:53.665762,නවත්වන්න,Stop it,STOP,{},,,False
+91,user_test_verify,2026-10-15T14:43:43.170385,ටෙස්ට් විමසුම,test query,EXPLAIN,{},,Simple,False
+92,user_001,2026-10-15T14:46:10.773123,සරල කරන්න,Simplify,SIMPLIFY,{},,Simple,False
+93,user_001,2026-10-15T14:46:14.065798,කරුණාකර මෙය ඉතාමත් සරලව පහදා දෙන්න,Please make this very simple.,SIMPLIFY,{},,Simple,False
+94,user_001,2026-10-15T14:46:17.643581,කෙටියෙන් කියන්න,Let me tell you briefly.,SUMMARIZE,{},,Simple,False
+95,user_002,2026-10-15T14:46:20.349646,තව විස්තර කරන්න,More details,ELABORATE,{},,Detailed,False
+96,user_002,2026-10-15T14:46:23.884414,මෙය තව ටිකක් විස්තර කරන්න පුළුවන්ද,Can you explain this a little more?,EXPLAIN,{},,Detailed,False
+97,user_002,2026-10-15T14:46:27.498115,සම්පූර්ණ විස්තරය දෙන්න,Give me the full details,ELABORATE,{},,Detailed,False
+98,user_003,2026-10-15T14:46:30.446884,පියවරෙන් පියවර පහදන්න,Step by step,STEP_BY_STEP,{},,StepByStep,False
+99,user_003,2026-10-15T14:46:33.185489,එකින් එක කියන්න,One by one .,STEP_BY_STEP,{},,StepByStep,False
+100,user_003,2026-10-15T14:46:35.894397,පියවර වශයෙන් විස්තර කරන්න,Step by step description,STEP_BY_STEP,{},,StepByStep,False
+101,user_001,2026-10-15T14:46:39.261679,මෙහි ඇත්තේ කුමක්ද,What's wrong with that?,ASK_QUESTION,{},,Simple,False
+102,user_002,2026-10-15T14:46:42.407409,මෙහි ඇත්තේ කුමක්ද,What's wrong with that?,ASK_QUESTION,{},,Detailed,False
+103,user_003,2026-10-15T14:46:50.763459,මෙහි ඇත්තේ කුමක්ද,What's wrong with that?,ASK_QUESTION,{},,StepByStep,False
+104,user_test_verify,2026-10-15T14:47:09.729346,ටෙස්ට් විමසුම,test query,EXPLAIN,{},,Simple,False
+105,user_test_verify,2026-10-15T15:44:27.967453,ටෙස්ට් විමසුම,test query,EXPLAIN,{},,Simple,False
+106,user_test_verify,2026-10-15T15:47:34.542448,ටෙස්ට් විමසුම,test query,EXPLAIN,{},,Simple,False
+107,user_test_verify,2026-10-15T20:43:21.365200,ටෙස්ට් විමසුම,test query,EXPLAIN,{},,Simple,False
+108,user_test_verify,2026-10-15T20:49:26.223146,ටෙස්ට් විමසුම,test query,EXPLAIN,{},,Simple,False
+109,user_001,2026-10-15T21:08:56.970235,ඒක කියවන්න,Read it .,READ_ALOUD,{},,Simple,False
+110,user_001,2026-10-15T21:15:59.925294,ලිපිය ඒක කියවන්න,Let's read it.,READ_ALOUD,{},,Simple,False
+111,user_001,2026-10-15T21:16:54.726244,ආයතනයේ නම මොකක්ද,What is the name of the institution?,ASK_QUESTION,{},,Simple,False
+112,user_001,2026-10-15T21:17:16.379635,කියන්න,Tell me what you want .,ASK_QUESTION,{},,Simple,False
+113,user_001,2026-10-15T21:17:39.011966,නම කියන්නම්,I'll tell you the name.,ASK_QUESTION,{},,Simple,False
+114,user_001,2026-10-15T21:17:59.668687,ඉලවශයෙන් නිකුත් කළ දිනය කවද්ද,When is the date of issue of the certificate?,ASK_QUESTION,{},,Simple,False
+115,user_001,2026-10-15T21:18:26.740777,නැවත කියවන්න,Read it again,REPEAT,{},,Simple,False
+116,user_001,2026-10-15T21:18:44.209076,හෙමින් කියන්න,Slowly say,CHANGE_SPEED,{},,Simple,False
+117,user_001,2026-10-15T21:19:02.158068,ලිපිය එක කියවන්න,Read the article.,READ_ALOUD,{},,Simple,False
+118,user_001,2026-10-15T21:19:44.794407,වේගය වැඩි කරන්න,Increase speed,CHANGE_SPEED,{},,Simple,False
+119,user_001,2026-10-15T21:20:01.555353,පිය එක වේගය වැඩිකර කියවන්න,Read more about the speed of the train,READ_ALOUD,{},,Detailed,False
+120,user_001,2026-10-15T21:20:31.951316,ලිපිය එක වේගය අඩුවෙන් කියන්න,Let's say the article is slow.,CHANGE_SPEED,{},,Detailed,False
+121,user_001,2026-10-15T21:21:53.875475,පිය දෙක කියවන්න,Read the two pages,READ_ALOUD,{},,Detailed,False
+122,user_001,2026-10-15T21:22:36.432287,ලිපිය එක කියවන්න,Read the article.,READ_ALOUD,{},,Detailed,False
+123,user_001,2026-10-15T21:22:58.928066,ලිපි කීයක් තියෙනවද,How many articles do you have ?,ASK_QUESTION,{},,Detailed,False
+124,user_001,2026-10-15T21:23:31.058270,ඔබ සතුව ලිපි කීයක් තියද,You have a lot of articles?,ASK_QUESTION,{},,Detailed,False
+125,user_001,2026-10-15T21:58:11.235867,ලිපිය දෙක කියන්න,Let me tell you two,ASK_QUESTION,{},,Detailed,False
+126,user_001,2026-10-15T21:58:44.395932,ලිපිය හත කියන්නම්,I'll tell you what.,NONE,{},,Detailed,False
+127,user_001,2026-10-15T21:59:11.796605,පස්සෙන් ලිපිය කියන්න,I'm going to write you a letter.,WRITE_LETTER,{},,Detailed,False
+128,user_001,2026-10-15T22:00:59.262997,කවුරු ගැනද කිව්වේ,Who did you say that about ?,ASK_QUESTION,{},,Simple,True
+129,user_001,2026-10-15T22:01:26.536181,වේගයෙන් කියන්න,Tell me fast,SUMMARIZE,{},,Simple,False
+130,user_001,2026-10-15T22:01:53.378166,තව වේගේ වැඩි කරන්න,More speed increase,CHANGE_SPEED,{},,Detailed,False
+131,user_001,2026-10-15T22:02:15.265577,හයියෙන් කියන්න,Say it out loud,READ_ALOUD,{},,Simple,False
+132,user_001,2026-10-15T22:02:40.675203,හෙමින් කියන්න,Slowly say,CHANGE_SPEED,{},,Simple,False
+133,user_001,2026-10-15T22:02:54.845348,නැවත හෙමින් කියන්න,I'll say it again.,REPEAT,{},,StepByStep,True
+134,user_001,2026-10-15T22:03:18.721146,පියවරෙන් පියවර කියන්නේ,Step by step says,STEP_BY_STEP,{},,StepByStep,False
+135,user_001,2026-10-15T22:03:34.443840,පහ පියවරෙන් පියවර කියන්න,Five steps to say step by step,STEP_BY_STEP,{},,StepByStep,False
+136,user_001,2026-10-15T22:03:50.921490,ලිපිය පහකින්,Article 5 of the,READ_ALOUD,{},,StepByStep,True
+137,user_001,2026-10-15T22:04:02.760577,එය පියවරෙන් පියවර කියන්නේ,It's step by step saying,STEP_BY_STEP,{},,Simple,True
+138,user_001,2026-10-15T22:07:04.877668,ලිපිය එකකින්,In one letter,SUMMARIZE,{},,Simple,False
+139,user_001,2026-10-15T22:08:09.797501,ලිපිය තුන කියවන්න,Read the article,READ_ALOUD,{},,Simple,False
+140,user_001,2026-10-15T22:09:21.778490,කුමන වසරද සඳහන් කරයි,Which year is mentioned,ASK_QUESTION,{},,Simple,False
+141,user_001,2026-10-15T22:09:35.913484,හයියෙන් කියන්න,Say it out loud,READ_ALOUD,{},,Simple,False
+142,user_001,2026-10-15T22:10:14.653584,වේගය වැඩි කරන්න,Increase speed,CHANGE_SPEED,{},,Simple,False
+143,user_001,2026-10-15T22:10:31.897060,ලිපිය දෙක තවත් වේගයෙන් කියන්න,Let me tell you something more quickly.,SUMMARIZE,{},,Simple,False
+144,user_001,2026-10-15T22:10:54.047197,දෙක කියන්න,Two to say,REPEAT,{},,Detailed,True
+145,user_001,2026-10-15T22:11:29.386843,එය වැඩි කරන්න,Make it more,ELABORATE,{},,Detailed,False
+146,user_001,2026-10-15T22:11:57.280106,වේගය අඩුකර කියන්නේ,The speed of the slowing is,CHANGE_SPEED,{},,Simple,False
+147,user_001,2026-10-15T22:12:26.495254,වේගය අඩුකර කියන්න,Slow down the speed,CHANGE_SPEED,{},,Simple,False
+148,user_001,2026-10-15T22:12:44.020184,ලිපිය දෙක වේගය අඩුකර කියන්න,"The article is entitled ""The two speed of the train""",IDENTIFY_CONTENT,{},,StepByStep,True
+149,user_001,2026-10-15T22:13:00.900963,පියවර කියන්න,Step by step,STEP_BY_STEP,{},,StepByStep,False
+150,user_001,2026-10-15T22:13:25.632945,ගියවරින් පියවර කියවන්න,Read the next step,NEXT,{},,StepByStep,False
+151,user_001,2026-10-15T22:13:49.855186,මට ඒක තේරුනේ නෑ නැවත කියන්න,I don't understand. I can't say it again.,EXPLAIN,{},,Simple,False
+152,user_001,2026-10-15T22:28:00.361898,ලිපිය දෙක කියවන්න,Read the article,READ_ALOUD,{},,Simple,False
+153,user_001,2026-10-15T22:28:34.786655,මහතාගේ නම කුමක්ද,What is the name of the man?,ASK_QUESTION,{},,StepByStep,True
+154,user_001,2026-10-15T22:29:00.640609,දෙක පියවරෙන් පියවර කියන්න,"Two steps , step by step",STEP_BY_STEP,{},,Detailed,True
+155,user_001,2026-10-15T22:29:30.216678,වැඩිගෙන් කියන්න,Tell me more,ELABORATE,{},,Detailed,False
+156,user_001,2026-10-15T22:29:54.585076,වේගය වැඩි කරන්න,Increase speed,CHANGE_SPEED,{},,Simple,False

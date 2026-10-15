@@ -169,6 +169,8 @@ class Answer(BaseModel):
     style_source: Optional[str] = None
     user_profile: Optional[dict] = None
     learned: bool = False
+    speed: float = 1.0                    # speech rate for mobile TTS (0.8 - 1.3)
+    speech_rate: float = 1.0              # alias for mobile TTS
     warnings: List[str] = []
     timings: dict = {}
     error: Optional[str] = None

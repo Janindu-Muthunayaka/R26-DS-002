@@ -1,13 +1,61 @@
 # Build Spec: Personalization Module (Component 4)
 ## Sinhala Assistive Reader — Adaptive Conversational Personalization
-### v2 — adds model persistence + correction-signal learning
+### v3 — adds Adaptive Voice Delivery, Multi-Modal Modifiers (Phase 2b), Evidence-Only Online Learning & Unified LLM Backend
+*(Previously v2: model persistence + correction-signal learning)*
 
-Paste this entire document to your coding agent as one task. Follow the steps
-in order — do not skip ahead. Each step has a "Verify" block; run it and
-confirm the expected output before moving to the next step.
+---
 
-**What changed from v1:** two fixes have been built into this version based
-on a design review:
+## 🚀 Upgrades Implemented in v3 (from Upgrade Package)
+
+Based on the upgrade package (`system/layers/l7_personalization/ugradePackage`), Component 4 has been upgraded with the following enhancements while preserving 100% backward compatibility with Layer 0 (`l0_voice`), Layer 6 (`l6_generator`), and the system integration contract:
+
+### 1. Stage 4: Adaptive Voice Delivery (`delivery/`)
+- **Speech Planner (`delivery/planner.py`)**: Transforms Sinhala response text into timed, segmented speech plans (`split_segments`) with base pauses calibrated per style (Simple: 400ms, Detailed: 600ms, StepByStep: 800ms), ordinals splitting, abbreviation handling, and checkpoint previews (`"කරුණු 3ක් තියෙනවා"`). Also generates `formatted_text` via `format_text_with_tts_pauses` inserting natural pause tokens (`... \n`, `.  \n`, `. \n`) so downstream TTS engines naturally pause without custom millisecond timing commands.
+- **Voice Delivery Profiles (`delivery/voice_profile.py`)**: Persistent per-user delivery settings (`voice_profiles` table in `data/db.json`) tracking `rate`, `pause_scale`, `chunk_size`, `clean_streak`, and `last_spoken` for repeat tracking.
+- **Adaptive Feedback Rules (`delivery/feedback.py`)**: Disentangles delivery complaints (rate/speed, repeat, "didn't hear") from content requests (simpler/more detailed style). Dynamically tunes rate strictly within **0.8–1.3** (default 1.0), pause scaling, and handles interactive check-in questions (`"දිගටම කියන්නද?"` -> yes/no).
+- **Turn Orchestration (`delivery/turn.py`)**: Coordinates fast-path routing for short repeat/speed commands (≤3 words) without incurring heavy LLM calls, handles check-ins, and logs playback outcomes.
+- **Laptop Player & Mock C3 (`delivery/laptop_player.py`, `delivery/mock_c3.py`)**: Offline demo capabilities with gTTS caching, keyboard interruption (Enter), and canned responses across styles for testing without live phone hardware.
+
+### 2. Multi-Modal Modifiers & Lexical Grounding (`intent_detection/modifiers.py`)
+- **Sinhala Lexical Detection**: Extracts `repeat`, `speed` (`slower` / `faster`), and `style` (`Simple`, `Detailed`, `StepByStep`) directly from Sinhala STT input using native morphology (`ආයෙත්`, `හෙමින්`, `වේගෙන්`, `කෙටියෙන්`, `විස්තර`, `පියවරෙන්`) before translation loss.
+- **Frame Construction (`build_frame`)**: Emits `{intent, modifiers: {repeat, speed, style}, evidence: {...}}` consumed by both the personalization loop and delivery feedback.
+- **Intent Fusion (`fuse_intent`)**: Overrides incorrect machine translation / LLM classifications (e.g. `PREVIOUS` or `UNKNOWN` from `ආයෙ`) with `REPEAT` when clear Sinhala repeat tokens are present.
+- **Unmatched Modifiers Tracking**: Identifies when LLM intents suggest a modifier that lacked lexical word matches, logged to `unmatched_modifiers` in `db.json` for vocabulary expansion.
+
+### 3. Pure OpenAI LLM Backend (`intent_detection/llm_backend.py`)
+- Removed Ollama and llama-cpp dependencies completely; intent classification uses a dedicated OpenAI API backend (`gpt-4o`/`gpt-4o-mini`) configured via `OPENAI_API_KEY` in `system/.env`.
+- Includes robust JSON fence stripping (`parse_json_reply`) and canonical label normalization.
+
+### 4. Intent Detection Refinement (`intent_detection/approach1_nllb_llm.py`)
+- **Option A Production Prompt**: Upgraded to Option A with canonical labels including `CHANGE_SPEED`, structured disambiguation rules, and aliases.
+- **Hallucination Protection**: Eliminates unreliable `personalization_flags` requests to the 1B LLM, preventing false style signals from poisoning the training state.
+
+### 5. Dominant Baseline Presets & Evidence-Only Online Learning (`personalization/style_model.py`)
+- **Dominant Base Limits (Old Method Enforced)**: Preserves permanent dominant baseline minimums (`DOMINANT_BASE_MIN = 0.45` / 45%) for demo profiles: `user_001` (Simple), `user_002` (Detailed), and `user_003` (StepByStep). Starting from blank has been completely removed.
+- **Evidence-Only Learning**: The model learns solely from genuine user signals (explicit style intents, lexical keywords, or user corrections) and never trains on its own predictions, eliminating majority-class collapse.
+- **Per-User Pipelines**: Each `user_id` maintains an independent pipeline (`_get_user_state`) with recency-weighted history decay (`HISTORY_DECAY = 0.85`).
+- **User-History Features**: TF-IDF text features are combined with normalized user confirmation history weights, allowing the model to generalize style preferences across neutral content queries.
+
+### 6. System Commands Expansion with Question Protection (`personalization/system_commands.py`)
+- Extends system navigation vocabulary to `GO_FORWARD`, `STOP`, `GO_BACK`, `GO_TO_PAGE`, `GO_TO_SECTION`, `READ_HEADLINES`.
+- Incorporates question starter heuristics (`question_starters` and token length limits) to protect conversational inquiries from being misclassified as navigation commands.
+
+### 7. Dual Persistence Logging (`personalization/logger.py`)
+- Synchronous persistence to both TinyDB (`data/db.json`) and CSV (`data/interaction_logs.csv` with `utf-8-sig` encoding).
+- Added `log_unmatched_modifiers` for vocabulary analytics.
+
+### 8. Integration Contract & Server Endpoints (`server.py`)
+- Exposes `POST /interpret` and `GET /profile/{user_id}` adhering strictly to the contract required by `l0_voice/voice.py` and `l6_generator/adapters.py`.
+- Additionally exposes `POST /deliver` (speech plan generation) and `GET /delivery-profile/{user_id}` for adaptive delivery consumers.
+
+### 9. Mobile TTS Delivery & Cleanup (Round 2 Finalization)
+- **Natural TTS Pauses (Option A)**: In `system/app/server.py`, the `speakable` field returned to the mobile app is formatted through `format_text_with_tts_pauses()` according to the active style (`StepByStep` -> `... \n`, `Detailed` -> `.  \n`, `Simple` -> `. \n`). Downstream mobile TTS naturally pauses on punctuation without confusing the client with multiple text fields.
+- **Speed & Speech Rate Serialization**: Added `speed` (0.8–1.3) and `speech_rate` to `core.schemas.Answer`, `l0_voice/voice.py`, and `system/app/server.py` so the mobile application receives the delivery speed directly in the HTTP JSON response for `POST /ask`.
+- **Duplicate & Unnecessary File Cleanup**: Safely deleted `system/layers/l7_personalization/ugradePackage/` after successful verification and user consent, and removed redundant demo scripts (`compare_users.py`, `app.py`).
+
+---
+
+## What changed from v1 (v2 notes):
 1. The style model now saves itself to disk after every learning update and
    reloads on startup (fixes: model forgetting everything on restart).
 2. The system now detects when a user corrects a previous style guess

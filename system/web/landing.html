@@ -488,6 +488,132 @@
         .node2.tint-b {
             border-color: var(--split-b);
         }
+
+        /* ---- History Weights Badge ---- */
+        .hw-badge {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-top: 5px;
+            padding: 5px 8px;
+            border: 1.5px solid var(--accent);
+            border-radius: 7px;
+            cursor: pointer;
+            background: rgba(217,119,87,0.07);
+            transition: background 0.18s, box-shadow 0.18s;
+            user-select: none;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .hw-badge:hover {
+            background: rgba(217,119,87,0.16);
+            box-shadow: 0 0 0 2px rgba(217,119,87,0.20);
+        }
+        .hw-badge .hw-dots {
+            display: flex;
+            gap: 3px;
+            align-items: center;
+            flex-shrink: 0;
+        }
+        .hw-badge .hw-dots span {
+            display: inline-block;
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        .hw-badge .hw-label {
+            font-size: 9.5px;
+            font-weight: 600;
+            color: var(--ink);
+            flex: 1;
+            white-space: nowrap;
+        }
+        .hw-badge .hw-arrow {
+            font-size: 11px;
+            color: var(--accent-deep);
+            flex-shrink: 0;
+            line-height: 1;
+        }
+
+        /* ---- History Weights Overlay ---- */
+        #hw-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.72);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+        }
+        #hw-overlay.active {
+            display: flex;
+        }
+        #hw-popup {
+            background: var(--card);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 24px 28px 20px;
+            box-shadow: 0 8px 40px rgba(0,0,0,0.55);
+            min-width: 480px;
+            max-width: 94vw;
+            position: relative;
+        }
+        #hw-popup h4 {
+            margin: 0 0 4px;
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--ink);
+            letter-spacing: -0.01em;
+        }
+        #hw-popup .hw-subtitle {
+            font-size: 11px;
+            color: var(--ink-soft);
+            margin-bottom: 18px;
+        }
+        #hw-chart-canvas {
+            width: 100%;
+            border-radius: 8px;
+            display: block;
+            background: var(--bg-soft);
+        }
+        #hw-popup .hw-legend {
+            display: flex;
+            gap: 18px;
+            margin-top: 14px;
+            font-size: 11px;
+            color: var(--ink-soft);
+            justify-content: center;
+        }
+        #hw-popup .hw-legend span {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        #hw-popup .hw-legend i {
+            display: inline-block;
+            width: 22px;
+            height: 3px;
+            border-radius: 2px;
+        }
+        .hw-close {
+            position: absolute;
+            top: 14px;
+            right: 16px;
+            background: none;
+            border: none;
+            color: var(--ink-soft);
+            font-size: 18px;
+            cursor: pointer;
+            line-height: 1;
+            padding: 2px 6px;
+            border-radius: 4px;
+            transition: color 0.15s, background 0.15s;
+        }
+        .hw-close:hover {
+            color: var(--ink);
+            background: var(--bg-soft);
+        }
     </style>
 </head>
 
@@ -737,12 +863,31 @@
         <div class="lightbox-content" onclick="event.stopPropagation()"></div>
     </div>
 
+    <!-- History Weights Overlay -->
+    <div id="hw-overlay" onclick="closeHWOverlay(event)">
+        <div id="hw-popup" onclick="event.stopPropagation()">
+            <button class="hw-close" onclick="closeHWOverlay()">&#x2715;</button>
+            <h4>📈 History Weights Over Turns</h4>
+            <div class="hw-subtitle">Tracks how the system weighted each response style across conversation turns</div>
+            <canvas id="hw-chart-canvas" height="220"></canvas>
+            <div class="hw-legend">
+                <span><i style="background:#6EE7B7;"></i> Simple</span>
+                <span><i style="background:#93C5FD;"></i> Detail</span>
+                <span><i style="background:#FCA5A5;"></i> Step by Step</span>
+            </div>
+        </div>
+    </div>
+
     <script>
         let lastJob = null;
         let lastGenCount = -1;
         
         let activeUser = 'user_001';
         let activeUserProfile = null;
+
+        // Accumulates history_weights per turn for the chart
+        // Each entry: { turn: N, simple: 0.x, detail: 0.x, step_by_step: 0.x }
+        let weightHistory = [];
 
         function closeLightbox(e) {
             document.getElementById('lightbox').classList.remove('active');
@@ -881,6 +1026,102 @@
                 el.textContent = id;
                 el.parentElement.classList.remove('has-data');
                 el.style.color = 'var(--ink-soft)';
+            }
+        }
+
+        function getTurnSpeed(turn, latestRef, doc) {
+            if (!turn) return '1.0x';
+            if (turn.speed != null) return formatSpeed(turn.speed);
+            if (turn.speech_rate != null) return formatSpeed(turn.speech_rate);
+            if (turn.user_profile && turn.user_profile.rate != null) return formatSpeed(turn.user_profile.rate);
+            if (turn.delivery_profile && turn.delivery_profile.rate != null) return formatSpeed(turn.delivery_profile.rate);
+            
+            // Check query for Sinhala / English speed requests
+            const q = ((turn.query || turn.sinhala_input || '') + ' ' + (turn.english_translation || '')).toLowerCase();
+            if (q.includes('හෙමින්') || q.includes('සෙමින්') || q.includes('slow')) return '0.9x';
+            if (q.includes('වේගෙන්') || q.includes('ඉක්මනින්') || q.includes('fast') || q.includes('quick')) return '1.2x';
+
+            // If this is the latest turn or matching last_answer
+            if (latestRef && (latestRef.speed != null || latestRef.speech_rate != null)) {
+                return formatSpeed(latestRef.speed || latestRef.speech_rate);
+            }
+            if (doc && doc.last_answer && (doc.last_answer.speed != null || doc.last_answer.speech_rate != null)) {
+                return formatSpeed(doc.last_answer.speed || doc.last_answer.speech_rate);
+            }
+
+            // Check activeUserProfile
+            if (typeof activeUserProfile !== 'undefined' && activeUserProfile) {
+                if (activeUserProfile.rate != null) return formatSpeed(activeUserProfile.rate);
+                if (activeUserProfile.speed != null) return formatSpeed(activeUserProfile.speed);
+            }
+
+            // Presets by active user
+            if (typeof activeUser !== 'undefined') {
+                if (activeUser === 'user_001') return '1.1x';
+                if (activeUser === 'user_002') return '0.9x';
+                if (activeUser === 'user_003') return '1.0x';
+            }
+            return '1.0x';
+        }
+
+        function formatSpeed(val) {
+            const num = parseFloat(val);
+            if (isNaN(num)) return '1.0x';
+            return num.toFixed(1) + 'x';
+        }
+
+        function getTurnPauseInfo(turn) {
+            if (!turn) return getPauseBadge('none');
+            if (turn.pause_level) return getPauseBadge(String(turn.pause_level).toLowerCase());
+            if (turn.pause) return getPauseBadge(String(turn.pause).toLowerCase());
+
+            const route = (turn.route || '').toUpperCase();
+            if (route === 'LOCAL' || route === 'SYSTEM_COMMAND') {
+                return getPauseBadge('none');
+            }
+
+            const style = (turn.style_class || '').toLowerCase();
+            if (style.includes('stepbystep') || style.includes('step')) {
+                return getPauseBadge('high');
+            } else if (style.includes('detailed') || style.includes('detail')) {
+                return getPauseBadge('mid');
+            } else if (style.includes('simple')) {
+                return getPauseBadge('low');
+            }
+            return getPauseBadge('none');
+        }
+
+        function getPauseBadge(level) {
+            switch (level) {
+                case 'high':
+                    return {
+                        level: 'high',
+                        bg: 'rgba(248, 113, 113, 0.15)',
+                        border: 'rgba(248, 113, 113, 0.35)',
+                        color: '#FCA5A5'
+                    };
+                case 'mid':
+                    return {
+                        level: 'mid',
+                        bg: 'rgba(252, 211, 77, 0.15)',
+                        border: 'rgba(252, 211, 77, 0.35)',
+                        color: '#FCD34D'
+                    };
+                case 'low':
+                    return {
+                        level: 'low',
+                        bg: 'rgba(110, 231, 183, 0.15)',
+                        border: 'rgba(110, 231, 183, 0.35)',
+                        color: '#6EE7B7'
+                    };
+                case 'none':
+                default:
+                    return {
+                        level: 'none',
+                        bg: 'rgba(255, 255, 255, 0.05)',
+                        border: 'var(--card-border)',
+                        color: 'var(--ink-soft)'
+                    };
             }
         }
 
@@ -1086,17 +1327,18 @@
                             else if (srcName === 'text_keywords') srcName = 'Text Keywords';
                             persHtml += `<b style="font-size:10px;">Source:</b> <span style="font-size:10.5px;color:var(--accent-deep);">${srcName}</span><br>`;
                         }
+                        const latestSpeed = getTurnSpeed(latest, latest, doc);
+                        const latestPause = getTurnPauseInfo(latest);
+                        persHtml += `<div style="margin-top: 3px; font-size: 9.5px;"><b>Speed:</b> <span style="color:var(--accent-deep); font-weight:600;">${latestSpeed}</span> &nbsp;·&nbsp; <b>Pause:</b> <span style="color:${latestPause.color}; font-weight:600; text-transform:capitalize;">${latestPause.level}</span></div>`;
                         
                         const prof = activeUserProfile || latest.user_profile;
                         if (prof) {
                             persHtml += `<div style="margin-top: 6px; font-size: 9.5px; border-top: 1px dashed var(--card-border); padding-top: 6px;">`;
                             persHtml += `<b>Confirmed Turns:</b> ${prof.n_confirmed || 0}<br>`;
                             if (prof.history_weights) {
-                                persHtml += `<b>History Weights:</b><br>`;
-                                for (let [k, v] of Object.entries(prof.history_weights)) {
-                                    let pct = Math.round(v * 100);
-                                    persHtml += `• ${k}: ${pct}%<br>`;
-                                }
+                                // Sync weightHistory with current turns
+                                syncWeightHistory(generations, prof.history_weights);
+                                persHtml += buildHWBadge(prof.history_weights);
                             }
                             persHtml += `</div>`;
                         }
@@ -1107,11 +1349,17 @@
                         // Show intent and prompt for every turn
                         persHtml += `<div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line);">`;
                         generations.forEach((turn) => {
+                            const speedVal = getTurnSpeed(turn, latest, doc);
+                            const pauseInfo = getTurnPauseInfo(turn);
                             persHtml += `<div style="margin-bottom: 8px;">`;
                             persHtml += `<b>Turn ${turn.index} Detected Intent:</b> <span style="color:var(--accent-deep);">${turn.intent || 'NONE'}</span><br>`;
                             if (turn.style_class) {
                                 persHtml += `<b>Turn ${turn.index} Applied Style:</b> <span style="color:var(--accent-deep);">${turn.style_class}</span><br>`;
                             }
+                            persHtml += `<div style="display:flex; flex-wrap:wrap; gap:4px; margin: 3px 0 4px; font-size: 9.5px;">`;
+                            persHtml += `<span style="background:rgba(217, 119, 87, 0.12); border:1px solid rgba(217, 119, 87, 0.28); border-radius:4px; padding:1px 6px; color:var(--accent-deep); font-weight:600;">⚡ Speed: ${speedVal}</span>`;
+                            persHtml += `<span style="background:${pauseInfo.bg}; border:1px solid ${pauseInfo.border}; border-radius:4px; padding:1px 6px; color:${pauseInfo.color}; font-weight:600;">⏸ Pause: ${pauseInfo.level}</span>`;
+                            persHtml += `</div>`;
                             if (turn.prompt_modifier) {
                                 persHtml += `<div style="margin-top: 4px; padding: 4px 6px; background: rgba(0,0,0,0.03); border-radius: 4px; font-family: monospace; font-size: 9.5px; border-left: 2px solid var(--accent); white-space: pre-wrap; word-break: break-word;">"${turn.prompt_modifier}"</div>`;
                             }
@@ -1156,17 +1404,18 @@
                             else if (srcName === 'text_keywords') srcName = 'Text Keywords';
                             persHtml += `<b style="font-size:10px;">Source:</b> <span style="font-size:10.5px;color:var(--accent-deep);">${srcName}</span><br>`;
                         }
+                        const ansTopSpeed = getTurnSpeed(ans, ans, doc);
+                        const ansTopPause = getTurnPauseInfo(ans);
+                        persHtml += `<div style="margin-top: 3px; font-size: 9.5px;"><b>Speed:</b> <span style="color:var(--accent-deep); font-weight:600;">${ansTopSpeed}</span> &nbsp;·&nbsp; <b>Pause:</b> <span style="color:${ansTopPause.color}; font-weight:600; text-transform:capitalize;">${ansTopPause.level}</span></div>`;
                         
                         const prof = activeUserProfile || ans.user_profile;
                         if (prof) {
                             persHtml += `<div style="margin-top: 6px; font-size: 9.5px; border-top: 1px dashed var(--card-border); padding-top: 6px;">`;
                             persHtml += `<b>Confirmed Turns:</b> ${prof.n_confirmed || 0}<br>`;
                             if (prof.history_weights) {
-                                persHtml += `<b>History Weights:</b><br>`;
-                                for (let [k, v] of Object.entries(prof.history_weights)) {
-                                    let pct = Math.round(v * 100);
-                                    persHtml += `• ${k}: ${pct}%<br>`;
-                                }
+                                // Single-turn: treat as turn 1
+                                syncWeightHistorySingle(prof.history_weights);
+                                persHtml += buildHWBadge(prof.history_weights);
                             }
                             persHtml += `</div>`;
                         }
@@ -1175,9 +1424,18 @@
                         }
 
                         // Show intent and prompt for this turn
+                        const ansSpeed = getTurnSpeed(ans, ans, doc);
+                        const ansPause = getTurnPauseInfo(ans);
                         persHtml += `<div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line);">`;
                         persHtml += `<div style="margin-bottom: 8px;">`;
                         persHtml += `<b>Turn 1 Intent:</b> <span style="color:var(--accent-deep);">${ans.intent || 'NONE'}</span><br>`;
+                        if (ans.style_class) {
+                            persHtml += `<b>Turn 1 Style:</b> <span style="color:var(--accent-deep);">${ans.style_class}</span><br>`;
+                        }
+                        persHtml += `<div style="display:flex; flex-wrap:wrap; gap:4px; margin: 3px 0 4px; font-size: 9.5px;">`;
+                        persHtml += `<span style="background:rgba(217, 119, 87, 0.12); border:1px solid rgba(217, 119, 87, 0.28); border-radius:4px; padding:1px 6px; color:var(--accent-deep); font-weight:600;">⚡ Speed: ${ansSpeed}</span>`;
+                        persHtml += `<span style="background:${ansPause.bg}; border:1px solid ${ansPause.border}; border-radius:4px; padding:1px 6px; color:${ansPause.color}; font-weight:600;">⏸ Pause: ${ansPause.level}</span>`;
+                        persHtml += `</div>`;
                         if (ans.prompt_modifier) {
                             persHtml += `<div style="margin-top: 4px; padding: 4px 6px; background: rgba(0,0,0,0.03); border-radius: 4px; font-family: monospace; font-size: 9.5px; border-left: 2px solid var(--accent); white-space: pre-wrap; word-break: break-word;">"${ans.prompt_modifier}"</div>`;
                         }
@@ -1272,6 +1530,198 @@
 
         setInterval(pollLatest, 1500);
         pollLatest();
+
+        // ============================================================
+        // History Weights Chart Logic
+        // ============================================================
+
+        // Palette for known style keys — dynamically extended for unknowns
+        const HW_PALETTE = [
+            '#6EE7B7', '#93C5FD', '#FCA5A5', '#FCD34D', '#C4B5FD', '#F9A8D4'
+        ];
+        // Maps actual API key → assigned colour (built on first hw object seen)
+        let hwKeyColorMap = {};
+
+        function getHWColor(key) {
+            if (hwKeyColorMap[key]) return hwKeyColorMap[key];
+            const idx = Object.keys(hwKeyColorMap).length % HW_PALETTE.length;
+            hwKeyColorMap[key] = HW_PALETTE[idx];
+            return hwKeyColorMap[key];
+        }
+
+        /** Build a compact clickable badge — just dots + label + arrow */
+        function buildHWBadge(hw) {
+            const keys = Object.keys(hw);
+            // Pre-register colours so dots match chart lines
+            keys.forEach(k => getHWColor(k));
+            const dots = keys.map(k =>
+                `<span style="background:${getHWColor(k)};"></span>`
+            ).join('');
+            return `<div class="hw-badge" onclick="openHWOverlay()" title="Click to view weight history chart">
+                        <div class="hw-dots">${dots}</div>
+                        <span class="hw-label">History Weights</span>
+                        <span class="hw-arrow">&#x2197;</span>
+                    </div>`;
+        }
+
+        /** Sync weightHistory — stores ALL keys from the actual hw object */
+        function syncWeightHistory(generations, hw) {
+            const lastTurn = generations.length > 0 ? generations[generations.length - 1].index : 1;
+            const alreadyHas = weightHistory.find(e => e.turn === lastTurn);
+            if (!alreadyHas) {
+                const entry = { turn: lastTurn };
+                for (const k of Object.keys(hw)) entry[k] = hw[k] != null ? hw[k] : 0;
+                weightHistory.push(entry);
+                weightHistory.sort((a, b) => a.turn - b.turn);
+            } else {
+                for (const k of Object.keys(hw)) alreadyHas[k] = hw[k] != null ? hw[k] : 0;
+            }
+        }
+
+        function syncWeightHistorySingle(hw) {
+            if (weightHistory.length === 0) {
+                const entry = { turn: 1 };
+                for (const k of Object.keys(hw)) entry[k] = hw[k] != null ? hw[k] : 0;
+                weightHistory.push(entry);
+            } else {
+                const e = weightHistory[0];
+                for (const k of Object.keys(hw)) e[k] = hw[k] != null ? hw[k] : 0;
+            }
+        }
+
+        function openHWOverlay() {
+            document.getElementById('hw-overlay').classList.add('active');
+            drawHWChart();
+        }
+
+        function closeHWOverlay(e) {
+            if (e && e.target !== document.getElementById('hw-overlay')) return;
+            document.getElementById('hw-overlay').classList.remove('active');
+        }
+
+        function drawHWChart() {
+            const canvas = document.getElementById('hw-chart-canvas');
+            const dpr = window.devicePixelRatio || 1;
+            const W = canvas.parentElement.clientWidth - 56;
+            const H = 220;
+            canvas.style.width  = W + 'px';
+            canvas.style.height = H + 'px';
+            canvas.width  = W * dpr;
+            canvas.height = H * dpr;
+
+            const ctx = canvas.getContext('2d');
+            ctx.scale(dpr, dpr);
+
+            const PAD = { top: 20, right: 24, bottom: 38, left: 44 };
+            const cw = W - PAD.left - PAD.right;
+            const ch = H - PAD.top  - PAD.bottom;
+
+            // Background
+            ctx.fillStyle = '#1C1B19';
+            ctx.fillRect(0, 0, W, H);
+
+            const data = weightHistory;
+            const n = data.length;
+
+            // Grid lines (horizontal 0%, 25%, 50%, 75%, 100%)
+            ctx.strokeStyle = '#2E2C29';
+            ctx.lineWidth = 1;
+            for (let p = 0; p <= 4; p++) {
+                const yp = PAD.top + ch - (p / 4) * ch;
+                ctx.beginPath();
+                ctx.moveTo(PAD.left, yp);
+                ctx.lineTo(PAD.left + cw, yp);
+                ctx.stroke();
+                // Y label
+                ctx.fillStyle = '#6B6560';
+                ctx.font = '9px -apple-system, sans-serif';
+                ctx.textAlign = 'right';
+                ctx.fillText((p * 25) + '%', PAD.left - 6, yp + 3.5);
+            }
+
+            if (n === 0) {
+                ctx.fillStyle = '#6B6560';
+                ctx.font = '12px -apple-system, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('No data yet — make some conversation turns', PAD.left + cw / 2, PAD.top + ch / 2);
+                return;
+            }
+
+            // Derive keys dynamically from the stored data
+            const allKeys = data.length > 0
+                ? Object.keys(data[0]).filter(k => k !== 'turn')
+                : [];
+
+            // X axis labels (Turn N)
+            ctx.fillStyle = '#6B6560';
+            ctx.font = '9px -apple-system, sans-serif';
+            ctx.textAlign = 'center';
+            data.forEach((d, i) => {
+                const x = n === 1 ? PAD.left + cw / 2 : PAD.left + (i / (n - 1)) * cw;
+                const y = PAD.top + ch + 16;
+                ctx.fillText('T' + d.turn, x, y);
+            });
+
+            // X axis label
+            ctx.fillStyle = '#4C4640';
+            ctx.font = '9px -apple-system, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('Conversation Turn', PAD.left + cw / 2, PAD.top + ch + 30);
+
+            // Draw each series using dynamic keys + dynamic colours
+            for (const key of allKeys) {
+                const color = getHWColor(key);
+                ctx.save();
+                ctx.shadowColor = color;
+                ctx.shadowBlur = 6;
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 2.5;
+                ctx.lineJoin = 'round';
+                ctx.lineCap  = 'round';
+
+                ctx.beginPath();
+                data.forEach((d, i) => {
+                    const x = n === 1 ? PAD.left + cw / 2 : PAD.left + (i / (n - 1)) * cw;
+                    const y = PAD.top + ch - (d[key] || 0) * ch;
+                    if (i === 0) ctx.moveTo(x, y);
+                    else        ctx.lineTo(x, y);
+                });
+                ctx.stroke();
+                ctx.restore();
+
+                // Dots + value labels
+                data.forEach((d, i) => {
+                    const x = n === 1 ? PAD.left + cw / 2 : PAD.left + (i / (n - 1)) * cw;
+                    const y = PAD.top + ch - (d[key] || 0) * ch;
+                    ctx.beginPath();
+                    ctx.arc(x, y, 3.5, 0, Math.PI * 2);
+                    ctx.fillStyle = color;
+                    ctx.fill();
+                    ctx.fillStyle = color;
+                    ctx.font = 'bold 8px -apple-system, sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(Math.round((d[key] || 0) * 100) + '%', x, y - 8);
+                });
+            }
+
+            // Dynamic legend at bottom of canvas area
+            if (allKeys.length > 0) {
+                const legY = H - 6;
+                const totalW = allKeys.length * 90;
+                let legX = PAD.left + cw / 2 - totalW / 2;
+                ctx.font = '9px -apple-system, sans-serif';
+                ctx.textAlign = 'left';
+                allKeys.forEach(k => {
+                    const col = getHWColor(k);
+                    ctx.fillStyle = col;
+                    ctx.fillRect(legX, legY - 4, 18, 3);
+                    ctx.fillStyle = '#9C948A';
+                    const label = k.replace(/_/g, ' ');
+                    ctx.fillText(label, legX + 22, legY);
+                    legX += 90;
+                });
+            }
+        }
     </script>
 </body>
 

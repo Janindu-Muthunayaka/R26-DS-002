@@ -240,7 +240,6 @@ def build(pipeline, web_dir: Path):
                 
                 if res.get('speakable'):
                     reply['body'] = res['speakable']
-                    reply['title'] = ''  # Clear raw title so it isn't spoken before the scan
                 elif getattr(doc, 'tts_text', None):
                     reply['body'] = doc.tts_text
                 else:
@@ -359,9 +358,21 @@ def build(pipeline, web_dir: Path):
         for w in res['warnings']:
             print(f'[ask {q.job}] {w}')
 
+        # Natural TTS pause formatting (Option A) so mobile TTS naturally pauses on punctuation
+        speakable_out = res['speakable']
+        if speakable_out:
+            try:
+                from layers.l7_personalization.delivery.planner import format_text_with_tts_pauses
+                speakable_out = format_text_with_tts_pauses(
+                    speakable_out,
+                    style=voice.get('style_class', 'Detailed')
+                )
+            except Exception:
+                pass
+
         ans_dict = Answer(
             ok=res['ok'], job=q.job, route=res['route'], intent=res['intent'],
-            speakable=res['speakable'], answer_si=res['answer_si'],
+            speakable=speakable_out, answer_si=res['answer_si'],
             sources=res['sources'],
             english_translation=voice.get('english_translation', ''),
             style_class=voice.get('style_class', ''),
@@ -370,6 +381,8 @@ def build(pipeline, web_dir: Path):
             style_source=voice.get('style_source'),
             user_profile=voice.get('user_profile'),
             learned=voice.get('learned', False),
+            speed=float(voice.get('speed', 1.0)),
+            speech_rate=float(voice.get('speech_rate', voice.get('speed', 1.0))),
             warnings=res['warnings'],
             timings={'voice': t_voice, 'generate': t_gen,
                      'total': round(time.time() - t0, 2)},
