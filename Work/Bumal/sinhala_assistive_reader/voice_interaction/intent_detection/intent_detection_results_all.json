@@ -1,0 +1,1645 @@
+{
+  "summary": {
+    "a1": {
+      "label": "Approach 1 (NLLB+Llama)",
+      "correct": 35,
+      "total": 45,
+      "accuracy": 77.78,
+      "avg_latency": 1.525
+    },
+    "a2": {
+      "label": "Approach 2 (Qwen direct)",
+      "correct": 1,
+      "total": 45,
+      "accuracy": 2.22,
+      "avg_latency": 5.195
+    },
+    "a3": {
+      "label": "Approach 3 (trained)",
+      "correct": 28,
+      "total": 45,
+      "accuracy": 62.22,
+      "avg_latency": 0.925
+    }
+  },
+  "detailed_results": {
+    "a1": [
+      {
+        "approach": "Approach 1 — NLLB + Llama3.2:1b (llamacpp)",
+        "sinhala_input": "මෙය සාරාංශ කරන්න",
+        "english_translation": "Summarize this",
+        "intent": "SUMMARIZE",
+        "personalization_flags": {},
+        "translation_time_sec": 0.722,
+        "llm_time_sec": 7.863,
+        "total_time_sec": 8.585,
+        "correct": true
+      },
+      {
+        "approach": "Approach 1 — NLLB + Llama3.2:1b (llamacpp)",
+        "sinhala_input": "මෙය තව ටිකක් විස්තර කරන්න පුළුවන්ද",
+        "english_translation": "Can you explain this a little more?",
+        "intent": "EXPLAIN",
+        "personalization_flags": {},
+        "translation_time_sec": 0.778,
+        "llm_time_sec": 0.403,
+        "total_time_sec": 1.181,
+        "correct": true
+      },
+      {
+        "approach": "Approach 1 — NLLB + Llama3.2:1b (llamacpp)",
+        "sinhala_input": "කරුණාකර මෙය ඉතාමත් සරලව සහ කෙටියෙන් මට තේරෙන විදිහට පහදා දෙන්න",
+        "english_translation": "Please explain this very simply and briefly as I understand it.",
+        "intent": "EXPLAIN",
+        "personalization_flags": {},
+        "translation_time_sec": 1.143,
+        "llm_time_sec": 0.426,
+        "total_time_sec": 1.569,
+        "correct": true
+      },
+      {
+        "approach": "Approach 1 — NLLB + Llama3.2:1b (llamacpp)",
+        "sinhala_input": "ඔයා ඔයා මට මෙහි ඇත්තේ කුමක්දැයි කියන්න පුළුවන්ද",
+        "english_translation": "You can you tell me what I have here?",
+        "intent": "IDENTIFY_CONTENT",
+        "personalization_flags": {},
+        "translation_time_sec": 0.894,
+        "llm_time_sec": 0.483,
+        "total_time_sec": 1.377,
+        "correct": true
+      },
+      {
+        "approach": "Approach 1 — NLLB + Llama3.2:1b (llamacpp)",
+        "sinhala_input": "මට ඕනේ හ්ම් ඉතාමත් දිගු විස්තර නොමැතිව කෙටියෙන් වේගයෙන් මෙය පහදන්න",
+        "english_translation": "I want to get this down without any details .",
+        "intent": "SIMPLIFY",
+        "personalization_flags": {},
+        "translation_time_sec": 0.948,
+        "llm_time_sec": 0.46,
+        "total_time_sec": 1.408,
+        "correct": true
+      },
+      {
+        "approach": "Approach 1 — NLLB + Llama3.2:1b (llamacpp)",
+        "sinhala_input": "ඒක හරියට තේරෙන්නේ නෑ වෙනත් විදිහකට කියන්න",
+        "english_translation": "It's just not clear.",
+        "intent": "EXPLAIN",
+        "personalization_flags": {},
+        "translation_time_sec": 0.691,
+        "llm_time_sec": 0.394,
+        "total_time_sec": 1.085,
+        "correct": false
+      },
+      {
+        "approach": "Approach 1 — NLLB + Llama3.2:1b (llamacpp)",
+        "sinhala_input": "ඇත්තටම මට මේ සම්පූර්ණ ලියවිල්ලම අහගෙන ඉන්න වෙලාවක් නැහැ, ඒ නිසා මේකෙ තියෙන වැදගත්ම කරුණු ටික විතරක් තෝරලා අරගෙන මට පැහැදිලිව කියවන්න පුළුවන්ද",
+        "english_translation": "Actually, I don't have time to listen to this whole document, so can I just pick out the most important points in it and read it clearly?",
+        "intent": "SUMMARIZE",
+        "personalization_flags": {},
+        "translation_time_sec": 2.553,
+        "llm_time_sec": 0.598,
+        "total_time_sec": 3.151,
+        "correct": true
+      },
+      {
+        "approach": "Approach 1 — NLLB + Llama3.2:1b (llamacpp)",
+        "sinhala_input": "මේ පිටුවේ තියෙන දේ කෙටියෙන් සාරාංශයක් විදිහට දෙන්න",
+        "english_translation": "Give a brief summary of what is on this page",
+        "intent": "SUMMARIZE",
+        "personalization_flags": {},
+        "translation_time_sec": 1.041,
+        "llm_time_sec": 0.449,
+        "total_time_sec": 1.49,
+        "correct": true
+      },
+      {
+        "approach": "Approach 1 — NLLB + Llama3.2:1b (llamacpp)",
+        "sinhala_input": "අ මට ඕනෙ මේකෙ ප්‍රධාන අදහස් ටික විතරයි",
+        "english_translation": "I just want the main ideas.",
+        "intent": "SUMMARIZE",
+        "personalization_flags": {},
+        "translation_time_sec": 0.701,
+        "llm_time_sec": 0.433,
+        "total_time_sec": 1.134,
+        "correct": true
+      },
+      {
+        "approach": "Approach 1 — NLLB + Llama3.2:1b (llamacpp)",
+        "sinhala_input": "ඔක්කොම නෙවෙයි සාරාංශය විතරක් ඇති",
+        "english_translation": "All is not enough.",
+        "intent": "SUMMARIZE",
+        "personalization_flags": {},
+        "translation_time_sec": 0.564,
+        "llm_time_sec": 0.434,
+        "total_time_sec": 0.998,
+        "correct": true
+      },
+      {
+        "approach": "Approach 1 — NLLB + Llama3.2:1b (llamacpp)",
+        "sinhala_input": "මේ වචනෙ තේරුම මොකක්ද",
+        "english_translation": "What does this word mean?",
+        "intent": "EXPLAIN",
+        "personalization_flags": {},
+        "translation_time_sec": 0.608,
+        "llm_time_sec": 0.395,
+        "total_time_sec": 1.002,
+        "correct": true
+      },
+      {
+        "approach": "Approach 1 — NLLB + Llama3.2:1b (llamacpp)",
+        "sinhala_input": "ඔයා ඔයා කිව්ව දේ මට තේරුනේ නෑ ඒක පහදලා දෙන්න",
+        "english_translation": "I don't understand what you said. Let it out.",
+        "intent": "EXPLAIN",
+        "personalization_flags": {},
+        "translation_time_sec": 1.134,
+        "llm_time_sec": 0.441,
+        "total_time_sec": 1.574,
+        "correct": true
+      },
+      {
+        "approach": "Approach 1 — NLLB + Llama3.2:1b (llamacpp)",
+        "sinhala_input": "මේ ආර්ථික වචන ටිකේ අදහස පැහැදිලි කරලා දෙන්න",
+        "english_translation": "Explain the idea of these economic words",
+        "intent": "EXPLAIN",
+        "personalization_flags": {},
+        "translation_time_sec": 0.838,
+        "llm_time_sec": 0.428,
+        "total_time_sec": 1.267,
+        "correct": true
+      },
+      {
+        "approach": "Approach 1 — NLLB + Llama3.2:1b (llamacpp)",
+        "sinhala_input": "මම මේක දෙපාරක් ඇහුවා ඒත් තාමත් ඔලුවට යන්නේ නෑ මේකෙ අදහස මට පැහැදිලි කරලා දෙන්න පුළුවන්ද",
+        "english_translation": "I've asked this twice but it still doesn't come to mind. Can you explain the idea to me?",
+        "intent": "EXPLAIN",
+        "personalization_flags": {},
+        "translation_time_sec": 1.936,
+        "llm_time_sec": 0.512,
+        "total_time_sec": 2.448,
+        "correct": true
+      },
+      {
+        "approach": "Approach 1 — NLLB + Llama3.2:1b (llamacpp)",
+        "sinhala_input": "ලේසියෙන් කියන්න",
+        "english_translation": "Easy to say .",
+        "intent": "SIMPLIFY",
+        "personalization_flags": {},
+        "translation_time_sec": 0.495,
+        "llm_time_sec": 0.42,
+        "total_time_sec": 0.915,
+        "correct": true
+      },
+      {
+        "approach": "Approach 1 — NLLB + Llama3.2:1b (llamacpp)",
+        "sinhala_input": "හ්ම් මේ ලොකු ලොකු වචන නැතුව සාමාන්‍ය විදිහට කියන්න",
+        "english_translation": "Hmm these are big big words without saying it normally",
+        "intent": "EXPLAIN",
+        "personalization_flags": {},
+        "translation_time_sec": 0.959,
+        "llm_time_sec": 0.437,
+        "total_time_sec": 1.396,
+        "correct": false
+      },
+      {
+        "approach": "Approach 1 — NLLB + Llama3.2:1b (llamacpp)",
+        "sinhala_input": "මට මේ තාක්ෂණික වචන තේරෙන්නේ නෑ සරල භාෂාවෙන් කියන්න",
+        "english_translation": "I don't understand these technical words to say in simple language.",
+        "intent": "EXPLAIN",
+        "personalization_flags": {},
+        "translation_time_sec": 1.207,
+        "llm_time_sec": 0.432,
+        "total_time_sec": 1.639,
+        "correct": false
+      },
+      {
+        "approach": "Approach 1 — NLLB + Llama3.2:1b (llamacpp)",
+        "sinhala_input": "වෙනස් විදිහකට",
+        "english_translation": "In a different way",
+        "intent": "REPHRASE",
+        "personalization_flags": {},
+        "translation_time_sec": 0.462,
+        "llm_time_sec": 0.488,
+        "total_time_sec": 0.95,
+        "correct": true
+      },
+      {
+        "approach": "Approach 1 — NLLB + Llama3.2:1b (llamacpp)",
+        "sinhala_input": "ඔය විදිහට නෙවෙයි වෙන ක්‍රමයකට ඒක කියලා දෙන්න",
+        "english_translation": "Don't tell me it's not like that.",
+        "intent": "EXPLAIN",
+        "personalization_flags": {},
+        "translation_time_sec": 1.033,
+        "llm_time_sec": 0.454,
+        "total_time_sec": 1.488,
+        "correct": false
+      },
+      {
+        "approach": "Approach 1 — NLLB + Llama3.2:1b (llamacpp)",
+        "sinhala_input": "මේ වාක්‍යය ටිකක් වෙනස් කරලා ආයෙ කියන්න",
+        "english_translation": "Change the sentence a little and say it again .",
+        "intent": "UNKNOWN",
+        "personalization_flags": {},
+        "translation_time_sec": 0.905,
+        "llm_time_sec": 0.58,
+        "total_time_sec": 1.485,
+        "correct": false
+      },
+      {
+        "approach": "Approach 1 — NLLB + Llama3.2:1b (llamacpp)",
+        "sinhala_input": "මේ මොකක්ද",
+        "english_translation": "What is this?",
+        "intent": "IDENTIFY_CONTENT",
+        "personalization_flags": {},
+        "translation_time_sec": 0.493,
+        "llm_time_sec": 0.408,
+        "total_time_sec": 0.901,
+        "correct": true
+      },
+      {
+        "approach": "Approach 1 — NLLB + Llama3.2:1b (llamacpp)",
+        "sinhala_input": "හ්ම් මේ පිටුවෙ මොනවා ගැනද තියෙන්නෙ",
+        "english_translation": "What's on this page about?",
+        "intent": "IDENTIFY_CONTENT",
+        "personalization_flags": {},
+        "translation_time_sec": 0.761,
+        "llm_time_sec": 0.444,
+        "total_time_sec": 1.206,
+        "correct": true
+      },
+      {
+        "approach": "Approach 1 — NLLB + Llama3.2:1b (llamacpp)",
+        "sinhala_input": "මේ ලියවිල්ල මොන වගේ එකක්ද",
+        "english_translation": "What kind of document is this ?",
+        "intent": "IDENTIFY_CONTENT",
+        "personalization_flags": {},
+        "translation_time_sec": 0.683,
+        "llm_time_sec": 0.446,
+        "total_time_sec": 1.128,
+        "correct": true
+      },
+      {
+        "approach": "Approach 1 — NLLB + Llama3.2:1b (llamacpp)",
+        "sinhala_input": "මගේ අතේ තියෙන මේ කොළේ මොනවද ලියලා තියෙන්නේ",
+        "english_translation": "What is written in this paper in my hand",
+        "intent": "IDENTIFY_CONTENT",
+        "personalization_flags": {},
+        "translation_time_sec": 0.817,
+        "llm_time_sec": 0.451,
+        "total_time_sec": 1.268,
+        "correct": true
+      },
+      {
+        "approach": "Approach 1 — NLLB + Llama3.2:1b (llamacpp)",
+        "sinhala_input": "මම දැන් කැමරාව අල්ලගෙන ඉන්න මේ කොටසේ මොනවා ගැනද කතා කරන්නේ කියලා මට මුලින්ම කියන්න",
+        "english_translation": "I'm gonna hold the camera now and tell me what you're talking about in this section.",
+        "intent": "IDENTIFY_CONTENT",
+        "personalization_flags": {},
+        "translation_time_sec": 1.713,
+        "llm_time_sec": 0.544,
+        "total_time_sec": 2.256,
+        "correct": true
+      },
+      {
+        "approach": "Approach 1 — NLLB + Llama3.2:1b (llamacpp)",
+        "sinhala_input": "ආයෙ",
+        "english_translation": "I'm going back.",
+        "intent": "PREVIOUS",
+        "personalization_flags": {},
+        "translation_time_sec": 0.635,
+        "llm_time_sec": 0.367,
+        "total_time_sec": 1.002,
+        "correct": false
+      },
+      {
+        "approach": "Approach 1 — NLLB + Llama3.2:1b (llamacpp)",
+        "sinhala_input": "අ අ නැවත කියන්න",
+        "english_translation": "I'll tell you again.",
+        "intent": "REPEAT",
+        "personalization_flags": {},
+        "translation_time_sec": 0.707,
+        "llm_time_sec": 0.392,
+        "total_time_sec": 1.099,
+        "correct": true
+      },
+      {
+        "approach": "Approach 1 — NLLB + Llama3.2:1b (llamacpp)",
+        "sinhala_input": "කලින් කියපු කොටස තව පාරක් කියන්න",
+        "english_translation": "Previously on \" Tell Me Another Way \"",
+        "intent": "PREVIOUS",
+        "personalization_flags": {},
+        "translation_time_sec": 0.844,
+        "llm_time_sec": 0.423,
+        "total_time_sec": 1.267,
+        "correct": false
+      },
+      {
+        "approach": "Approach 1 — NLLB + Llama3.2:1b (llamacpp)",
+        "sinhala_input": "සද්දෙ නිසා මට ඇහුනෙ නෑ",
+        "english_translation": "I didn't hear it because of the noise.",
+        "intent": "REPEAT",
+        "personalization_flags": {},
+        "translation_time_sec": 0.988,
+        "llm_time_sec": 0.438,
+        "total_time_sec": 1.426,
+        "correct": true
+      },
+      {
+        "approach": "Approach 1 — NLLB + Llama3.2:1b (llamacpp)",
+        "sinhala_input": "සමාවෙන්න මගේ ෆෝන් එක රින්ග් වුණා ඒ නිසා ඔයා අන්තිමට කියපු ටික මට මඟ ඇරුණා ඒක ආයෙත් කියන්න",
+        "english_translation": "Sorry my phone rang so I missed the last thing you said.",
+        "intent": "REPEAT",
+        "personalization_flags": {},
+        "translation_time_sec": 1.149,
+        "llm_time_sec": 0.467,
+        "total_time_sec": 1.615,
+        "correct": true
+      },
+      {
+        "approach": "Approach 1 — NLLB + Llama3.2:1b (llamacpp)",
+        "sinhala_input": "ඇති",
+        "english_translation": "That's enough.",
+        "intent": "STOP",
+        "personalization_flags": {},
+        "translation_time_sec": 0.532,
+        "llm_time_sec": 0.345,
+        "total_time_sec": 0.877,
+        "correct": true
+      },
+      {
+        "approach": "Approach 1 — NLLB + Llama3.2:1b (llamacpp)",
+        "sinhala_input": "හරි හරි නවත්තන්න",
+        "english_translation": "Okay, okay, stop it.",
+        "intent": "STOP",
+        "personalization_flags": {},
+        "translation_time_sec": 0.688,
+        "llm_time_sec": 0.347,
+        "total_time_sec": 1.035,
+        "correct": true
+      },
+      {
+        "approach": "Approach 1 — NLLB + Llama3.2:1b (llamacpp)",
+        "sinhala_input": "දැන් කියවන්න එපා",
+        "english_translation": "Don't read it now.",
+        "intent": "STOP",
+        "personalization_flags": {},
+        "translation_time_sec": 0.691,
+        "llm_time_sec": 0.351,
+        "total_time_sec": 1.041,
+        "correct": true
+      },
+      {
+        "approach": "Approach 1 — NLLB + Llama3.2:1b (llamacpp)",
+        "sinhala_input": "මට කෝල් එකක් එනවා ටිකකට නවත්තන්න",
+        "english_translation": "I got a call coming in. Stop for a while.",
+        "intent": "STOP",
+        "personalization_flags": {},
+        "translation_time_sec": 1.03,
+        "llm_time_sec": 0.419,
+        "total_time_sec": 1.449,
+        "correct": true
+      },
+      {
+        "approach": "Approach 1 — NLLB + Llama3.2:1b (llamacpp)",
+        "sinhala_input": "අද නම් මට ඇති වෙන්න ඇහුවා ඉතුරු ටික හෙට අහන්නම් දැනට කියවීම නවත්තන්න",
+        "english_translation": "I've had enough today. I've heard the rest tomorrow. I'll ask you.",
+        "intent": "STOP",
+        "personalization_flags": {},
+        "translation_time_sec": 1.73,
+        "llm_time_sec": 0.414,
+        "total_time_sec": 2.144,
+        "correct": true
+      },
+      {
+        "approach": "Approach 1 — NLLB + Llama3.2:1b (llamacpp)",
+        "sinhala_input": "ඊළඟ",
+        "english_translation": "Next .",
+        "intent": "NEXT",
+        "personalization_flags": {},
+        "translation_time_sec": 0.337,
+        "llm_time_sec": 0.329,
+        "total_time_sec": 0.665,
+        "correct": true
+      },
+      {
+        "approach": "Approach 1 — NLLB + Llama3.2:1b (llamacpp)",
+        "sinhala_input": "අ ඊළඟ පුවතට",
+        "english_translation": "A to the next news",
+        "intent": "NEXT",
+        "personalization_flags": {},
+        "translation_time_sec": 0.557,
+        "llm_time_sec": 0.365,
+        "total_time_sec": 0.923,
+        "correct": true
+      },
+      {
+        "approach": "Approach 1 — NLLB + Llama3.2:1b (llamacpp)",
+        "sinhala_input": "අනිත් පිටුවට යන්න",
+        "english_translation": "Go to the other page",
+        "intent": "GO_TO_PAGE",
+        "personalization_flags": {},
+        "translation_time_sec": 0.551,
+        "llm_time_sec": 0.43,
+        "total_time_sec": 0.982,
+        "correct": false
+      },
+      {
+        "approach": "Approach 1 — NLLB + Llama3.2:1b (llamacpp)",
+        "sinhala_input": "මේ පුවත ඇති ඊළඟ එක අහමු",
+        "english_translation": "This is the news. Let's hear the next one.",
+        "intent": "READ_ALOUD",
+        "personalization_flags": {},
+        "translation_time_sec": 1.115,
+        "llm_time_sec": 0.504,
+        "total_time_sec": 1.618,
+        "correct": false
+      },
+      {
+        "approach": "Approach 1 — NLLB + Llama3.2:1b (llamacpp)",
+        "sinhala_input": "මේ පිටුවේ තියෙන ඔක්කොම මම අහලා ඉවරයි ඒ නිසා ඊළඟට තියෙන පිටුව පටන් ගන්න",
+        "english_translation": "I've heard everything on this page so start the next page.",
+        "intent": "NEXT",
+        "personalization_flags": {},
+        "translation_time_sec": 1.192,
+        "llm_time_sec": 0.41,
+        "total_time_sec": 1.602,
+        "correct": true
+      },
+      {
+        "approach": "Approach 1 — NLLB + Llama3.2:1b (llamacpp)",
+        "sinhala_input": "කියවන්න",
+        "english_translation": "Read it",
+        "intent": "READ_ALOUD",
+        "personalization_flags": {},
+        "translation_time_sec": 0.337,
+        "llm_time_sec": 0.449,
+        "total_time_sec": 0.786,
+        "correct": true
+      },
+      {
+        "approach": "Approach 1 — NLLB + Llama3.2:1b (llamacpp)",
+        "sinhala_input": "හ්ම් මේ ලිපිය මුල ඉඳන් අගට කියවලා දෙන්න",
+        "english_translation": "Let me read this article from the beginning .",
+        "intent": "READ_ALOUD",
+        "personalization_flags": {},
+        "translation_time_sec": 0.826,
+        "llm_time_sec": 0.499,
+        "total_time_sec": 1.325,
+        "correct": true
+      },
+      {
+        "approach": "Approach 1 — NLLB + Llama3.2:1b (llamacpp)",
+        "sinhala_input": "මේ පිටුවේ තියෙන දේ හඬ නඟලා කියවන්න",
+        "english_translation": "Read aloud what's on this page.",
+        "intent": "READ_ALOUD",
+        "personalization_flags": {},
+        "translation_time_sec": 0.91,
+        "llm_time_sec": 0.473,
+        "total_time_sec": 1.383,
+        "correct": true
+      },
+      {
+        "approach": "Approach 1 — NLLB + Llama3.2:1b (llamacpp)",
+        "sinhala_input": "මගේ බෙහෙත් කොළේ තියෙන දේ කියවලා දෙන්න",
+        "english_translation": "Read me what's in my medicine book.",
+        "intent": "IDENTIFY_CONTENT",
+        "personalization_flags": {},
+        "translation_time_sec": 0.926,
+        "llm_time_sec": 0.451,
+        "total_time_sec": 1.377,
+        "correct": false
+      },
+      {
+        "approach": "Approach 1 — NLLB + Llama3.2:1b (llamacpp)",
+        "sinhala_input": "මට ඇස් පේන්නෙ නැති නිසා මේ ලියුම මට කියවන්න බැහැ කරුණාකරලා ඒක මුලින්ම ඉඳන් කියවලා දෙන්න",
+        "english_translation": "I can't read this letter because I can't see. Please read it first.",
+        "intent": "READ_ALOUD",
+        "personalization_flags": {},
+        "translation_time_sec": 1.57,
+        "llm_time_sec": 0.544,
+        "total_time_sec": 2.114,
+        "correct": true
+      }
+    ],
+    "a2": [
+      {
+        "approach": "Approach 2 — Direct Qwen2.5:1.5b",
+        "sinhala_input": "මෙය සාරාංශ කරන්න",
+        "english_translation": "N/A — no translation step",
+        "intent": "ANALYZE_COMMAND",
+        "personalization_flags": {
+          "language_style": "technical"
+        },
+        "translation_time_sec": 0,
+        "llm_time_sec": 16.535,
+        "total_time_sec": 16.535,
+        "correct": false
+      },
+      {
+        "approach": "Approach 2 — Direct Qwen2.5:1.5b",
+        "sinhala_input": "මෙය තව ටිකක් විස්තර කරන්න පුළුවන්ද",
+        "english_translation": "N/A — no translation step",
+        "intent": "ANALYZE",
+        "personalization_flags": {
+          "language_style": "technical"
+        },
+        "translation_time_sec": 0,
+        "llm_time_sec": 4.89,
+        "total_time_sec": 4.89,
+        "correct": false
+      },
+      {
+        "approach": "Approach 2 — Direct Qwen2.5:1.5b",
+        "sinhala_input": "කරුණාකර මෙය ඉතාමත් සරලව සහ කෙටියෙන් මට තේරෙන විදිහට පහදා දෙන්න",
+        "english_translation": "N/A — no translation step",
+        "intent": "ANALYZE",
+        "personalization_flags": {
+          "language_style": "technical"
+        },
+        "translation_time_sec": 0,
+        "llm_time_sec": 5.654,
+        "total_time_sec": 5.654,
+        "correct": false
+      },
+      {
+        "approach": "Approach 2 — Direct Qwen2.5:1.5b",
+        "sinhala_input": "ඔයා ඔයා මට මෙහි ඇත්තේ කුමක්දැයි කියන්න පුළුවන්ද",
+        "english_translation": "N/A — no translation step",
+        "intent": "REPHRASE",
+        "personalization_flags": {
+          "language_style": "simple"
+        },
+        "translation_time_sec": 0,
+        "llm_time_sec": 5.15,
+        "total_time_sec": 5.15,
+        "correct": false
+      },
+      {
+        "approach": "Approach 2 — Direct Qwen2.5:1.5b",
+        "sinhala_input": "මට ඕනේ හ්ම් ඉතාමත් දිගු විස්තර නොමැතිව කෙටියෙන් වේගයෙන් මෙය පහදන්න",
+        "english_translation": "N/A — no translation step",
+        "intent": "ANALYZE",
+        "personalization_flags": {
+          "language_style": "technical"
+        },
+        "translation_time_sec": 0,
+        "llm_time_sec": 5.9,
+        "total_time_sec": 5.9,
+        "correct": false
+      },
+      {
+        "approach": "Approach 2 — Direct Qwen2.5:1.5b",
+        "sinhala_input": "ඒක හරියට තේරෙන්නේ නෑ වෙනත් විදිහකට කියන්න",
+        "english_translation": "N/A — no translation step",
+        "intent": "ANALYZE",
+        "personalization_flags": {
+          "language_style": "technical"
+        },
+        "translation_time_sec": 0,
+        "llm_time_sec": 5.288,
+        "total_time_sec": 5.288,
+        "correct": false
+      },
+      {
+        "approach": "Approach 2 — Direct Qwen2.5:1.5b",
+        "sinhala_input": "ඇත්තටම මට මේ සම්පූර්ණ ලියවිල්ලම අහගෙන ඉන්න වෙලාවක් නැහැ, ඒ නිසා මේකෙ තියෙන වැදගත්ම කරුණු ටික විතරක් තෝරලා අරගෙන මට පැහැදිලිව කියවන්න පුළුවන්ද",
+        "english_translation": "N/A — no translation step",
+        "intent": "ANALYZE",
+        "personalization_flags": {
+          "detail_level": "brief",
+          "language_style": "simple"
+        },
+        "translation_time_sec": 0,
+        "llm_time_sec": 9.613,
+        "total_time_sec": 9.613,
+        "correct": false
+      },
+      {
+        "approach": "Approach 2 — Direct Qwen2.5:1.5b",
+        "sinhala_input": "මේ පිටුවේ තියෙන දේ කෙටියෙන් සාරාංශයක් විදිහට දෙන්න",
+        "english_translation": "N/A — no translation step",
+        "intent": "READ_ALOUD",
+        "personalization_flags": {
+          "language_style": "simple"
+        },
+        "translation_time_sec": 0,
+        "llm_time_sec": 5.388,
+        "total_time_sec": 5.388,
+        "correct": false
+      },
+      {
+        "approach": "Approach 2 — Direct Qwen2.5:1.5b",
+        "sinhala_input": "අ මට ඕනෙ මේකෙ ප්‍රධාන අදහස් ටික විතරයි",
+        "english_translation": "N/A — no translation step",
+        "intent": "ANALYZE",
+        "personalization_flags": {},
+        "translation_time_sec": 0,
+        "llm_time_sec": 4.702,
+        "total_time_sec": 4.702,
+        "correct": false
+      },
+      {
+        "approach": "Approach 2 — Direct Qwen2.5:1.5b",
+        "sinhala_input": "ඔක්කොම නෙවෙයි සාරාංශය විතරක් ඇති",
+        "english_translation": "N/A — no translation step",
+        "intent": "EXPLAIN",
+        "personalization_flags": {
+          "language_style": "technical"
+        },
+        "translation_time_sec": 0,
+        "llm_time_sec": 4.519,
+        "total_time_sec": 4.519,
+        "correct": false
+      },
+      {
+        "approach": "Approach 2 — Direct Qwen2.5:1.5b",
+        "sinhala_input": "මේ වචනෙ තේරුම මොකක්ද",
+        "english_translation": "N/A — no translation step",
+        "intent": "ANALYZE",
+        "personalization_flags": {
+          "language_style": "technical"
+        },
+        "translation_time_sec": 0,
+        "llm_time_sec": 4.145,
+        "total_time_sec": 4.145,
+        "correct": false
+      },
+      {
+        "approach": "Approach 2 — Direct Qwen2.5:1.5b",
+        "sinhala_input": "ඔයා ඔයා කිව්ව දේ මට තේරුනේ නෑ ඒක පහදලා දෙන්න",
+        "english_translation": "N/A — no translation step",
+        "intent": "RECOGNIZE_COMMAND",
+        "personalization_flags": {
+          "language_style": "technical"
+        },
+        "translation_time_sec": 0,
+        "llm_time_sec": 5.108,
+        "total_time_sec": 5.108,
+        "correct": false
+      },
+      {
+        "approach": "Approach 2 — Direct Qwen2.5:1.5b",
+        "sinhala_input": "මේ ආර්ථික වචන ටිකේ අදහස පැහැදිලි කරලා දෙන්න",
+        "english_translation": "N/A — no translation step",
+        "intent": "ANALYZE",
+        "personalization_flags": {
+          "language_style": "technical"
+        },
+        "translation_time_sec": 0,
+        "llm_time_sec": 4.97,
+        "total_time_sec": 4.97,
+        "correct": false
+      },
+      {
+        "approach": "Approach 2 — Direct Qwen2.5:1.5b",
+        "sinhala_input": "මම මේක දෙපාරක් ඇහුවා ඒත් තාමත් ඔලුවට යන්නේ නෑ මේකෙ අදහස මට පැහැදිලි කරලා දෙන්න පුළුවන්ද",
+        "english_translation": "N/A — no translation step",
+        "intent": "REPHRASE",
+        "personalization_flags": {
+          "language_style": "simple"
+        },
+        "translation_time_sec": 0,
+        "llm_time_sec": 6.73,
+        "total_time_sec": 6.73,
+        "correct": false
+      },
+      {
+        "approach": "Approach 2 — Direct Qwen2.5:1.5b",
+        "sinhala_input": "ලේසියෙන් කියන්න",
+        "english_translation": "N/A — no translation step",
+        "intent": "ANALYZE_COMMAND",
+        "personalization_flags": {
+          "language_style": "technical"
+        },
+        "translation_time_sec": 0,
+        "llm_time_sec": 4.028,
+        "total_time_sec": 4.028,
+        "correct": false
+      },
+      {
+        "approach": "Approach 2 — Direct Qwen2.5:1.5b",
+        "sinhala_input": "හ්ම් මේ ලොකු ලොකු වචන නැතුව සාමාන්‍ය විදිහට කියන්න",
+        "english_translation": "N/A — no translation step",
+        "intent": "ANALYZE",
+        "personalization_flags": {
+          "language_style": "technical"
+        },
+        "translation_time_sec": 0,
+        "llm_time_sec": 5.385,
+        "total_time_sec": 5.385,
+        "correct": false
+      },
+      {
+        "approach": "Approach 2 — Direct Qwen2.5:1.5b",
+        "sinhala_input": "මට මේ තාක්ෂණික වචන තේරෙන්නේ නෑ සරල භාෂාවෙන් කියන්න",
+        "english_translation": "N/A — no translation step",
+        "intent": "EXPLAIN",
+        "personalization_flags": {
+          "language_style": "simple"
+        },
+        "translation_time_sec": 0,
+        "llm_time_sec": 5.254,
+        "total_time_sec": 5.254,
+        "correct": false
+      },
+      {
+        "approach": "Approach 2 — Direct Qwen2.5:1.5b",
+        "sinhala_input": "වෙනස් විදිහකට",
+        "english_translation": "N/A — no translation step",
+        "intent": "ANALYZE_COMMAND",
+        "personalization_flags": {
+          "language_style": "technical"
+        },
+        "translation_time_sec": 0,
+        "llm_time_sec": 3.917,
+        "total_time_sec": 3.917,
+        "correct": false
+      },
+      {
+        "approach": "Approach 2 — Direct Qwen2.5:1.5b",
+        "sinhala_input": "ඔය විදිහට නෙවෙයි වෙන ක්‍රමයකට ඒක කියලා දෙන්න",
+        "english_translation": "N/A — no translation step",
+        "intent": "ANALYZE",
+        "personalization_flags": {
+          "detail_level": "brief",
+          "language_style": "simple"
+        },
+        "translation_time_sec": 0,
+        "llm_time_sec": 5.739,
+        "total_time_sec": 5.739,
+        "correct": false
+      },
+      {
+        "approach": "Approach 2 — Direct Qwen2.5:1.5b",
+        "sinhala_input": "මේ වාක්‍යය ටිකක් වෙනස් කරලා ආයෙ කියන්න",
+        "english_translation": "N/A — no translation step",
+        "intent": "ANALYZE",
+        "personalization_flags": {
+          "language_style": "technical"
+        },
+        "translation_time_sec": 0,
+        "llm_time_sec": 4.85,
+        "total_time_sec": 4.85,
+        "correct": false
+      },
+      {
+        "approach": "Approach 2 — Direct Qwen2.5:1.5b",
+        "sinhala_input": "මේ මොකක්ද",
+        "english_translation": "N/A — no translation step",
+        "intent": "ANALYZE",
+        "personalization_flags": {},
+        "translation_time_sec": 0,
+        "llm_time_sec": 3.502,
+        "total_time_sec": 3.502,
+        "correct": false
+      },
+      {
+        "approach": "Approach 2 — Direct Qwen2.5:1.5b",
+        "sinhala_input": "හ්ම් මේ පිටුවෙ මොනවා ගැනද තියෙන්නෙ",
+        "english_translation": "N/A — no translation step",
+        "intent": "REPHRASE",
+        "personalization_flags": {
+          "language_style": "simple"
+        },
+        "translation_time_sec": 0,
+        "llm_time_sec": 4.759,
+        "total_time_sec": 4.759,
+        "correct": false
+      },
+      {
+        "approach": "Approach 2 — Direct Qwen2.5:1.5b",
+        "sinhala_input": "මේ ලියවිල්ල මොන වගේ එකක්ද",
+        "english_translation": "N/A — no translation step",
+        "intent": "ANALYZE",
+        "personalization_flags": {
+          "language_style": "technical"
+        },
+        "translation_time_sec": 0,
+        "llm_time_sec": 4.301,
+        "total_time_sec": 4.301,
+        "correct": false
+      },
+      {
+        "approach": "Approach 2 — Direct Qwen2.5:1.5b",
+        "sinhala_input": "මගේ අතේ තියෙන මේ කොළේ මොනවද ලියලා තියෙන්නේ",
+        "english_translation": "N/A — no translation step",
+        "intent": "REPHRASE",
+        "personalization_flags": {
+          "language_style": "simple"
+        },
+        "translation_time_sec": 0,
+        "llm_time_sec": 4.988,
+        "total_time_sec": 4.988,
+        "correct": false
+      },
+      {
+        "approach": "Approach 2 — Direct Qwen2.5:1.5b",
+        "sinhala_input": "මම දැන් කැමරාව අල්ලගෙන ඉන්න මේ කොටසේ මොනවා ගැනද කතා කරන්නේ කියලා මට මුලින්ම කියන්න",
+        "english_translation": "N/A — no translation step",
+        "intent": "REPHRASE",
+        "personalization_flags": {
+          "language_style": "simple"
+        },
+        "translation_time_sec": 0,
+        "llm_time_sec": 6.335,
+        "total_time_sec": 6.335,
+        "correct": false
+      },
+      {
+        "approach": "Approach 2 — Direct Qwen2.5:1.5b",
+        "sinhala_input": "ආයෙ",
+        "english_translation": "N/A — no translation step",
+        "intent": "RECOGNIZE_COMMAND",
+        "personalization_flags": {
+          "language_style": "technical"
+        },
+        "translation_time_sec": 0,
+        "llm_time_sec": 3.741,
+        "total_time_sec": 3.741,
+        "correct": false
+      },
+      {
+        "approach": "Approach 2 — Direct Qwen2.5:1.5b",
+        "sinhala_input": "අ අ නැවත කියන්න",
+        "english_translation": "N/A — no translation step",
+        "intent": "ANALYZE",
+        "personalization_flags": {
+          "language_style": "technical"
+        },
+        "translation_time_sec": 0,
+        "llm_time_sec": 4.273,
+        "total_time_sec": 4.273,
+        "correct": false
+      },
+      {
+        "approach": "Approach 2 — Direct Qwen2.5:1.5b",
+        "sinhala_input": "කලින් කියපු කොටස තව පාරක් කියන්න",
+        "english_translation": "N/A — no translation step",
+        "intent": "ANALYZE",
+        "personalization_flags": {},
+        "translation_time_sec": 0,
+        "llm_time_sec": 4.452,
+        "total_time_sec": 4.452,
+        "correct": false
+      },
+      {
+        "approach": "Approach 2 — Direct Qwen2.5:1.5b",
+        "sinhala_input": "සද්දෙ නිසා මට ඇහුනෙ නෑ",
+        "english_translation": "N/A — no translation step",
+        "intent": "ANALYZE",
+        "personalization_flags": {
+          "language_style": "technical"
+        },
+        "translation_time_sec": 0,
+        "llm_time_sec": 4.293,
+        "total_time_sec": 4.293,
+        "correct": false
+      },
+      {
+        "approach": "Approach 2 — Direct Qwen2.5:1.5b",
+        "sinhala_input": "සමාවෙන්න මගේ ෆෝන් එක රින්ග් වුණා ඒ නිසා ඔයා අන්තිමට කියපු ටික මට මඟ ඇරුණා ඒක ආයෙත් කියන්න",
+        "english_translation": "N/A — no translation step",
+        "intent": "ANALYZE",
+        "personalization_flags": {
+          "language_style": "technical"
+        },
+        "translation_time_sec": 0,
+        "llm_time_sec": 6.821,
+        "total_time_sec": 6.821,
+        "correct": false
+      },
+      {
+        "approach": "Approach 2 — Direct Qwen2.5:1.5b",
+        "sinhala_input": "ඇති",
+        "english_translation": "N/A — no translation step",
+        "intent": "ANALYZE_COMMAND",
+        "personalization_flags": {
+          "language_style": "technical"
+        },
+        "translation_time_sec": 0,
+        "llm_time_sec": 3.656,
+        "total_time_sec": 3.656,
+        "correct": false
+      },
+      {
+        "approach": "Approach 2 — Direct Qwen2.5:1.5b",
+        "sinhala_input": "හරි හරි නවත්තන්න",
+        "english_translation": "N/A — no translation step",
+        "intent": "ANALYZE_COMMAND",
+        "personalization_flags": {
+          "language_style": "technical"
+        },
+        "translation_time_sec": 0,
+        "llm_time_sec": 3.995,
+        "total_time_sec": 3.995,
+        "correct": false
+      },
+      {
+        "approach": "Approach 2 — Direct Qwen2.5:1.5b",
+        "sinhala_input": "දැන් කියවන්න එපා",
+        "english_translation": "N/A — no translation step",
+        "intent": "ANALYZE_COMMAND",
+        "personalization_flags": {
+          "language_style": "technical"
+        },
+        "translation_time_sec": 0,
+        "llm_time_sec": 3.985,
+        "total_time_sec": 3.985,
+        "correct": false
+      },
+      {
+        "approach": "Approach 2 — Direct Qwen2.5:1.5b",
+        "sinhala_input": "මට කෝල් එකක් එනවා ටිකකට නවත්තන්න",
+        "english_translation": "N/A — no translation step",
+        "intent": "ANALYZE",
+        "personalization_flags": {
+          "language_style": "technical"
+        },
+        "translation_time_sec": 0,
+        "llm_time_sec": 4.511,
+        "total_time_sec": 4.511,
+        "correct": false
+      },
+      {
+        "approach": "Approach 2 — Direct Qwen2.5:1.5b",
+        "sinhala_input": "අද නම් මට ඇති වෙන්න ඇහුවා ඉතුරු ටික හෙට අහන්නම් දැනට කියවීම නවත්තන්න",
+        "english_translation": "N/A — no translation step",
+        "intent": "EXPLAIN",
+        "personalization_flags": {
+          "detail_level": "brief"
+        },
+        "translation_time_sec": 0,
+        "llm_time_sec": 5.864,
+        "total_time_sec": 5.864,
+        "correct": false
+      },
+      {
+        "approach": "Approach 2 — Direct Qwen2.5:1.5b",
+        "sinhala_input": "ඊළඟ",
+        "english_translation": "N/A — no translation step",
+        "intent": "RECOGNIZE_COMMAND",
+        "personalization_flags": {
+          "language_style": "technical"
+        },
+        "translation_time_sec": 0,
+        "llm_time_sec": 3.594,
+        "total_time_sec": 3.594,
+        "correct": false
+      },
+      {
+        "approach": "Approach 2 — Direct Qwen2.5:1.5b",
+        "sinhala_input": "අ ඊළඟ පුවතට",
+        "english_translation": "N/A — no translation step",
+        "intent": "ANALYZE",
+        "personalization_flags": {},
+        "translation_time_sec": 0,
+        "llm_time_sec": 3.661,
+        "total_time_sec": 3.661,
+        "correct": false
+      },
+      {
+        "approach": "Approach 2 — Direct Qwen2.5:1.5b",
+        "sinhala_input": "අනිත් පිටුවට යන්න",
+        "english_translation": "N/A — no translation step",
+        "intent": "ANALYZE",
+        "personalization_flags": {
+          "language_style": "technical"
+        },
+        "translation_time_sec": 0,
+        "llm_time_sec": 3.963,
+        "total_time_sec": 3.963,
+        "correct": false
+      },
+      {
+        "approach": "Approach 2 — Direct Qwen2.5:1.5b",
+        "sinhala_input": "මේ පුවත ඇති ඊළඟ එක අහමු",
+        "english_translation": "N/A — no translation step",
+        "intent": "ANALYZE",
+        "personalization_flags": {},
+        "translation_time_sec": 0,
+        "llm_time_sec": 4.159,
+        "total_time_sec": 4.159,
+        "correct": false
+      },
+      {
+        "approach": "Approach 2 — Direct Qwen2.5:1.5b",
+        "sinhala_input": "මේ පිටුවේ තියෙන ඔක්කොම මම අහලා ඉවරයි ඒ නිසා ඊළඟට තියෙන පිටුව පටන් ගන්න",
+        "english_translation": "N/A — no translation step",
+        "intent": "ANALYZE",
+        "personalization_flags": {
+          "language_style": "technical"
+        },
+        "translation_time_sec": 0,
+        "llm_time_sec": 5.927,
+        "total_time_sec": 5.927,
+        "correct": false
+      },
+      {
+        "approach": "Approach 2 — Direct Qwen2.5:1.5b",
+        "sinhala_input": "කියවන්න",
+        "english_translation": "N/A — no translation step",
+        "intent": "ANALYZE_COMMAND",
+        "personalization_flags": {
+          "language_style": "technical"
+        },
+        "translation_time_sec": 0,
+        "llm_time_sec": 3.696,
+        "total_time_sec": 3.696,
+        "correct": false
+      },
+      {
+        "approach": "Approach 2 — Direct Qwen2.5:1.5b",
+        "sinhala_input": "හ්ම් මේ ලිපිය මුල ඉඳන් අගට කියවලා දෙන්න",
+        "english_translation": "N/A — no translation step",
+        "intent": "IDENTIFY_CONTENT",
+        "personalization_flags": {
+          "language_style": "technical"
+        },
+        "translation_time_sec": 0,
+        "llm_time_sec": 4.84,
+        "total_time_sec": 4.84,
+        "correct": false
+      },
+      {
+        "approach": "Approach 2 — Direct Qwen2.5:1.5b",
+        "sinhala_input": "මේ පිටුවේ තියෙන දේ හඬ නඟලා කියවන්න",
+        "english_translation": "N/A — no translation step",
+        "intent": "ANALYZE",
+        "personalization_flags": {
+          "language_style": "technical"
+        },
+        "translation_time_sec": 0,
+        "llm_time_sec": 5.231,
+        "total_time_sec": 5.231,
+        "correct": false
+      },
+      {
+        "approach": "Approach 2 — Direct Qwen2.5:1.5b",
+        "sinhala_input": "මගේ බෙහෙත් කොළේ තියෙන දේ කියවලා දෙන්න",
+        "english_translation": "N/A — no translation step",
+        "intent": "RECOGNIZE_COMMAND",
+        "personalization_flags": {
+          "language_style": "technical"
+        },
+        "translation_time_sec": 0,
+        "llm_time_sec": 4.802,
+        "total_time_sec": 4.802,
+        "correct": false
+      },
+      {
+        "approach": "Approach 2 — Direct Qwen2.5:1.5b",
+        "sinhala_input": "මට ඇස් පේන්නෙ නැති නිසා මේ ලියුම මට කියවන්න බැහැ කරුණාකරලා ඒක මුලින්ම ඉඳන් කියවලා දෙන්න",
+        "english_translation": "N/A — no translation step",
+        "intent": "READ_ALOUD",
+        "personalization_flags": {
+          "language_style": "simple"
+        },
+        "translation_time_sec": 0,
+        "llm_time_sec": 6.68,
+        "total_time_sec": 6.68,
+        "correct": true
+      }
+    ],
+    "a3": [
+      {
+        "approach": "Approach 3 — Trained TF-IDF+LinearSVC",
+        "sinhala_input": "මෙය සාරාංශ කරන්න",
+        "english_translation": "Summarize this",
+        "intent": "SUMMARIZE",
+        "confidence": 0.838,
+        "personalization_flags": {},
+        "translation_time_sec": 0.48,
+        "classify_time_sec": 0.014,
+        "total_time_sec": 0.494,
+        "correct": true
+      },
+      {
+        "approach": "Approach 3 — Trained TF-IDF+LinearSVC",
+        "sinhala_input": "මෙය තව ටිකක් විස්තර කරන්න පුළුවන්ද",
+        "english_translation": "Can you explain this a little more?",
+        "intent": "EXPLAIN",
+        "confidence": 0.853,
+        "personalization_flags": {},
+        "translation_time_sec": 0.801,
+        "classify_time_sec": 0.006,
+        "total_time_sec": 0.807,
+        "correct": true
+      },
+      {
+        "approach": "Approach 3 — Trained TF-IDF+LinearSVC",
+        "sinhala_input": "කරුණාකර මෙය ඉතාමත් සරලව සහ කෙටියෙන් මට තේරෙන විදිහට පහදා දෙන්න",
+        "english_translation": "Please explain this very simply and briefly as I understand it.",
+        "intent": "SIMPLIFY",
+        "confidence": 0.632,
+        "personalization_flags": {},
+        "translation_time_sec": 1.161,
+        "classify_time_sec": 0.004,
+        "total_time_sec": 1.165,
+        "correct": false
+      },
+      {
+        "approach": "Approach 3 — Trained TF-IDF+LinearSVC",
+        "sinhala_input": "ඔයා ඔයා මට මෙහි ඇත්තේ කුමක්දැයි කියන්න පුළුවන්ද",
+        "english_translation": "You can you tell me what I have here?",
+        "intent": "IDENTIFY_CONTENT",
+        "confidence": 0.386,
+        "personalization_flags": {},
+        "translation_time_sec": 0.917,
+        "classify_time_sec": 0.005,
+        "total_time_sec": 0.922,
+        "correct": true
+      },
+      {
+        "approach": "Approach 3 — Trained TF-IDF+LinearSVC",
+        "sinhala_input": "මට ඕනේ හ්ම් ඉතාමත් දිගු විස්තර නොමැතිව කෙටියෙන් වේගයෙන් මෙය පහදන්න",
+        "english_translation": "I want to get this down without any details .",
+        "intent": "SUMMARIZE",
+        "confidence": 0.395,
+        "personalization_flags": {},
+        "translation_time_sec": 0.91,
+        "classify_time_sec": 0.004,
+        "total_time_sec": 0.914,
+        "correct": false
+      },
+      {
+        "approach": "Approach 3 — Trained TF-IDF+LinearSVC",
+        "sinhala_input": "ඒක හරියට තේරෙන්නේ නෑ වෙනත් විදිහකට කියන්න",
+        "english_translation": "It's just not clear.",
+        "intent": "SUMMARIZE",
+        "confidence": 0.312,
+        "personalization_flags": {},
+        "translation_time_sec": 0.706,
+        "classify_time_sec": 0.006,
+        "total_time_sec": 0.712,
+        "correct": false
+      },
+      {
+        "approach": "Approach 3 — Trained TF-IDF+LinearSVC",
+        "sinhala_input": "ඇත්තටම මට මේ සම්පූර්ණ ලියවිල්ලම අහගෙන ඉන්න වෙලාවක් නැහැ, ඒ නිසා මේකෙ තියෙන වැදගත්ම කරුණු ටික විතරක් තෝරලා අරගෙන මට පැහැදිලිව කියවන්න පුළුවන්ද",
+        "english_translation": "Actually, I don't have time to listen to this whole document, so can I just pick out the most important points in it and read it clearly?",
+        "intent": "SUMMARIZE",
+        "confidence": 0.682,
+        "personalization_flags": {},
+        "translation_time_sec": 2.524,
+        "classify_time_sec": 0.006,
+        "total_time_sec": 2.531,
+        "correct": true
+      },
+      {
+        "approach": "Approach 3 — Trained TF-IDF+LinearSVC",
+        "sinhala_input": "මේ පිටුවේ තියෙන දේ කෙටියෙන් සාරාංශයක් විදිහට දෙන්න",
+        "english_translation": "Give a brief summary of what is on this page",
+        "intent": "SUMMARIZE",
+        "confidence": 0.571,
+        "personalization_flags": {},
+        "translation_time_sec": 1.007,
+        "classify_time_sec": 0.006,
+        "total_time_sec": 1.012,
+        "correct": true
+      },
+      {
+        "approach": "Approach 3 — Trained TF-IDF+LinearSVC",
+        "sinhala_input": "අ මට ඕනෙ මේකෙ ප්‍රධාන අදහස් ටික විතරයි",
+        "english_translation": "I just want the main ideas.",
+        "intent": "SUMMARIZE",
+        "confidence": 0.46,
+        "personalization_flags": {},
+        "translation_time_sec": 0.716,
+        "classify_time_sec": 0.006,
+        "total_time_sec": 0.722,
+        "correct": true
+      },
+      {
+        "approach": "Approach 3 — Trained TF-IDF+LinearSVC",
+        "sinhala_input": "ඔක්කොම නෙවෙයි සාරාංශය විතරක් ඇති",
+        "english_translation": "All is not enough.",
+        "intent": "STOP",
+        "confidence": 0.217,
+        "personalization_flags": {},
+        "translation_time_sec": 0.559,
+        "classify_time_sec": 0.006,
+        "total_time_sec": 0.565,
+        "correct": false
+      },
+      {
+        "approach": "Approach 3 — Trained TF-IDF+LinearSVC",
+        "sinhala_input": "මේ වචනෙ තේරුම මොකක්ද",
+        "english_translation": "What does this word mean?",
+        "intent": "EXPLAIN",
+        "confidence": 0.596,
+        "personalization_flags": {},
+        "translation_time_sec": 0.618,
+        "classify_time_sec": 0.006,
+        "total_time_sec": 0.623,
+        "correct": true
+      },
+      {
+        "approach": "Approach 3 — Trained TF-IDF+LinearSVC",
+        "sinhala_input": "ඔයා ඔයා කිව්ව දේ මට තේරුනේ නෑ ඒක පහදලා දෙන්න",
+        "english_translation": "I don't understand what you said. Let it out.",
+        "intent": "EXPLAIN",
+        "confidence": 0.548,
+        "personalization_flags": {},
+        "translation_time_sec": 1.121,
+        "classify_time_sec": 0.006,
+        "total_time_sec": 1.127,
+        "correct": true
+      },
+      {
+        "approach": "Approach 3 — Trained TF-IDF+LinearSVC",
+        "sinhala_input": "මේ ආර්ථික වචන ටිකේ අදහස පැහැදිලි කරලා දෙන්න",
+        "english_translation": "Explain the idea of these economic words",
+        "intent": "REPHRASE",
+        "confidence": 0.293,
+        "personalization_flags": {},
+        "translation_time_sec": 0.883,
+        "classify_time_sec": 0.006,
+        "total_time_sec": 0.888,
+        "correct": false
+      },
+      {
+        "approach": "Approach 3 — Trained TF-IDF+LinearSVC",
+        "sinhala_input": "මම මේක දෙපාරක් ඇහුවා ඒත් තාමත් ඔලුවට යන්නේ නෑ මේකෙ අදහස මට පැහැදිලි කරලා දෙන්න පුළුවන්ද",
+        "english_translation": "I've asked this twice but it still doesn't come to mind. Can you explain the idea to me?",
+        "intent": "EXPLAIN",
+        "confidence": 0.715,
+        "personalization_flags": {},
+        "translation_time_sec": 1.943,
+        "classify_time_sec": 0.003,
+        "total_time_sec": 1.946,
+        "correct": true
+      },
+      {
+        "approach": "Approach 3 — Trained TF-IDF+LinearSVC",
+        "sinhala_input": "ලේසියෙන් කියන්න",
+        "english_translation": "Easy to say .",
+        "intent": "SIMPLIFY",
+        "confidence": 0.77,
+        "personalization_flags": {},
+        "translation_time_sec": 0.469,
+        "classify_time_sec": 0.003,
+        "total_time_sec": 0.472,
+        "correct": true
+      },
+      {
+        "approach": "Approach 3 — Trained TF-IDF+LinearSVC",
+        "sinhala_input": "හ්ම් මේ ලොකු ලොකු වචන නැතුව සාමාන්‍ය විදිහට කියන්න",
+        "english_translation": "Hmm these are big big words without saying it normally",
+        "intent": "SIMPLIFY",
+        "confidence": 0.554,
+        "personalization_flags": {},
+        "translation_time_sec": 1.007,
+        "classify_time_sec": 0.003,
+        "total_time_sec": 1.01,
+        "correct": true
+      },
+      {
+        "approach": "Approach 3 — Trained TF-IDF+LinearSVC",
+        "sinhala_input": "මට මේ තාක්ෂණික වචන තේරෙන්නේ නෑ සරල භාෂාවෙන් කියන්න",
+        "english_translation": "I don't understand these technical words to say in simple language.",
+        "intent": "SIMPLIFY",
+        "confidence": 0.801,
+        "personalization_flags": {},
+        "translation_time_sec": 1.215,
+        "classify_time_sec": 0.006,
+        "total_time_sec": 1.221,
+        "correct": true
+      },
+      {
+        "approach": "Approach 3 — Trained TF-IDF+LinearSVC",
+        "sinhala_input": "වෙනස් විදිහකට",
+        "english_translation": "In a different way",
+        "intent": "REPHRASE",
+        "confidence": 0.864,
+        "personalization_flags": {},
+        "translation_time_sec": 0.474,
+        "classify_time_sec": 0.006,
+        "total_time_sec": 0.48,
+        "correct": true
+      },
+      {
+        "approach": "Approach 3 — Trained TF-IDF+LinearSVC",
+        "sinhala_input": "ඔය විදිහට නෙවෙයි වෙන ක්‍රමයකට ඒක කියලා දෙන්න",
+        "english_translation": "Don't tell me it's not like that.",
+        "intent": "SIMPLIFY",
+        "confidence": 0.416,
+        "personalization_flags": {},
+        "translation_time_sec": 1.099,
+        "classify_time_sec": 0.006,
+        "total_time_sec": 1.105,
+        "correct": false
+      },
+      {
+        "approach": "Approach 3 — Trained TF-IDF+LinearSVC",
+        "sinhala_input": "මේ වාක්‍යය ටිකක් වෙනස් කරලා ආයෙ කියන්න",
+        "english_translation": "Change the sentence a little and say it again .",
+        "intent": "REPHRASE",
+        "confidence": 0.498,
+        "personalization_flags": {},
+        "translation_time_sec": 0.921,
+        "classify_time_sec": 0.006,
+        "total_time_sec": 0.926,
+        "correct": true
+      },
+      {
+        "approach": "Approach 3 — Trained TF-IDF+LinearSVC",
+        "sinhala_input": "මේ මොකක්ද",
+        "english_translation": "What is this?",
+        "intent": "IDENTIFY_CONTENT",
+        "confidence": 0.757,
+        "personalization_flags": {},
+        "translation_time_sec": 0.472,
+        "classify_time_sec": 0.003,
+        "total_time_sec": 0.476,
+        "correct": true
+      },
+      {
+        "approach": "Approach 3 — Trained TF-IDF+LinearSVC",
+        "sinhala_input": "හ්ම් මේ පිටුවෙ මොනවා ගැනද තියෙන්නෙ",
+        "english_translation": "What's on this page about?",
+        "intent": "IDENTIFY_CONTENT",
+        "confidence": 0.61,
+        "personalization_flags": {},
+        "translation_time_sec": 0.76,
+        "classify_time_sec": 0.003,
+        "total_time_sec": 0.763,
+        "correct": true
+      },
+      {
+        "approach": "Approach 3 — Trained TF-IDF+LinearSVC",
+        "sinhala_input": "මේ ලියවිල්ල මොන වගේ එකක්ද",
+        "english_translation": "What kind of document is this ?",
+        "intent": "IDENTIFY_CONTENT",
+        "confidence": 0.408,
+        "personalization_flags": {},
+        "translation_time_sec": 0.677,
+        "classify_time_sec": 0.004,
+        "total_time_sec": 0.68,
+        "correct": true
+      },
+      {
+        "approach": "Approach 3 — Trained TF-IDF+LinearSVC",
+        "sinhala_input": "මගේ අතේ තියෙන මේ කොළේ මොනවද ලියලා තියෙන්නේ",
+        "english_translation": "What is written in this paper in my hand",
+        "intent": "IDENTIFY_CONTENT",
+        "confidence": 0.78,
+        "personalization_flags": {},
+        "translation_time_sec": 0.843,
+        "classify_time_sec": 0.006,
+        "total_time_sec": 0.849,
+        "correct": true
+      },
+      {
+        "approach": "Approach 3 — Trained TF-IDF+LinearSVC",
+        "sinhala_input": "මම දැන් කැමරාව අල්ලගෙන ඉන්න මේ කොටසේ මොනවා ගැනද කතා කරන්නේ කියලා මට මුලින්ම කියන්න",
+        "english_translation": "I'm gonna hold the camera now and tell me what you're talking about in this section.",
+        "intent": "EXPLAIN",
+        "confidence": 0.476,
+        "personalization_flags": {},
+        "translation_time_sec": 1.703,
+        "classify_time_sec": 0.004,
+        "total_time_sec": 1.707,
+        "correct": false
+      },
+      {
+        "approach": "Approach 3 — Trained TF-IDF+LinearSVC",
+        "sinhala_input": "ආයෙ",
+        "english_translation": "I'm going back.",
+        "intent": "PREVIOUS_PAGE",
+        "confidence": 0.512,
+        "personalization_flags": {},
+        "translation_time_sec": 0.679,
+        "classify_time_sec": 0.005,
+        "total_time_sec": 0.684,
+        "correct": false
+      },
+      {
+        "approach": "Approach 3 — Trained TF-IDF+LinearSVC",
+        "sinhala_input": "අ අ නැවත කියන්න",
+        "english_translation": "I'll tell you again.",
+        "intent": "SUMMARIZE",
+        "confidence": 0.428,
+        "personalization_flags": {},
+        "translation_time_sec": 0.701,
+        "classify_time_sec": 0.006,
+        "total_time_sec": 0.707,
+        "correct": false
+      },
+      {
+        "approach": "Approach 3 — Trained TF-IDF+LinearSVC",
+        "sinhala_input": "කලින් කියපු කොටස තව පාරක් කියන්න",
+        "english_translation": "Previously on \" Tell Me Another Way \"",
+        "intent": "REPHRASE",
+        "confidence": 0.766,
+        "personalization_flags": {},
+        "translation_time_sec": 0.861,
+        "classify_time_sec": 0.006,
+        "total_time_sec": 0.867,
+        "correct": false
+      },
+      {
+        "approach": "Approach 3 — Trained TF-IDF+LinearSVC",
+        "sinhala_input": "සද්දෙ නිසා මට ඇහුනෙ නෑ",
+        "english_translation": "I didn't hear it because of the noise.",
+        "intent": "REPEAT",
+        "confidence": 0.703,
+        "personalization_flags": {},
+        "translation_time_sec": 0.98,
+        "classify_time_sec": 0.006,
+        "total_time_sec": 0.986,
+        "correct": true
+      },
+      {
+        "approach": "Approach 3 — Trained TF-IDF+LinearSVC",
+        "sinhala_input": "සමාවෙන්න මගේ ෆෝන් එක රින්ග් වුණා ඒ නිසා ඔයා අන්තිමට කියපු ටික මට මඟ ඇරුණා ඒක ආයෙත් කියන්න",
+        "english_translation": "Sorry my phone rang so I missed the last thing you said.",
+        "intent": "GO_TO_END",
+        "confidence": 0.277,
+        "personalization_flags": {},
+        "translation_time_sec": 1.138,
+        "classify_time_sec": 0.003,
+        "total_time_sec": 1.141,
+        "correct": false
+      },
+      {
+        "approach": "Approach 3 — Trained TF-IDF+LinearSVC",
+        "sinhala_input": "ඇති",
+        "english_translation": "That's enough.",
+        "intent": "STOP",
+        "confidence": 0.569,
+        "personalization_flags": {},
+        "translation_time_sec": 0.542,
+        "classify_time_sec": 0.003,
+        "total_time_sec": 0.545,
+        "correct": true
+      },
+      {
+        "approach": "Approach 3 — Trained TF-IDF+LinearSVC",
+        "sinhala_input": "හරි හරි නවත්තන්න",
+        "english_translation": "Okay, okay, stop it.",
+        "intent": "STOP",
+        "confidence": 0.797,
+        "personalization_flags": {},
+        "translation_time_sec": 0.678,
+        "classify_time_sec": 0.005,
+        "total_time_sec": 0.683,
+        "correct": true
+      },
+      {
+        "approach": "Approach 3 — Trained TF-IDF+LinearSVC",
+        "sinhala_input": "දැන් කියවන්න එපා",
+        "english_translation": "Don't read it now.",
+        "intent": "REPEAT",
+        "confidence": 0.27,
+        "personalization_flags": {},
+        "translation_time_sec": 0.694,
+        "classify_time_sec": 0.006,
+        "total_time_sec": 0.699,
+        "correct": false
+      },
+      {
+        "approach": "Approach 3 — Trained TF-IDF+LinearSVC",
+        "sinhala_input": "මට කෝල් එකක් එනවා ටිකකට නවත්තන්න",
+        "english_translation": "I got a call coming in. Stop for a while.",
+        "intent": "STOP",
+        "confidence": 0.681,
+        "personalization_flags": {},
+        "translation_time_sec": 1.05,
+        "classify_time_sec": 0.006,
+        "total_time_sec": 1.056,
+        "correct": true
+      },
+      {
+        "approach": "Approach 3 — Trained TF-IDF+LinearSVC",
+        "sinhala_input": "අද නම් මට ඇති වෙන්න ඇහුවා ඉතුරු ටික හෙට අහන්නම් දැනට කියවීම නවත්තන්න",
+        "english_translation": "I've had enough today. I've heard the rest tomorrow. I'll ask you.",
+        "intent": "SUMMARIZE",
+        "confidence": 0.278,
+        "personalization_flags": {},
+        "translation_time_sec": 1.726,
+        "classify_time_sec": 0.003,
+        "total_time_sec": 1.73,
+        "correct": false
+      },
+      {
+        "approach": "Approach 3 — Trained TF-IDF+LinearSVC",
+        "sinhala_input": "ඊළඟ",
+        "english_translation": "Next .",
+        "intent": "NEXT_ARTICLE",
+        "confidence": 0.673,
+        "personalization_flags": {},
+        "translation_time_sec": 0.317,
+        "classify_time_sec": 0.004,
+        "total_time_sec": 0.32,
+        "correct": true
+      },
+      {
+        "approach": "Approach 3 — Trained TF-IDF+LinearSVC",
+        "sinhala_input": "අ ඊළඟ පුවතට",
+        "english_translation": "A to the next news",
+        "intent": "NEXT_ARTICLE",
+        "confidence": 0.824,
+        "personalization_flags": {},
+        "translation_time_sec": 0.536,
+        "classify_time_sec": 0.003,
+        "total_time_sec": 0.54,
+        "correct": true
+      },
+      {
+        "approach": "Approach 3 — Trained TF-IDF+LinearSVC",
+        "sinhala_input": "අනිත් පිටුවට යන්න",
+        "english_translation": "Go to the other page",
+        "intent": "NAVIGATE_SECTION",
+        "confidence": 0.233,
+        "personalization_flags": {},
+        "translation_time_sec": 0.54,
+        "classify_time_sec": 0.005,
+        "total_time_sec": 0.545,
+        "correct": false
+      },
+      {
+        "approach": "Approach 3 — Trained TF-IDF+LinearSVC",
+        "sinhala_input": "මේ පුවත ඇති ඊළඟ එක අහමු",
+        "english_translation": "This is the news. Let's hear the next one.",
+        "intent": "NEXT_ARTICLE",
+        "confidence": 0.601,
+        "personalization_flags": {},
+        "translation_time_sec": 1.121,
+        "classify_time_sec": 0.005,
+        "total_time_sec": 1.127,
+        "correct": true
+      },
+      {
+        "approach": "Approach 3 — Trained TF-IDF+LinearSVC",
+        "sinhala_input": "මේ පිටුවේ තියෙන ඔක්කොම මම අහලා ඉවරයි ඒ නිසා ඊළඟට තියෙන පිටුව පටන් ගන්න",
+        "english_translation": "I've heard everything on this page so start the next page.",
+        "intent": "NEXT_PAGE",
+        "confidence": 0.786,
+        "personalization_flags": {},
+        "translation_time_sec": 1.223,
+        "classify_time_sec": 0.006,
+        "total_time_sec": 1.229,
+        "correct": true
+      },
+      {
+        "approach": "Approach 3 — Trained TF-IDF+LinearSVC",
+        "sinhala_input": "කියවන්න",
+        "english_translation": "Read it",
+        "intent": "REPEAT",
+        "confidence": 0.521,
+        "personalization_flags": {},
+        "translation_time_sec": 0.319,
+        "classify_time_sec": 0.003,
+        "total_time_sec": 0.323,
+        "correct": false
+      },
+      {
+        "approach": "Approach 3 — Trained TF-IDF+LinearSVC",
+        "sinhala_input": "හ්ම් මේ ලිපිය මුල ඉඳන් අගට කියවලා දෙන්න",
+        "english_translation": "Let me read this article from the beginning .",
+        "intent": "READ_ARTICLE",
+        "confidence": 0.633,
+        "personalization_flags": {},
+        "translation_time_sec": 0.834,
+        "classify_time_sec": 0.003,
+        "total_time_sec": 0.838,
+        "correct": true
+      },
+      {
+        "approach": "Approach 3 — Trained TF-IDF+LinearSVC",
+        "sinhala_input": "මේ පිටුවේ තියෙන දේ හඬ නඟලා කියවන්න",
+        "english_translation": "Read aloud what's on this page.",
+        "intent": "IDENTIFY_CONTENT",
+        "confidence": 0.66,
+        "personalization_flags": {},
+        "translation_time_sec": 0.979,
+        "classify_time_sec": 0.003,
+        "total_time_sec": 0.982,
+        "correct": false
+      },
+      {
+        "approach": "Approach 3 — Trained TF-IDF+LinearSVC",
+        "sinhala_input": "මගේ බෙහෙත් කොළේ තියෙන දේ කියවලා දෙන්න",
+        "english_translation": "Read me what's in my medicine book.",
+        "intent": "IDENTIFY_CONTENT",
+        "confidence": 0.733,
+        "personalization_flags": {},
+        "translation_time_sec": 0.921,
+        "classify_time_sec": 0.003,
+        "total_time_sec": 0.924,
+        "correct": false
+      },
+      {
+        "approach": "Approach 3 — Trained TF-IDF+LinearSVC",
+        "sinhala_input": "මට ඇස් පේන්නෙ නැති නිසා මේ ලියුම මට කියවන්න බැහැ කරුණාකරලා ඒක මුලින්ම ඉඳන් කියවලා දෙන්න",
+        "english_translation": "I can't read this letter because I can't see. Please read it first.",
+        "intent": "READ_ARTICLE",
+        "confidence": 0.445,
+        "personalization_flags": {},
+        "translation_time_sec": 1.562,
+        "classify_time_sec": 0.004,
+        "total_time_sec": 1.565,
+        "correct": true
+      }
+    ]
+  }
+}

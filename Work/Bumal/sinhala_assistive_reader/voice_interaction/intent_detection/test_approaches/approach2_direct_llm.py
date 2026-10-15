@@ -5,6 +5,8 @@ import time
 import json
 import requests
 
+from intent_detection.llm_backend import normalize_label, labels_match
+
 
 # ─── Extract Intent via Ollama Qwen2.5 1.5B ────────────
 def extract_intent_qwen(sinhala_text):
@@ -85,7 +87,7 @@ def detect_intent_approach2(sinhala_text):
         "approach":              "Approach 2 — Direct Qwen2.5:1.5b",
         "sinhala_input":         sinhala_text,
         "english_translation":   "N/A — no translation step",
-        "intent":                result.get("intent", "UNKNOWN"),
+        "intent":                normalize_label(result.get("intent")) or "UNKNOWN",
         "personalization_flags": result.get("personalization_flags", {}),
         "translation_time_sec":  0,
         "llm_time_sec":          round(total_time, 3),
@@ -113,7 +115,7 @@ if __name__ == "__main__":
         print(f"Expected : {sample['expected_intent']}")
 
         result = detect_intent_approach2(sample["stt_output"])
-        correct = result["intent"] == sample["expected_intent"]
+        correct = labels_match(result["intent"], sample["expected_intent"])
 
         if correct:
             correct_count += 1

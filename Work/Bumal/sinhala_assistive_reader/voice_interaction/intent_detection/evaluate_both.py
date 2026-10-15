@@ -10,7 +10,8 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from data.test_samples import test_samples
 from intent_detection.approach1_nllb_llm import detect_intent_approach1
-from intent_detection.approach2_direct_llm import detect_intent_approach2
+from intent_detection.test_approaches.approach2_direct_llm import detect_intent_approach2
+from intent_detection.llm_backend import labels_match
 
 
 def run_evaluation():
@@ -34,7 +35,7 @@ def run_evaluation():
         print(f"\n  [Approach 1 — NLLB + Llama3.2:1b]")
         try:
             r1 = detect_intent_approach1(sample["stt_output"])
-            correct1 = r1["intent"] == sample["expected_intent"]
+            correct1 = labels_match(r1["intent"], sample["expected_intent"])
             print(f"  Translation  : {r1['english_translation']}")
             print(f"  Intent       : {r1['intent']} {'✅' if correct1 else '❌'}")
             print(f"  Flags        : {r1['personalization_flags']}")
@@ -50,7 +51,7 @@ def run_evaluation():
         print(f"\n  [Approach 2 — Direct Qwen2.5:1.5b]")
         try:
             r2 = detect_intent_approach2(sample["stt_output"])
-            correct2 = r2["intent"] == sample["expected_intent"]
+            correct2 = labels_match(r2["intent"], sample["expected_intent"])
             print(f"  Intent       : {r2['intent']} {'✅' if correct2 else '❌'}")
             print(f"  Flags        : {r2['personalization_flags']}")
             print(f"  Total Time   : {r2['total_time_sec']}s")

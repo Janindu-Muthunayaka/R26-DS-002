@@ -50,7 +50,7 @@ TEACHING = {
 }
 
 # One neutral question, asked to everyone. Deliberately contains NO style
-# words, so style_from_intent() and style_from_flags() both return None and
+# words, so style_from_intent() and style_from_keywords() both return None and
 # the answer must come from each user's learned profile.
 NEUTRAL_QUESTION = "මෙහි ඇත්තේ කුමක්ද"   # "what is in this?"
 

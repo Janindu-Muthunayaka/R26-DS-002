@@ -1,0 +1,17 @@
+# Python
+venv/
+__pycache__/
+*.pyc
+
+# Large model files (kept locally, not in git)
+*.gguf
+*.joblib
+
+# Learned per-user model state
+data/*.pkl
+
+# Generated speech audio (delivery/laptop_player.py cache)
+data/tts_cache/
+
+# Local safety copies of data/
+backups/

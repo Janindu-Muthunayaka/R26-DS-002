@@ -18,9 +18,12 @@ import time
 import joblib
 
 from intent_detection.approach1_nllb_llm import translate_to_english, extract_intent_llama
+from intent_detection.llm_backend import labels_match
 
 # ─── Load Trained Classifier ───────────────────────────
-MODEL_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "model")
+# The bundle lives in intent_detection/model/, one level up from this file
+# (test_approaches/).
+MODEL_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "model")
 BUNDLE_PATH = os.path.join(MODEL_DIR, "intent_classifier_bundle.joblib")
 
 print("Loading trained intent classifier (TF-IDF + LinearSVC)...")
@@ -142,7 +145,7 @@ if __name__ == "__main__":
         print(f"Expected : {sample['expected_intent']}")
 
         result = detect_intent_approach3(sample["stt_output"])
-        correct = result["intent"] == sample["expected_intent"]
+        correct = labels_match(result["intent"], sample["expected_intent"])
 
         if correct:
             correct_count += 1

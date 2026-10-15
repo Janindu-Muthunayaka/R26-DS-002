@@ -54,3 +54,12 @@ PyAudio==0.2.14
 audioop-lts==0.2.2
 standard-aifc==3.13.0
 standard-chunk==3.13.0
+# Adaptive voice delivery (delivery/): Sinhala TTS + tests.
+# Playback also needs FFmpeg's ffplay: winget install Gyan.FFmpeg
+gTTS==2.5.4
+pytest==9.1.1
+# llama-cpp-python: install via the maintainer's prebuilt Windows/Linux CPU
+# wheel index, NOT a plain pip install — a bare install compiles from
+# source and can fail on newer MSVC (std::chrono errors in older releases).
+#   pip install llama-cpp-python --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cpu
+llama-cpp-python

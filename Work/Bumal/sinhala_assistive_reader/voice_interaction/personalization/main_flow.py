@@ -8,8 +8,12 @@
 #
 # DECISION ORDER for this turn's style:
 #   1. Explicit intent      (SIMPLIFY / ELABORATE / STEP_BY_STEP)  -> obey outright
-#   2. Explicit flags       (language_style / detail_level)        -> obey outright
+#   2. Style words in the English translation (text keywords)      -> obey outright
 #   3. The user's own model (prediction from their history)        -> only if 1 & 2 silent
+#
+# (Phase 3: the old "explicit LLM flags" step was removed — the LLM has not
+# been asked for personalization_flags since 12 Oct, so it never fired. The
+# payload still sends "personalization_flags": {} so the contract stays valid.)
 #
 # LEARNING RULE: only cases 1 and 2 (plus corrections) are real user
 # evidence, and only they train the model. Case 3 is a prediction and is
@@ -17,12 +21,13 @@
 # loop that made the previous version a majority-class predictor.
 
 from intent_detection.approach1_nllb_llm import detect_intent_approach1
+from intent_detection.modifiers import build_frame
 from personalization.logger import (
-    log_interaction, get_last_interaction,
+    log_interaction, log_unmatched_modifiers, get_last_interaction,
     update_last_interaction_style, update_interaction_style_by_timestamp
 )
 from personalization.diagnostic import (
-    style_from_intent, style_from_flags, style_from_keywords, detect_correction_signal
+    style_from_intent, style_from_keywords, detect_correction_signal
 )
 from personalization.style_model import predict_style, learn_style, get_user_summary
 from personalization.system_commands import detect_system_command, get_command_action
@@ -43,7 +48,11 @@ def handle_voice_command(sinhala_text, user_id):
         "stt_stage":             {...},
         "intent_stage":          <detect_intent_approach1() output>,
         "personalization_stage": {...decisions and why...},
-        "final_prompt":          <payload for Component 3>
+        "final_prompt":          <payload for Component 3>,
+        "frame":                 <intent_detection.modifiers.build_frame() output:
+                                  {intent, modifiers, evidence} — Phase 2b, read
+                                  by delivery/feedback.py; the fields above are
+                                  unchanged and still use the LLM intent>
       }
     """
     # ── Stage 1: STT output ──
@@ -53,7 +62,8 @@ def handle_voice_command(sinhala_text, user_id):
     intent_stage = detect_intent_approach1(sinhala_text)
     intent = intent_stage["intent"]
     english_text = intent_stage["english_translation"]
-    flags = intent_stage.get("personalization_flags", {})
+    frame = build_frame(sinhala_text, english_text, intent)
+    log_unmatched_modifiers(user_id, sinhala_text, english_text, frame)
 
     # ── Stage 3: System command check (before anything personalization) ──
     # Navigation commands carry no style information, so they bypass the
@@ -79,6 +89,7 @@ def handle_voice_command(sinhala_text, user_id):
                 "intent": intent,
                 "english_translation": english_text,
             },
+            "frame": frame,
         }
 
     # ── Stage 4: Personalization ──
@@ -96,15 +107,10 @@ def handle_voice_command(sinhala_text, user_id):
 
     # 4c. Decide this turn's style, in strict priority order
     intent_style = style_from_intent(intent)
-    # Flags are grounded against the translation — an unsupported flag from
-    # the 1B model is rejected rather than trusted (see diagnostic.py).
-    flag_style = style_from_flags(flags, english_text)
     keyword_style = style_from_keywords(english_text)
 
     if intent_style:
         style, style_source, is_evidence = intent_style, "explicit_intent", True
-    elif flag_style:
-        style, style_source, is_evidence = flag_style, "explicit_flag", True
     elif keyword_style:
         style, style_source, is_evidence = keyword_style, "text_keywords", True
     else:
@@ -139,7 +145,8 @@ def handle_voice_command(sinhala_text, user_id):
             "english_translation": english_text,
             "style_class": style,
             "prompt_modifier": prompt_modifier,
-            "personalization_flags": flags,
+            "personalization_flags": {},   # kept for the Component 3 contract; never filled
             "correction_applied": corrected_style,
         },
+        "frame": frame,
     }

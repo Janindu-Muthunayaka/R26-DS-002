@@ -63,6 +63,56 @@ SYSTEM_COMMANDS = {
             "HALT", "CANCEL", "QUIET",
         },
     },
+    "GO_BACK": {
+        "action": "Go back to the previous item",
+        "phrases": {
+            "go back", "back", "previous", "previous one", "previous page",
+            "previous article", "previous news", "the previous one",
+        },
+        "contains": {
+            "previous page", "previous article", "previous news",
+            "go back to the previous",
+        },
+        "intents": {
+            "PREVIOUS", "GO_BACK", "BACK", "PREVIOUS_PAGE",
+            "PREVIOUS_ARTICLE", "GO_PREVIOUS",
+        },
+    },
+    # The three commands below have no "contains" phrases on purpose: words
+    # like "page", "section" or "headlines" also appear in content requests
+    # ("summarize the sports section"), so only the intent label or the
+    # whole utterance is trusted.
+    "GO_TO_PAGE": {
+        "action": "Jump to a specific page (number, first or last)",
+        "phrases": {
+            "first page", "go to the first page", "last page",
+            "go to the last page",
+        },
+        "contains": set(),
+        "intents": {
+            "GO_TO_PAGE", "NAVIGATE_PAGE_NUMBER", "GO_TO_START", "GO_TO_END",
+            "PAGE_NUMBER", "GO_TO_FIRST_PAGE", "GO_TO_LAST_PAGE",
+        },
+    },
+    "GO_TO_SECTION": {
+        "action": "Jump to a named section of the newspaper",
+        "phrases": set(),
+        "contains": set(),
+        "intents": {
+            "GO_TO_SECTION", "NAVIGATE_SECTION", "OPEN_SECTION",
+        },
+    },
+    "READ_HEADLINES": {
+        "action": "Read out the list of headlines",
+        "phrases": {
+            "headlines", "read the headlines", "read headlines",
+            "what are the headlines",
+        },
+        "contains": set(),
+        "intents": {
+            "READ_HEADLINES", "HEADLINES", "LIST_HEADLINES",
+        },
+    },
 }
 
 
