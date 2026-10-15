@@ -329,6 +329,16 @@ def build(pipeline, web_dir: Path):
         try:
             voice = l0.interpret(q.text, user_id=q.user_id or VOICE_USER_ID)
             voice.setdefault('sinhala_input', q.text)
+            voice.setdefault('session_id', q.job)
+            if hasattr(doc, 'generations') and doc.generations:
+                voice['chat_history'] = [
+                    {
+                        'question': g.get('query') or '',
+                        'standalone_question': g.get('standalone_query') or g.get('query') or '',
+                        'answer': g.get('answer') or g.get('answer_si') or ''
+                    }
+                    for g in doc.generations
+                ]
             t_voice = round(time.time() - t0, 2)
 
             t1 = time.time()

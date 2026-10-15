@@ -13,23 +13,14 @@ WHAT IS NADEE'S AND KEPT VERBATIM
   * `sinhala_purity` and the strict retry when an answer comes back
     code-switched.
   * The chunk metadata shape and the "always retrieve the current page" rule.
-
-`Work/Nadee/` is untouched. What changed is the machinery underneath — see
-`store.py`.
-
-ONE DELIBERATE DIFFERENCE. The E5 `"query: "` / `"passage: "` prefixes are
-dropped. They are a convention of `intfloat/multilingual-e5-*`, which is no
-longer the embedding model; carrying them over would put two meaningless
-tokens at the front of every text and quietly degrade retrieval.
+  * Multi-turn chat history and follow-up query rewriting.
 """
 from __future__ import annotations
 
 import sys
 from pathlib import Path
 
-# `system/` on the path for core.llm and core.env ONLY. Both are stdlib-only —
-# json, os, re, time, urllib — so this pulls no torch, no cv2 and no
-# transformers into this service's environment. Importing `core.config` would.
+# `system/` on the path for core.llm and core.env ONLY. Both are stdlib-only.
 _REPO = Path(__file__).resolve().parent.parent.parent
 if str(_REPO / 'system') not in sys.path:
     sys.path.insert(0, str(_REPO / 'system'))
@@ -37,24 +28,42 @@ if str(_REPO / 'system') not in sys.path:
 from core import llm                                   # noqa: E402
 from ingest import records_from_text                    # noqa: E402
 from store import VectorStore, record_hash, text_hash   # noqa: E402
+from history import get_history, add_turn, format_history_for_prompt  # noqa: E402
+from rewrite import rewrite_query                       # noqa: E402
+
+def clean_ocr_sinhala(text: str) -> str:
+    """Normalize common Sinhala OCR artifacts and character confusions."""
+    if not text:
+        return ""
+    import unicodedata
+    text = unicodedata.normalize('NFC', text)
+    text = text.replace('ප් ර', 'ප්‍ර').replace('ත්ර', 'ත්‍ර').replace('ක්‍ර', 'ක්‍ර').replace('ක් ර', 'ක්‍ර')
+    text = text.replace('ඟාල්ල', 'ගාල්ල')
+    return text
+
 
 PROMPT = """
 ඔබ දෘෂ්ටි විනාශයට ලක් වූ පුද්ගලයින් සඳහා සිංහල කියවීමේ සහායකයෙකි.
 
 උපදෙස්:
 - පිළිතුර සිංහල භාෂාවෙන් පමණක් ලබා දෙන්න.
-- පහත දක්වා ඇති සාක්ෂි (evidence) මත පමණක් පදනම් වන්න.
-- ප්‍රමාණවත් තොරතුරු නොමැති නම්, "කියවන ලද පාඨයේ මෙම ප්‍රශ්නයට ප්‍රමාණවත් තොරතුරු නොමැත." ලෙස පිළිතුරු දෙන්න.
+- පහත දක්වා ඇති සාක්ෂි (Evidence) හි සඳහන් කරුණු ඇසුරෙන් අදාළ පිළිතුර ලබා දෙන්න. සාක්ෂි මගින් පිළිතුරු දිය නොහැකි නම් පමණක් "කියවන ලද පාඨයේ මෙම ප්‍රශ්නයට ප්‍රමාණවත් තොරතුරු නොමැත." ලෙස පිළිතුරු දෙන්න.
+- ප්‍රශ්නයේ "මේක", "මෙය", "එය" වැනි සර්වනාම තිබේ නම්, පෙර සංවාදය හෝ සාක්ෂි (Evidence) හි සඳහන් කරුණු ඇසුරෙන් එය කුමක්දැයි තේරුම් ගෙන අදාළ පිළිතුර ලබා දෙන්න.
+- "පෙර සංවාදය" කොටස ඇත්තේ පරිශීලකයා කලින් ඇසූ දේ තේරුම් ගැනීමට පමණි; කරුණු සඳහා Evidence කොටස පමණක් භාවිතා කරන්න.
+- පරිශීලකයා "තව කියන්න" වැනි ලෙස වැඩිදුර විස්තර ඉල්ලා ඇත්නම්, පෙර පිළිතුරේ දැනටමත් සඳහන් කළ කරුණු නැවත නොකියා, Evidence හි ඇති අලුත් කරුණු ලබා දෙන්න.
 - {prompt_modifier}
 - උපරිම වචන ගණන: {max_words}.
 
 Intent: {intent}
 Style: {style_class}
 
+පෙර සංවාදය (සන්දර්භය පමණි, සාක්ෂියක් නොවේ):
+{chat_history}
+
 Evidence:
 {evidence}
 
-User question (translated): {query_text}
+පරිශීලකයාගේ ප්‍රශ්නය: {query_text}
 
 පිළිතුර:
 """
@@ -148,8 +157,9 @@ def retrieve(store: VectorStore, query_text: str, retrieved_chunk_id=None,
         return [], reason
     q = qvec[0]
 
-    # 1. Retrieve all relevant chunks from the current article being read
-    current_docs = store.search(q, k=top_k, where={'source_type': 'ocr_current'})
+    # 1. Always pull in the current page chunks in natural reading order
+    current_docs = list(store.get_where('source_type', 'ocr_current'))
+    current_docs.sort(key=lambda d: d.get('chunk_id') or d.get('metadata', {}).get('chunk_id', ''))
     add(current_docs)
 
     # 2. Honour an anchor chunk if specified
@@ -157,7 +167,6 @@ def retrieve(store: VectorStore, query_text: str, retrieved_chunk_id=None,
         add([c for c in store.get_where('chunk_id', retrieved_chunk_id)])
 
     # 3. Only look into past articles if current article has no content or if specifically needed
-    # and require a meaningful similarity score (>= 0.35) to prevent polluting context with unrelated scraps.
     remaining = top_k - len(collected)
     if remaining > 0 and not current_docs:
         pool = store.search(q, k=remaining + len(collected))
@@ -170,7 +179,7 @@ def retrieve(store: VectorStore, query_text: str, retrieved_chunk_id=None,
 
 
 def generate(query_text, intent, style_class, prompt_modifier, max_words,
-             evidence_docs, sinhala_query: str = '') -> tuple:
+             evidence_docs, sinhala_query: str = '', chat_history: str = '') -> tuple:
     """(answer, reason). Never raises."""
     evidence = '\n---\n'.join(d['text'] for d in evidence_docs)
     if not evidence.strip():
@@ -185,7 +194,8 @@ def generate(query_text, intent, style_class, prompt_modifier, max_words,
         filled = PROMPT.format(
             prompt_modifier=modifier or '', max_words=max_words,
             intent=intent or '', style_class=style_class or '',
-            evidence=evidence, query_text=display_question)
+            evidence=evidence, query_text=display_question,
+            chat_history=chat_history or '(නැත)')
         return llm.chat([{'role': 'user', 'content': filled}],
                         temperature=0.2)
 
@@ -215,10 +225,17 @@ def run(store: VectorStore, ocr: dict, voice: dict, remember: bool = True
                 'answer_si': f"'{route}' route සඳහා RAG පිළිතුරු ජනනය නොකරයි.",
                 'retrieved_sources': [], 'speakable_text': None, 'notes': notes}
 
-    current = (ocr.get('corrected_text') or '').strip()
+    session_id = voice.get('session_id') or 'default'
+    caller_history = voice.get('chat_history')
+    if caller_history and isinstance(caller_history, list):
+        history = caller_history
+    else:
+        history = get_history(session_id)
 
-    # The page being read now REPLACES the previous one — one user, one page at
-    # a time, the assumption Nadee's vectorstore.py flagged.
+    raw_current = (ocr.get('corrected_text') or '').strip()
+    current = clean_ocr_sinhala(raw_current)
+
+    # The page being read now REPLACES the previous one
     if current:
         store.delete_where('source_type', 'ocr_current')
         recs = records_from_text(current, 'ocr_current', 'ocr_current')
@@ -226,8 +243,6 @@ def run(store: VectorStore, ocr: dict, voice: dict, remember: bool = True
         if reason:
             notes.append(f'indexing the current page failed: {reason}')
 
-        # And keep it, so the assistant can answer about what it has read
-        # before. This is the corpus the system actually has.
         if remember:
             base = text_hash(current)
             kept, reason = index_records(
@@ -239,11 +254,19 @@ def run(store: VectorStore, ocr: dict, voice: dict, remember: bool = True
     query = voice.get('english_translation') or ''
     sinhala_query = voice.get('sinhala_input') or voice.get('text') or ''
     retrieval_query = sinhala_query or query
-    docs, reason = retrieve(store, retrieval_query, voice.get('retrieved_chunk_id'))
+
+    # Multi-turn follow-up rewriting
+    standalone_query = rewrite_query(retrieval_query, history)
+    if standalone_query and standalone_query != retrieval_query:
+        notes.append(f"query rewritten: '{standalone_query}'")
+
+    docs, reason = retrieve(store, standalone_query or retrieval_query, voice.get('retrieved_chunk_id'))
     if reason:
         return {'ok': False, 'intent': intent, 'answer_si': FAILED,
                 'retrieved_sources': [], 'speakable_text': FAILED,
                 'notes': notes + [f'retrieval failed: {reason}']}
+
+    chat_history_text = format_history_for_prompt(history)
 
     answer, reason = generate(
         query_text=query, intent=intent,
@@ -252,17 +275,21 @@ def run(store: VectorStore, ocr: dict, voice: dict, remember: bool = True
         max_words=resolve_max_words(voice.get('style_class'),
                                     voice.get('personalization_flags')),
         evidence_docs=docs,
-        sinhala_query=sinhala_query)
+        sinhala_query=standalone_query or sinhala_query,
+        chat_history=chat_history_text)
     if answer is None:
         return {'ok': False, 'intent': intent, 'answer_si': FAILED,
                 'retrieved_sources': [], 'speakable_text': FAILED,
                 'notes': notes + [f'generation failed: {reason}']}
 
+    is_abstention = answer.strip() == NO_EVIDENCE
+    if is_abstention:
+        notes.append('no evidence found in read text for this question')
+    add_turn(retrieval_query, standalone_query, answer, session_id)
+
     return {
-        # `ok` is ADDITIVE and it matters: without it a failure SENTENCE — a
-        # perfectly non-empty string — came back to the reader looking exactly
-        # like a successful answer, and was reported ok=True. Caught live.
-        'ok': answer.strip() != NO_EVIDENCE,
+        'ok': True,
+        'is_abstention': is_abstention,
         'intent': intent,
         'answer_si': answer,
         'retrieved_sources': [

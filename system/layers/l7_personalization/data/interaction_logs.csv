@@ -77,3 +77,12 @@
 76,user_001,2026-10-14T20:02:36.343271,මේකේ තත්වේ කොහොමද?,How's the situation?,IDENTIFY_CONTENT,{},,Simple,False
 77,user_001,2026-10-14T20:06:38.116654,මේ තත්ත්වය ගැන ඔබ මොකද හිතන්නේ?,What do you think about this situation?,EXPLAIN,{},,Simple,False
 78,user_001,2026-10-14T20:10:06.432632,මෙයින් ඇතිවිය හැකි අනතුර කුමක්ද?,What is the potential danger?,IDENTIFY_CONTENT,{},,Simple,False
+79,user_001,2026-10-14T22:39:18.962374,මෙය පිහිටා ඇත්තේ කුමන මාර්ගයේද?,Which way is this located?,IDENTIFY_CONTENT,{},,Simple,False
+80,user_001,2026-10-14T23:43:45.026497,මෙය පිහිටා ඇත්තේ කුමන මාර්ගයේද?,Which way is this located?,IDENTIFY_CONTENT,{},,Simple,False
+81,user_001,2026-10-14T23:44:14.680731,මෙයින් ඇතිවිය හැකි අනතුර කුමක්ද?,What is the potential danger?,IDENTIFY_CONTENT,{},,Simple,False
+82,user_001,2026-10-15T00:02:53.929949,මෙයින් ඇතිවිය හැකි අනතුර කුමක්ද?,What is the potential danger?,IDENTIFY_CONTENT,{},,Simple,False
+83,user_001,2026-10-15T00:03:38.350837,මේක ගාල්ලේ කොහෙද තියෙන්නේ?,Where's this in the garage?,IDENTIFY_CONTENT,{},,Simple,False
+84,user_001,2026-10-15T06:11:20.010847,මෙයින් ඇතිවිය හැකි අනතුර කුමක්ද?,What is the potential danger?,IDENTIFY_CONTENT,{},,Simple,False
+85,user_001,2026-10-15T06:20:33.449118,මේක ගාල්ලේ කොහෙද තියෙන්නේ?,Where's this in the garage?,IDENTIFY_CONTENT,{},,Simple,False
+86,user_001,2026-10-15T06:21:27.689795,2 වන ලිපිය පදනම් වී ඇත්තේ කොහේද?,Where is Article 2 based?,IDENTIFY_CONTENT,{},,Simple,False
+87,user_001,2026-10-15T06:21:46.633246,මේක ගාල්ලේ කොහෙද තියෙන්නේ?,Where's this in the garage?,IDENTIFY_CONTENT,{},,Simple,False
