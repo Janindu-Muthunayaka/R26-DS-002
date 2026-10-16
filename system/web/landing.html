@@ -1125,6 +1125,76 @@
             }
         }
 
+        function extractWeightVal(hw, ...keys) {
+            if (!hw) return 0;
+            for (const k of keys) {
+                if (hw[k] != null) return parseFloat(hw[k]) || 0;
+            }
+            const lowerKeys = keys.map(k => k.toLowerCase());
+            for (const [hk, hv] of Object.entries(hw)) {
+                if (lowerKeys.includes(hk.toLowerCase()) && hv != null) return parseFloat(hv) || 0;
+            }
+            return 0;
+        }
+
+        function buildTurnWeightHtml(turn, prevTurn, latestHw) {
+            let currHw = (turn && turn.user_profile && turn.user_profile.history_weights)
+                ? turn.user_profile.history_weights
+                : (turn && weightHistory.find(e => e.turn === turn.index)) || latestHw || null;
+
+            if (!currHw) return '';
+
+            let prevHw = null;
+            if (prevTurn) {
+                prevHw = (prevTurn.user_profile && prevTurn.user_profile.history_weights)
+                    ? prevTurn.user_profile.history_weights
+                    : (weightHistory.find(e => e.turn === prevTurn.index) || null);
+            }
+
+            const styles = [
+                { label: 'Simple', keys: ['Simple', 'simple'], color: '#10b981', bg: 'rgba(16, 185, 129, 0.12)', border: 'rgba(16, 185, 129, 0.28)' },
+                { label: 'Detail', keys: ['Detailed', 'Detail', 'detail', 'detailed'], color: '#3b82f6', bg: 'rgba(59, 130, 246, 0.12)', border: 'rgba(59, 130, 246, 0.28)' },
+                { label: 'Step by Step', keys: ['StepByStep', 'Step', 'step_by_step', 'stepbystep'], color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.12)', border: 'rgba(245, 158, 11, 0.28)' }
+            ];
+
+            let pills = styles.map(s => {
+                const curVal = extractWeightVal(currHw, ...s.keys);
+                const curPct = Math.round(curVal * 100);
+
+                let diffHtml = '';
+                if (prevHw) {
+                    const prevVal = extractWeightVal(prevHw, ...s.keys);
+                    const prevPct = Math.round(prevVal * 100);
+                    const diff = curPct - prevPct;
+                    if (diff > 0) {
+                        diffHtml = ` <span style="font-size: 8px; font-weight: 700; color: #10b981;">+${diff}%</span>`;
+                    } else if (diff < 0) {
+                        diffHtml = ` <span style="font-size: 8px; font-weight: 700; color: #ef4444;">${diff}%</span>`;
+                    } else {
+                        diffHtml = ` <span style="font-size: 8px; color: var(--ink-soft);">=</span>`;
+                    }
+                }
+
+                return `<span style="background:${s.bg}; border:1px solid ${s.border}; border-radius:3px; padding:1px 4px; color:${s.color}; font-weight:600; white-space:nowrap;">${s.label}: ${curPct}%${diffHtml}</span>`;
+            }).join('');
+
+            return `<div style="margin: 2px 0;">
+                        <div style="font-size: 8.5px; font-weight: 600; color: var(--ink-soft); margin-bottom: 1px;">Weights:</div>
+                        <div style="display: flex; flex-wrap: wrap; gap: 2px; font-size: 8.5px;">${pills}</div>
+                    </div>`;
+        }
+
+        function formatSpeechWithPauses(text) {
+            if (!text) return '(empty)';
+            // Highlight pauses: ellipsis ' ... ', double spaces, or comma / stop pauses
+            let t = text;
+            // 1. Highlight deliberate ellipsis pauses (' ... ')
+            t = t.replace(/\s*\.\.\.\s*/g, ' <span style="background: rgba(245, 158, 11, 0.22); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.4); border-radius: 3px; padding: 0 4px; font-weight: 700; font-family: monospace; font-size: 10px;" title="Deliberate Speech Pause">⏸ …</span> ');
+            // 2. Highlight step / paragraph breaks with pause badge
+            t = t.replace(/\.\s*\n+/g, '.<br><span style="display:inline-block; margin: 2px 0; background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 3px; padding: 0 4px; font-size: 8.5px; font-weight: 600;" title="Inter-sentence Pause">⏸ pause</span><br>');
+            return t;
+        }
+
         async function pollLatest() {
             try {
                 const res = await fetch('/latest');
@@ -1308,7 +1378,9 @@
                             genHtml += `<b>Turn ${turn.index} (${turn.route})</b><br>`;
                             genHtml += `<i>Q:</i> ${turn.query}<br>`;
                             genHtml += `<i>A:</i> ${turn.answer || turn.answer_si}<br>`;
-                            genHtml += `<span style="font-size: 9.5px; color: var(--ink-soft);">Timings: voice=${turn.timings.voice}s, gen=${turn.timings.generate}s, total=${turn.timings.total}s</span>`;
+                            if (turn.timings) {
+                                genHtml += `<span style="font-size: 9.5px; color: var(--ink-soft);">Timings: voice=${turn.timings.voice}s, gen=${turn.timings.generate}s, total=${turn.timings.total}s</span>`;
+                            }
                             genHtml += `</div>`;
                         });
                         updateData('generator', genHtml, true);
@@ -1327,10 +1399,6 @@
                             else if (srcName === 'text_keywords') srcName = 'Text Keywords';
                             persHtml += `<b style="font-size:10px;">Source:</b> <span style="font-size:10.5px;color:var(--accent-deep);">${srcName}</span><br>`;
                         }
-                        const latestSpeed = getTurnSpeed(latest, latest, doc);
-                        const latestPause = getTurnPauseInfo(latest);
-                        persHtml += `<div style="margin-top: 3px; font-size: 9.5px;"><b>Speed:</b> <span style="color:var(--accent-deep); font-weight:600;">${latestSpeed}</span> &nbsp;·&nbsp; <b>Pause:</b> <span style="color:${latestPause.color}; font-weight:600; text-transform:capitalize;">${latestPause.level}</span></div>`;
-                        
                         const prof = activeUserProfile || latest.user_profile;
                         if (prof) {
                             persHtml += `<div style="margin-top: 6px; font-size: 9.5px; border-top: 1px dashed var(--card-border); padding-top: 6px;">`;
@@ -1346,22 +1414,25 @@
                             persHtml += `<div style="margin-top: 4px; font-size: 9.5px; color: #ef4444;"><b>Correction Applied:</b> ${latest.correction_applied}</div>`;
                         }
 
-                        // Show intent and prompt for every turn
-                        persHtml += `<div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line);">`;
-                        generations.forEach((turn) => {
-                            const speedVal = getTurnSpeed(turn, latest, doc);
-                            const pauseInfo = getTurnPauseInfo(turn);
-                            persHtml += `<div style="margin-bottom: 8px;">`;
-                            persHtml += `<b>Turn ${turn.index} Detected Intent:</b> <span style="color:var(--accent-deep);">${turn.intent || 'NONE'}</span><br>`;
-                            if (turn.style_class) {
-                                persHtml += `<b>Turn ${turn.index} Applied Style:</b> <span style="color:var(--accent-deep);">${turn.style_class}</span><br>`;
+                        // Pre-sync all turns that have user_profile into weightHistory
+                        generations.forEach((t) => {
+                            if (t.user_profile && t.user_profile.history_weights) {
+                                syncWeightHistoryForTurn(t.index, t.user_profile.history_weights);
                             }
-                            persHtml += `<div style="display:flex; flex-wrap:wrap; gap:4px; margin: 3px 0 4px; font-size: 9.5px;">`;
-                            persHtml += `<span style="background:rgba(217, 119, 87, 0.12); border:1px solid rgba(217, 119, 87, 0.28); border-radius:4px; padding:1px 6px; color:var(--accent-deep); font-weight:600;">⚡ Speed: ${speedVal}</span>`;
-                            persHtml += `<span style="background:${pauseInfo.bg}; border:1px solid ${pauseInfo.border}; border-radius:4px; padding:1px 6px; color:${pauseInfo.color}; font-weight:600;">⏸ Pause: ${pauseInfo.level}</span>`;
-                            persHtml += `</div>`;
+                        });
+
+                        // Show intent, style, weight change, and prompt for every turn
+                        persHtml += `<div style="margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--line);">`;
+                        generations.forEach((turn, idx) => {
+                            const prevTurn = idx > 0 ? generations[idx - 1] : null;
+                            persHtml += `<div style="margin-bottom: 5px;">`;
+                            persHtml += `<div style="line-height: 1.25; margin-bottom: 2px;"><b>Turn ${turn.index} Detected Intent:</b> <span style="color:var(--accent-deep);">${turn.intent || 'NONE'}</span></div>`;
+                            if (turn.style_class) {
+                                persHtml += `<div style="line-height: 1.25; margin-bottom: 2px;"><b>Turn ${turn.index} Applied Style:</b> <span style="color:var(--accent-deep);">${turn.style_class}</span></div>`;
+                            }
+                            persHtml += buildTurnWeightHtml(turn, prevTurn, prof ? prof.history_weights : null);
                             if (turn.prompt_modifier) {
-                                persHtml += `<div style="margin-top: 4px; padding: 4px 6px; background: rgba(0,0,0,0.03); border-radius: 4px; font-family: monospace; font-size: 9.5px; border-left: 2px solid var(--accent); white-space: pre-wrap; word-break: break-word;">"${turn.prompt_modifier}"</div>`;
+                                persHtml += `<div style="margin-top: 2px; padding: 2px 5px; background: rgba(0,0,0,0.03); border-radius: 4px; font-family: monospace; font-size: 9px; line-height: 1.25; border-left: 2px solid var(--accent); white-space: pre-wrap; word-break: break-word;">"${turn.prompt_modifier}"</div>`;
                             }
                             persHtml += `</div>`;
                         });
@@ -1369,25 +1440,54 @@
 
                         updateData('personalization', persHtml, true);
 
-                        let listenHtml = ``;
-                        generations.forEach((turn) => {
-                            listenHtml += `<div style="border-bottom: 1px solid var(--card-border); padding-bottom: 6px; margin-bottom: 6px; text-align: left;">`;
-                            listenHtml += `<b>Turn ${turn.index} Input:</b><br>${turn.query || '(empty)'}`;
-                            if (turn.english_translation && turn.english_translation !== turn.query) {
-                                listenHtml += `<br><span style="font-size: 10px; color: var(--ink-soft);">En: ${turn.english_translation}</span>`;
-                            }
-                            listenHtml += `</div>`;
-                        });
+                        let listenHtml = `<div style="text-align: left;">`;
+                        listenHtml += `<div style="font-weight: 650; color: var(--split-a); margin-bottom: 2px;">STT Voice Listener</div>`;
+                        listenHtml += `<div style="font-size: 10px; color: var(--ink-soft); margin-bottom: 5px;">Status: <span style="color:var(--accent-deep); font-weight:600;">Active</span> · ${generations.length} turn(s)</div>`;
+                        const latestIn = generations[generations.length - 1];
+                        listenHtml += `<div style="font-size: 9.5px; color: var(--ink-soft); font-weight: 600;">Latest Live Input:</div>`;
+                        listenHtml += `<div style="font-size: 11px; margin-top: 1px;">${latestIn.query || '(empty)'}</div>`;
+                        if (latestIn.english_translation && latestIn.english_translation !== latestIn.query) {
+                            listenHtml += `<div style="font-size: 9.5px; color: var(--ink-soft); font-style: italic;">En: ${latestIn.english_translation}</div>`;
+                        }
+                        listenHtml += `</div>`;
                         updateData('listen', listenHtml, true);
 
-                        let speechHtml = `<b>Spoken Text:</b><br>${latest.answer}`;
+                        let speechHtml = ``;
+                        generations.forEach((turn) => {
+                            const speedVal = getTurnSpeed(turn, latest, doc);
+                            const pauseInfo = getTurnPauseInfo(turn);
+                            speechHtml += `<div style="border-bottom: 1px solid var(--card-border); padding-bottom: 8px; margin-bottom: 8px; text-align: left;">`;
+                            speechHtml += `<div style="font-weight: 700; color: var(--accent-deep); font-size: 11.5px; margin-bottom: 3px;">Turn ${turn.index}</div>`;
+                            
+                            speechHtml += `<div style="margin-bottom: 4px;">`;
+                            speechHtml += `<span style="font-size: 10px; color: var(--split-a); font-weight: 700;">Input:</span> `;
+                            speechHtml += `<span style="font-size: 11px;">${turn.query || '(empty)'}</span>`;
+                            if (turn.english_translation && turn.english_translation !== turn.query) {
+                                speechHtml += `<br><span style="font-size: 9.5px; color: var(--ink-soft); font-style: italic;">En: ${turn.english_translation}</span>`;
+                            }
+                            speechHtml += `</div>`;
+                            
+                            speechHtml += `<div style="margin-bottom: 4px;">`;
+                            speechHtml += `<span style="font-size: 10px; color: var(--split-b); font-weight: 700;">Output:</span> `;
+                            const outText = turn.answer || turn.answer_si || '';
+                            speechHtml += `<div style="font-size: 11px; margin-top: 1px; line-height: 1.4;">${formatSpeechWithPauses(outText)}</div>`;
+                            speechHtml += `</div>`;
+                            
+                            speechHtml += `<div style="display:flex; flex-wrap:wrap; gap:3px; margin-top: 4px; font-size: 9px;">`;
+                            speechHtml += `<span style="background:rgba(217, 119, 87, 0.12); border:1px solid rgba(217, 119, 87, 0.28); border-radius:3px; padding:1px 5px; color:var(--accent-deep); font-weight:600;">⚡ Speed: ${speedVal}</span>`;
+                            speechHtml += `<span style="background:${pauseInfo.bg}; border:1px solid ${pauseInfo.border}; border-radius:3px; padding:1px 5px; color:${pauseInfo.color}; font-weight:600;">⏸ Pause: ${pauseInfo.level}</span>`;
+                            speechHtml += `</div>`;
+                            
+                            speechHtml += `</div>`;
+                        });
                         updateData('speech', speechHtml, true);
 
                     } else if (doc.last_answer) {
                         const ans = doc.last_answer;
                         updateData('voice', `Route: ${ans.route}\nIntent: ${ans.intent}`);
                         
-                        let genHtml = `<b>Answer (${ans.route})</b><br>${ans.answer_si || ans.speakable}`;
+                        let singleQ = (doc.generations && doc.generations.length > 0) ? (doc.generations[0].query || 'Voice input') : 'Voice input';
+                        let genHtml = `<b>Turn 1 (${ans.route})</b><br><i>Q:</i> ${singleQ}<br><i>A:</i> ${ans.answer_si || ans.speakable}`;
                         if (ans.warnings && ans.warnings.length > 0) {
                             genHtml += `<br><br><i>Warnings:</i><br>${ans.warnings.join('<br>')}`;
                         }
@@ -1404,10 +1504,6 @@
                             else if (srcName === 'text_keywords') srcName = 'Text Keywords';
                             persHtml += `<b style="font-size:10px;">Source:</b> <span style="font-size:10.5px;color:var(--accent-deep);">${srcName}</span><br>`;
                         }
-                        const ansTopSpeed = getTurnSpeed(ans, ans, doc);
-                        const ansTopPause = getTurnPauseInfo(ans);
-                        persHtml += `<div style="margin-top: 3px; font-size: 9.5px;"><b>Speed:</b> <span style="color:var(--accent-deep); font-weight:600;">${ansTopSpeed}</span> &nbsp;·&nbsp; <b>Pause:</b> <span style="color:${ansTopPause.color}; font-weight:600; text-transform:capitalize;">${ansTopPause.level}</span></div>`;
-                        
                         const prof = activeUserProfile || ans.user_profile;
                         if (prof) {
                             persHtml += `<div style="margin-top: 6px; font-size: 9.5px; border-top: 1px dashed var(--card-border); padding-top: 6px;">`;
@@ -1423,19 +1519,14 @@
                             persHtml += `<div style="margin-top: 4px; font-size: 9.5px; color: #ef4444;"><b>Correction Applied:</b> ${ans.correction_applied}</div>`;
                         }
 
-                        // Show intent and prompt for this turn
-                        const ansSpeed = getTurnSpeed(ans, ans, doc);
-                        const ansPause = getTurnPauseInfo(ans);
+                        // Show intent, style, weight change, and prompt for this turn
                         persHtml += `<div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line);">`;
                         persHtml += `<div style="margin-bottom: 8px;">`;
                         persHtml += `<b>Turn 1 Intent:</b> <span style="color:var(--accent-deep);">${ans.intent || 'NONE'}</span><br>`;
                         if (ans.style_class) {
                             persHtml += `<b>Turn 1 Style:</b> <span style="color:var(--accent-deep);">${ans.style_class}</span><br>`;
                         }
-                        persHtml += `<div style="display:flex; flex-wrap:wrap; gap:4px; margin: 3px 0 4px; font-size: 9.5px;">`;
-                        persHtml += `<span style="background:rgba(217, 119, 87, 0.12); border:1px solid rgba(217, 119, 87, 0.28); border-radius:4px; padding:1px 6px; color:var(--accent-deep); font-weight:600;">⚡ Speed: ${ansSpeed}</span>`;
-                        persHtml += `<span style="background:${ansPause.bg}; border:1px solid ${ansPause.border}; border-radius:4px; padding:1px 6px; color:${ansPause.color}; font-weight:600;">⏸ Pause: ${ansPause.level}</span>`;
-                        persHtml += `</div>`;
+                        persHtml += buildTurnWeightHtml(null, null, prof ? prof.history_weights : null);
                         if (ans.prompt_modifier) {
                             persHtml += `<div style="margin-top: 4px; padding: 4px 6px; background: rgba(0,0,0,0.03); border-radius: 4px; font-family: monospace; font-size: 9.5px; border-left: 2px solid var(--accent); white-space: pre-wrap; word-break: break-word;">"${ans.prompt_modifier}"</div>`;
                         }
@@ -1443,8 +1534,31 @@
 
                         updateData('personalization', persHtml, true);
                         
-                        updateData('listen', '<b>STT / Voice Input</b><br>Received and processed.', true);
-                        updateData('speech', `<b>Speech Output</b><br><i>Speakable:</i> ${ans.speakable}`, true);
+                        let singleListenHtml = `<div style="text-align: left;">`;
+                        singleListenHtml += `<div style="font-weight: 650; color: var(--split-a); margin-bottom: 2px;">STT Voice Listener</div>`;
+                        singleListenHtml += `<div style="font-size: 10px; color: var(--ink-soft); margin-bottom: 5px;">Status: <span style="color:var(--accent-deep); font-weight:600;">Active</span> · 1 turn</div>`;
+                        singleListenHtml += `<div style="font-size: 9.5px; color: var(--ink-soft); font-weight: 600;">Latest Live Input:</div>`;
+                        singleListenHtml += `<div style="font-size: 11px; margin-top: 1px;">${singleQ}</div>`;
+                        singleListenHtml += `</div>`;
+                        updateData('listen', singleListenHtml, true);
+
+                        let singleSpeechHtml = `<div style="text-align: left;">`;
+                        singleSpeechHtml += `<div style="font-weight: 700; color: var(--accent-deep); font-size: 11.5px; margin-bottom: 3px;">Turn 1</div>`;
+                        singleSpeechHtml += `<div style="margin-bottom: 4px;">`;
+                        singleSpeechHtml += `<span style="font-size: 10px; color: var(--split-a); font-weight: 700;">Input:</span> `;
+                        singleSpeechHtml += `<span style="font-size: 11px;">${singleQ}</span>`;
+                        singleSpeechHtml += `</div>`;
+                        singleSpeechHtml += `<div style="margin-bottom: 4px;">`;
+                        singleSpeechHtml += `<span style="font-size: 10px; color: var(--split-b); font-weight: 700;">Output:</span> `;
+                        const singleOutText = ans.speakable || ans.answer_si || '';
+                        singleSpeechHtml += `<div style="font-size: 11px; margin-top: 1px; line-height: 1.4;">${formatSpeechWithPauses(singleOutText)}</div>`;
+                        singleSpeechHtml += `</div>`;
+                        singleSpeechHtml += `<div style="display:flex; flex-wrap:wrap; gap:3px; margin-top: 4px; font-size: 9px;">`;
+                        singleSpeechHtml += `<span style="background:rgba(217, 119, 87, 0.12); border:1px solid rgba(217, 119, 87, 0.28); border-radius:3px; padding:1px 5px; color:var(--accent-deep); font-weight:600;">⚡ Speed: ${ansSpeed}</span>`;
+                        singleSpeechHtml += `<span style="background:${ansPause.bg}; border:1px solid ${ansPause.border}; border-radius:3px; padding:1px 5px; color:${ansPause.color}; font-weight:600;">⏸ Pause: ${ansPause.level}</span>`;
+                        singleSpeechHtml += `</div>`;
+                        singleSpeechHtml += `</div>`;
+                        updateData('speech', singleSpeechHtml, true);
                         
                     } else {
                         updateData('voice', 'Waiting for /ask...');
@@ -1564,18 +1678,23 @@
                     </div>`;
         }
 
-        /** Sync weightHistory — stores ALL keys from the actual hw object */
-        function syncWeightHistory(generations, hw) {
-            const lastTurn = generations.length > 0 ? generations[generations.length - 1].index : 1;
-            const alreadyHas = weightHistory.find(e => e.turn === lastTurn);
+        function syncWeightHistoryForTurn(turnIndex, hw) {
+            if (!hw) return;
+            const alreadyHas = weightHistory.find(e => e.turn === turnIndex);
             if (!alreadyHas) {
-                const entry = { turn: lastTurn };
+                const entry = { turn: turnIndex };
                 for (const k of Object.keys(hw)) entry[k] = hw[k] != null ? hw[k] : 0;
                 weightHistory.push(entry);
                 weightHistory.sort((a, b) => a.turn - b.turn);
             } else {
                 for (const k of Object.keys(hw)) alreadyHas[k] = hw[k] != null ? hw[k] : 0;
             }
+        }
+
+        /** Sync weightHistory — stores ALL keys from the actual hw object */
+        function syncWeightHistory(generations, hw) {
+            const lastTurn = generations.length > 0 ? generations[generations.length - 1].index : 1;
+            syncWeightHistoryForTurn(lastTurn, hw);
         }
 
         function syncWeightHistorySingle(hw) {
