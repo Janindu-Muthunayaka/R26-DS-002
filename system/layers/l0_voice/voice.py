@@ -128,8 +128,12 @@ def _degraded(text: str, reason: str) -> dict:
 
 
 def interpret(text: str, user_id: str = None,
-              retrieved_chunk_id: str = None, mode: str = None) -> dict:
-    """Sinhala utterance -> Component 4's routing dict. Never raises."""
+              retrieved_chunk_id: str = None, mode: str = None,
+              dry_run: bool = False) -> dict:
+    """Sinhala utterance -> Component 4's routing dict. Never raises.
+
+    dry_run: Component 4 decides the style for `user_id` but logs and learns
+    nothing. Used to re-generate an old answer under another user."""
     # Connect l8a_listen: if no text was provided (e.g. debugging/testing), 
     # optionally grab it from the local microphone if PyAudio is installed.
     if not text:
@@ -148,7 +152,8 @@ def interpret(text: str, user_id: str = None,
 
     body = {'text': text or '',
             'user_id': user_id or VOICE_USER_ID,
-            'retrieved_chunk_id': retrieved_chunk_id}
+            'retrieved_chunk_id': retrieved_chunk_id,
+            'dry_run': bool(dry_run)}
     reply, reason = svc.post_json(f'{VOICE_URL.rstrip("/")}/interpret', body,
                                   timeout_s=VOICE_TIMEOUT_S)
     if reply is None:
@@ -186,6 +191,28 @@ def interpret(text: str, user_id: str = None,
     reply['source'] = 'stub-service' if reply.get('stub') else 'component4'
     return reply
 
+# Same text as Component 4's STYLE_PROMPT_MODIFIERS (l7 main_flow.py). Kept
+# here so a turn the server starts itself (the first scan after a capture)
+# can be styled for the user without running intent detection on it.
+STYLE_PROMPT_MODIFIERS = {
+    "Simple": "Use very simple everyday words, short sentences, avoid technical terms.",
+    "Detailed": "Provide a thorough, in-depth explanation with full context, reasoning, and supporting detail. Do not shorten or oversimplify.",
+    "StepByStep": "Break the explanation into clear numbered steps, one action or idea per step.",
+}
+
+
+def style_for_user(user_id: str) -> dict:
+    """The user's current dominant style, read from their profile. Nothing is
+    logged or learned. Falls back to Detailed if the profile is unavailable."""
+    profile = get_profile(user_id)
+    style = (profile or {}).get('dominant_preference')
+    source = 'user_profile'
+    if style not in STYLE_PROMPT_MODIFIERS:
+        style, source = 'Detailed', 'default'
+    return {'style_class': style, 'prompt_modifier': STYLE_PROMPT_MODIFIERS[style],
+            'style_source': source, 'user_profile': profile}
+
+
 def get_profile(user_id: str) -> dict:
     mode = (VOICE_MODE or 'stub').lower()
     if mode == 'http':
@@ -197,3 +224,47 @@ def get_profile(user_id: str) -> dict:
         'dominant_preference': None
     }
 
+
+
+# ==========================================================================
+# USER REGISTRY (Component 4). Proxied so the web UI talks to one server.
+# Returns (reply, '') or (None, reason); never raises.
+# ==========================================================================
+def _voice_url(path: str) -> str:
+    return f'{VOICE_URL.rstrip("/")}{path}'
+
+
+def _need_http():
+    if (VOICE_MODE or 'stub').lower() != 'http':
+        return 'user profiles need SINHALA_VOICE_MODE=http (the L7 service)'
+    return ''
+
+
+def list_users():
+    why = _need_http()
+    if why:
+        return None, why
+    return svc.get_json(_voice_url('/users'), timeout_s=10)
+
+
+def add_user(base_weights: dict, description: str = '', name: str = '', tag: str = ''):
+    why = _need_http()
+    if why:
+        return None, why
+    return svc.post_json(_voice_url('/users'), {
+        'base_weights': base_weights, 'description': description,
+        'name': name, 'tag': tag}, timeout_s=10)
+
+
+def delete_user(user_id: str):
+    why = _need_http()
+    if why:
+        return None, why
+    return svc.post_json(_voice_url(f'/users/{user_id}/delete'), {}, timeout_s=10)
+
+
+def reset_user(user_id: str):
+    why = _need_http()
+    if why:
+        return None, why
+    return svc.post_json(_voice_url(f'/users/{user_id}/reset'), {}, timeout_s=10)

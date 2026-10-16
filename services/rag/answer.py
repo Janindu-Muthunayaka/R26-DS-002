@@ -227,7 +227,9 @@ def run(store: VectorStore, ocr: dict, voice: dict, remember: bool = True
 
     session_id = voice.get('session_id') or 'default'
     caller_history = voice.get('chat_history')
-    if caller_history and isinstance(caller_history, list):
+    # history_override: use the caller's list exactly, even when it is empty
+    # (a re-generated first turn must not see the turns that came after it).
+    if isinstance(caller_history, list) and (caller_history or voice.get('history_override')):
         history = caller_history
     else:
         history = get_history(session_id)
@@ -285,7 +287,9 @@ def run(store: VectorStore, ocr: dict, voice: dict, remember: bool = True
     is_abstention = answer.strip() == NO_EVIDENCE
     if is_abstention:
         notes.append('no evidence found in read text for this question')
-    add_turn(retrieval_query, standalone_query, answer, session_id)
+    # A re-generation replaces an existing turn; it is not a new one.
+    if not voice.get('no_history_write'):
+        add_turn(retrieval_query, standalone_query, answer, session_id)
 
     return {
         'ok': True,

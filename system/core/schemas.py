@@ -85,6 +85,16 @@ class Article(BaseModel):
     verdict: Literal['ok', 'warn', 'reject', 'unknown'] = 'unknown'
     note: str = ''
 
+    # ---- live progress, set by app/pipeline.py, shown by the web UI ----
+    # waiting: L3 has not given this article its regions yet.
+    title_status: Literal['waiting', 'running', 'done', 'failed'] = 'waiting'
+    # ocr_done: body OCR finished, mT5 waits for the title to finish too.
+    body_status: Literal['waiting', 'running', 'ocr_done', 'correcting',
+                         'done', 'failed'] = 'waiting'
+    # waiting: title + body not both ready yet. skipped: POLISH_MODE is off.
+    polish_status: Literal['waiting', 'correcting', 'done', 'skipped',
+                           'failed'] = 'waiting'
+
 
 class Document(BaseModel):
     """Layer 5 output — the whole page, ready for RAG/TTS."""

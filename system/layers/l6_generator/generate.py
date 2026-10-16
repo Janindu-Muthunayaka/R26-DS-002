@@ -29,6 +29,11 @@ from core.schemas import Document
 from core.textutils import sentences
 from layers.l5_assemble.payload import rag_payload, article_text
 
+try:
+    from .tts_clean import make_speakable
+except (ImportError, ValueError):
+    from tts_clean import make_speakable
+
 # Re-export generate_answer from llm_generate for testing or script compatibility
 try:
     from .llm_generate import generate_answer
@@ -254,7 +259,10 @@ def answer(document: Document, voice: dict, mode: str = None,
                     speakable=SI_NO_SERVICE, warnings=warnings, cursor=cursor)
 
     if mode == 'http':
-        if document and hasattr(document, 'generations') and document.generations and not voice.get('chat_history'):
+        # history_override: the caller's chat_history is exact, even when empty
+        # (re-generating turn N must see only turns 1..N-1, not later ones).
+        if (document and hasattr(document, 'generations') and document.generations
+                and not voice.get('history_override') and not voice.get('chat_history')):
             voice['chat_history'] = [
                 {
                     'question': g.get('query') or '',
@@ -275,7 +283,7 @@ def answer(document: Document, voice: dict, mode: str = None,
                         speakable=SI_FAILED, warnings=warnings, cursor=cursor)
 
         answer_si = (reply.get('answer_si') or '').strip()
-        speakable = (reply.get('speakable_text') or answer_si or '').strip()
+        speakable = make_speakable(reply.get('speakable_text') or answer_si or '')
         if not speakable:
             if intent == 'FIRST_SCAN':
                 warnings.append('rag: empty answer')
@@ -325,7 +333,7 @@ def answer(document: Document, voice: dict, mode: str = None,
     pipe_res = _run_inprocess(document, voice, warnings)
     if pipe_res is not None:
         answer_si = (pipe_res.get('answer_si') or '').strip()
-        speakable = (pipe_res.get('speakable_text') or answer_si or '').strip()
+        speakable = make_speakable(pipe_res.get('speakable_text') or answer_si or '')
         service_ok = bool(pipe_res.get('ok', True))
 
         if pipe_res.get('standalone_query'):
