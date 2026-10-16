@@ -80,7 +80,12 @@ def run_pipeline(vectorstore=None, raw_ocr_input: dict = None, raw_voice_input: 
     session_id = voice.get("session_id")
 
     original_query = voice["query_text"]
-    history = get_history(session_id) if use_history else []
+    caller_history = raw_voice_input.get("chat_history")
+    if raw_voice_input.get("history_override") and isinstance(caller_history, list):
+        # Re-generating an old turn: exactly the turns before it, nothing later.
+        history = caller_history if use_history else []
+    else:
+        history = get_history(session_id) if use_history else []
     standalone_query = rewrite_query(original_query, history)
 
     chat_history_text = (
@@ -152,7 +157,7 @@ def run_pipeline(vectorstore=None, raw_ocr_input: dict = None, raw_voice_input: 
             except Exception:
                 pass  # keep the original refusal answer
 
-    if use_history and generation_ok:
+    if use_history and generation_ok and not raw_voice_input.get("no_history_write"):
         add_turn(original_query, standalone_query, answer, session_id)
 
     return {

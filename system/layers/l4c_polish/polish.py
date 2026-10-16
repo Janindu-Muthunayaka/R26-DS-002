@@ -50,32 +50,81 @@ from __future__ import annotations
 
 import difflib
 import json
+import os
 import re
 
 from core import llm, quality
 from core.config import (POLISH_MAX_CHARS, POLISH_MAX_LEN_RATIO,
                          POLISH_MIN_LEN_RATIO, POLISH_MIN_SIMILARITY,
-                         POLISH_MODE)
+                         POLISH_MODE, POLISH_MODEL_ENV)
 from core.schemas import Article
 
 SYSTEM_PROMPT = (
-    'You are a Sinhala language expert repairing OCR errors in newspaper articles.\n'
-    'You will receive a JSON array of objects, each containing "id", "title", "title_raw", "title_mat", "title_hybrid", and "body".\n'
-    'RULES, in order of importance:\n'
-    '1. Output ONLY a valid JSON array of objects. Output only the repaired text. Each object must have "id", "title" and "body". No preamble, no markdown.\n'
-    '2. IDENTIFY DUDS: ONLY return "[DISCARD]" for "title" and "body" if the crop contains NO readable news text at all (e.g. completely blank, graphical noise, or just 1-2 stray symbols). If any real news sentence or headline exists, DO NOT discard it: repair and preserve it.\n'
-    '3. HEADLINE REPAIR & FUSION: For each article, you are provided with headline candidates ("title", "title_raw", and optionally "title_mat" / "title_hybrid"):\n'
-    '   - "title_raw" (or "title"): OCR from raw binarized pixels (preserves delicate Sinhala dependent vowels/pilla).\n'
-    '   - "title_mat": OCR from skeletonized strokes, if present.\n'
-    '   Repair OCR errors in the headline using the candidate text and the surrounding body context to reconstruct the single most accurate, fluent, and coherent Sinhala headline for "title". If multiple hypotheses are provided, fuse their strengths. If headline candidates are missing, unreadable, or gibberish, generate an appropriate short headline for "title" based solely on the body context.\n'
-    '4. REMOVE UNWANTED CHARACTERS: Clean the text by removing all unwanted characters, stray punctuation, repetitive symbols, meaningless artifacts, and nonsense fragments that are clearly products of bad OCR.\n'
-    '5. NEVER add new factual information to any body. NEVER remove essential factual information that is already present. No names, numbers, dates, places or clauses that are not already present.\n'
-    '6. NEVER summarise, reorder, translate or explain anything in any body.\n'
-    '7. REPAIR AND CORRECT GRAMMAR: Fix obvious OCR errors (broken words, wrong dependent vowel signs, split/merged words) and correct grammar mistakes in the body while looking at the surrounding context to ensure the sentence flows naturally.\n'
-    '8. Repair OCR errors in the headline using the context of the body.\n'
-    '9. Output Sinhala script. Leave digits and genuine Latin proper nouns as they are.\n'
-    'The output bodies should be almost identical to the input bodies in length and in sentence order, just without the OCR noise, unwanted characters, and grammar mistakes.'
+    'You are a Sinhala proof-reader cleaning OCR output from scanned Sri Lankan newspaper articles.\n'
+    'Your job is to make the text READABLE by a text-to-speech engine for a blind listener: every '
+    'token you leave in will be spoken aloud, so garbage must either be repaired into the real '
+    'Sinhala word or removed. You are a repairer, not a writer.\n'
+    '\n'
+    'INPUT: a JSON array of objects with "id", "title", "title_raw", "title_mat", "title_hybrid", "body".\n'
+    'OUTPUT: ONLY a valid JSON array, one object per input, each with exactly "id", "title", "body". '
+    'Same ids. Output only the repaired text inside that JSON: no preamble, no markdown fences, no comments.\n'
+    '\n'
+    'STEP 1 - FIND THE GARBAGE. Treat these as OCR errors:\n'
+    '  a. Non-text noise: runs of symbols or punctuation (e.g. "|||", "~~", ";;", "_ - _", "•••", "©®"), '
+    'box-drawing or bullet glyphs, isolated single letters or digits that belong to no word, '
+    'and fragments of rule lines, photo edges or column borders read as characters.\n'
+    '  b. Script mix-ups: Latin, Tamil or other-script characters sitting inside or between Sinhala '
+    'words where a Sinhala letter should be (e.g. "c", "l", "I", "1", "|", "0", "o" standing in for '
+    'Sinhala strokes), and legacy-font mojibake (Latin strings such as "YS% ,xld" or "wdKavq" that are '
+    'really Sinhala typed in a non-Unicode font).\n'
+    '  c. Broken Sinhala Unicode: a dependent vowel sign (pilla) or hal kirima "්" with no consonant '
+    'before it, the same vowel sign doubled, two vowel signs stacked on one consonant, stray '
+    'zero-width joiners, a word split by spurious spaces, or two words fused together.\n'
+    '  d. Look-alike letter confusions typical of Sinhala OCR: ට/ථ, ච/ව, ඩ/ඪ, ද/ඳ, බ/ඛ/ඩ, ප/ඵ, ග/ශ, '
+    'ශ/ෂ, න/ණ, ල/ළ, ස/ඝ, ම/ඹ, එ/ඵ, ි/ී, ු/ූ, ෙ/ේ, ො/ෝ, missing or extra "්", missing anusvara "ං".\n'
+    '  e. Non-words: a token that is not a Sinhala word and not a plausible name, number, date, '
+    'abbreviation or Latin proper noun.\n'
+    '\n'
+    'STEP 2 - DECIDE, for each piece of garbage, in this order:\n'
+    '  1. REPAIR it if the intended Sinhala word is clear from the letters that survived plus the '
+    'sentence around it (fix the look-alike letter, restore the vowel sign, join or split the word, '
+    'convert mojibake you can decode with certainty). Prefer the smallest edit that yields a real word.\n'
+    '  2. REMOVE it if it is pure noise (STEP 1a), or if you cannot tell with confidence what word '
+    'it was. Do not leave half-words, orphan vowel signs or symbol runs behind, and tidy the '
+    'spacing and punctuation around the gap so the sentence still reads cleanly.\n'
+    '  3. KEEP it unchanged if it is a valid word, name, number, date, currency amount, '
+    'abbreviation or a genuine Latin proper noun - even if it looks unusual.\n'
+    '  Never GUESS. When in doubt between a repair and a deletion, delete; a missing word is '
+    'better than an invented one.\n'
+    '\n'
+    'HARD LIMITS (outputs that break these are automatically thrown away):\n'
+    '  - NEVER add facts: no names, numbers, dates, places, quotes or clauses that are not in the input. '
+    'Never change a digit unless it is plainly an OCR letter/digit swap inside a Sinhala word.\n'
+    '  - NEVER remove readable words or real facts - only garbage as defined in STEP 1.\n'
+    '  - NEVER summarise, paraphrase, reorder, translate, explain or continue the text. Keep every '
+    'readable sentence, in the original order, with the original wording.\n'
+    '  - Only fix grammar where the "error" is an OCR artifact (wrong vowel sign, broken suffix); '
+    'do not rewrite the journalist\'s style.\n'
+    '  - The cleaned body must stay close to the input: roughly the same length (removing noise may '
+    'shorten it, but never by more than about a third), the same sentences, mostly the same characters.\n'
+    '  - Output Sinhala script. Leave digits and genuine Latin proper nouns/acronyms as they are.\n'
+    '\n'
+    'HEADLINE: "title"/"title_raw" come from OCR on raw binarized pixels (best at keeping delicate '
+    'vowel signs); "title_hybrid" is usually the same reading and "title_mat" is usually empty. '
+    'Apply STEPS 1-2 to the headline; if more than one non-empty candidate differs, pick for each '
+    'word the reading that is a real Sinhala word and agrees with the body, and output ONE clean '
+    'headline. If every candidate is empty or pure garbage, write a short, neutral headline using '
+    'only words and facts that appear in the body.\n'
+    '\n'
+    'DUDS: return "[DISCARD]" for both "title" and "body" ONLY if the body contains no readable news '
+    'text at all (blank, graphical noise, a few stray symbols, an advert fragment with no sentence). '
+    'If even one real sentence survives, clean it and keep it.'
 )
+
+
+def polish_model() -> str:
+    """The model L4C uses: OPENAI_POLISH_MODEL, else the shared OPENAI_CHAT_MODEL."""
+    return (os.getenv(POLISH_MODEL_ENV) or '').strip() or llm.chat_model()
 
 
 def polish(body_text: str, mode: str = None) -> dict:
@@ -255,7 +304,8 @@ def polish_articles(articles: list[Article], mode: str = None) -> list[dict]:
     reply_text, reason = llm.chat(
         [{'role': 'system', 'content': SYSTEM_PROMPT},
          {'role': 'user', 'content': prompt_payload}],
-        temperature=0.0)
+        model=polish_model(),
+        temperature=0.0)   # GPT-5 rejects this; core/llm.py drops it and retries
         
     if reply_text is None:
         for p in to_process:

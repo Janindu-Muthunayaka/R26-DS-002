@@ -34,20 +34,19 @@ OFF BY DEFAULT (`SINHALA_TITLE_MODE`). `stub` keeps the previous behaviour.
 """
 from __future__ import annotations
 
-import concurrent.futures
 import os
 import subprocess
+from pathlib import Path
 
 import cv2
 import numpy as np
 
-from core.config import (TITLE_ENGINE, TITLE_MODE, TITLE_TARGET_BAND_PX, TITLE_TESS_LANG,
-                         TITLE_TESS_PSM, TITLE_TESSDATA)
+from core.config import TITLE_MODE, TITLE_TESSDATA
 from core.schemas import Article
 
 MAX_REGION_PX = 4000 * 1500
 
-from .title_extractor import extract_and_stitch_title, binarize_strip, mat_process
+from .title_extractor import extract_and_stitch_title, binarize_strip
 
 
 class TitleResult(tuple):
@@ -122,7 +121,9 @@ def _ocr_strip(img_bgr: np.ndarray, lang: str, psm: str = '13') -> tuple[str, fl
 
 
 def read_title_region(img, box, band_h: float = 0.0, save_dir: Path | None = None, prefix: str = "") -> TitleResult:
-    """OCR one headline region according to TITLE_ENGINE ('raw', 'hybrid', or 'mat')."""
+    """OCR one headline region with the RAW model (sin_raw).
+
+    `band_h` is unused and kept only for callers such as tools/measure_headline.py."""
     x0, y0, x1, y1 = (int(v) for v in box)
     h, w = img.shape[:2]
     x0, y0 = max(0, x0 - 8), max(0, y0 - 8)
@@ -186,108 +187,22 @@ def read_title_region(img, box, band_h: float = 0.0, save_dir: Path | None = Non
     if not TITLE_TESSDATA.is_dir():
         return TitleResult('', f'tessdata not found at {TITLE_TESSDATA}', images=images)
 
-    engine = (TITLE_ENGINE or 'raw').lower()
-
-    # Fast RAW path: Runs sin_raw IMMEDIATELY on binarized_bgr.
-    # MAT skeletonization is completely decoupled and saved asynchronously / afterwards
-    # so the RAW answer is never delayed waiting for MAT.
-    if engine == 'raw':
-        text_raw, conf_raw = _ocr_strip(binarized_bgr, 'sin_raw', '13')
-
-        # Save MAT skeleton visualization in background/post-OCR if saving is requested
-        if save_dir is not None:
-            try:
-                mat_bgr, _ = mat_process(binarized_bgr)
-                if mat_bgr is not None:
-                    mat_name = f"{prefix}mat.png"
-                    cv2.imwrite(str(save_dir / mat_name), mat_bgr)
-                    images['mat'] = mat_name
-            except Exception as e:
-                print(f"  [Title] Non-blocking MAT save: {e}")
-
-        return TitleResult(
-            hybrid=text_raw,
-            why='' if text_raw else 'raw OCR produced empty text',
-            raw=text_raw,
-            mat='',
-            conf_raw=conf_raw,
-            conf_mat=0.0,
-            images=images
-        )
-
-    # Stage 5: MAT Skeletonization (for MAT and Hybrid modes)
-    mat_bgr = None
-    try:
-        mat_bgr, _ = mat_process(binarized_bgr)
-    except Exception as e:
-        mat_bgr = None
-
-    if save_dir is not None and mat_bgr is not None:
-        try:
-            mat_name = f"{prefix}mat.png"
-            cv2.imwrite(str(save_dir / mat_name), mat_bgr)
-            images['mat'] = mat_name
-        except Exception as e:
-            print(f"  [Title] Warning saving MAT image: {e}")
-
-    # MAT-only path: Computes MAT skeleton and runs sin_custom
-    if engine == 'mat':
-        target_mat = mat_bgr if mat_bgr is not None else binarized_bgr
-        text_mat, conf_mat = _ocr_strip(target_mat, 'sin_custom', '13')
-        return TitleResult(
-            hybrid=text_mat,
-            why='' if text_mat else 'mat OCR produced empty text',
-            raw='',
-            mat=text_mat,
-            conf_raw=0.0,
-            conf_mat=conf_mat,
-            images=images
-        )
-
-    # Hybrid path (configurable mode for research / benchmark evaluation):
-    # Runs RAW and MAT pipelines in parallel with confidence gate
-    target_mat = mat_bgr if mat_bgr is not None else binarized_bgr
-    text_raw, conf_raw = '', 0.0
-    text_mat, conf_mat = '', 0.0
-    with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
-        f_raw = executor.submit(_ocr_strip, binarized_bgr, 'sin_raw', '13')
-        f_mat = executor.submit(_ocr_strip, target_mat, 'sin_custom', '13')
-        try:
-            text_raw, conf_raw = f_raw.result()
-        except Exception:
-            text_raw, conf_raw = '', 0.0
-        try:
-            text_mat, conf_mat = f_mat.result()
-        except Exception:
-            text_mat, conf_mat = '', 0.0
-
-    # Dynamic Confidence-based Selection
-    if text_mat and text_raw:
-        if conf_mat > conf_raw:
-            text_hybrid = text_mat
-        else:
-            text_hybrid = text_raw
-    elif text_mat:
-        text_hybrid = text_mat
-    elif text_raw:
-        text_hybrid = text_raw
-    else:
-        text_hybrid = ''
-
+    # RAW only: sin_raw on the binarized strip. The MAT model (sin_custom) and
+    # its skeletonization are not used, so they are not computed.
+    text_raw, conf_raw = _ocr_strip(binarized_bgr, 'sin_raw', '13')
     return TitleResult(
-        hybrid=text_hybrid,
-        why='' if text_hybrid else 'both OCR models produced empty text',
+        hybrid=text_raw,
+        why='' if text_raw else 'raw OCR produced empty text',
         raw=text_raw,
-        mat=text_mat,
         conf_raw=conf_raw,
-        conf_mat=conf_mat,
         images=images
     )
 
 
 def extract(img, article: Article, job_dir: Path | None = None) -> Article:
-    """Fill `article.title_raw`, `article.title_mat`, `article.title_hybrid`,
-    `article.title`, and `article.title_images` from the region Layer 3 located.
+    """Fill `article.title_raw`, `article.title_hybrid` (= raw), `article.title`,
+    and `article.title_images` from the region Layer 3 located. RAW model only;
+    `article.title_mat` is left empty.
     """
     mode = (TITLE_MODE or 'mat').lower()
     if mode in ('stub', 'off') or img is None:
@@ -300,33 +215,19 @@ def extract(img, article: Article, job_dir: Path | None = None) -> Article:
         article.note = (article.note + '; ' if article.note else '') + 'title: no title region detected by L3'
         return article
 
-    band_h = 0.0
-    try:
-        from layers.l3_segment.closeup import headline_bands, text_lines
-        _lines, _med = text_lines(img)
-        bs = headline_bands(img, _med)
-        if bs:
-            hs = sorted(b[1] - b[0] for b in bs)
-            band_h = float(hs[len(hs) // 2])
-    except Exception:
-        band_h = 0.0
-
     raw_texts = []
-    mat_texts = []
     hybrid_texts = []
     all_images: dict[str, str] = {}
 
     for r_idx, r in enumerate(regions):
         prefix = f"art_{article.index}_title_{r_idx}_"
         res = read_title_region(
-            img, (r.box.x1, r.box.y1, r.box.x2, r.box.y2), band_h,
+            img, (r.box.x1, r.box.y1, r.box.x2, r.box.y2),
             save_dir=job_dir, prefix=prefix
         )
         if isinstance(res, TitleResult):
             if res.raw:
                 raw_texts.append(res.raw)
-            if res.mat:
-                mat_texts.append(res.mat)
             if res.hybrid:
                 hybrid_texts.append(res.hybrid)
             elif res.why:
@@ -349,18 +250,10 @@ def extract(img, article: Article, job_dir: Path | None = None) -> Article:
 
     if raw_texts:
         article.title_raw = ' '.join(raw_texts)
-    if mat_texts:
-        article.title_mat = ' '.join(mat_texts)
     if hybrid_texts:
         article.title_hybrid = ' '.join(hybrid_texts)
-
-    engine = (TITLE_ENGINE or 'raw').lower()
-    if engine == 'raw':
-        article.title = article.title_raw
-    elif engine == 'mat':
-        article.title = article.title_mat
-    else:
-        article.title = article.title_hybrid or article.title_raw or article.title_mat
+    # title_mat stays empty: the MAT model is no longer run.
+    article.title = article.title_raw
 
     article.title_images = all_images
     return article

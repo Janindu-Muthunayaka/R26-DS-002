@@ -56,10 +56,13 @@ STYLE_PROMPT_MODIFIERS = {
 }
 
 
-def handle_voice_command(sinhala_text, user_id, retrieved_chunk_id=None):
+def handle_voice_command(sinhala_text, user_id, retrieved_chunk_id=None, dry_run=False):
     """
     Runs one full turn.
     retrieved_chunk_id: optional chunk identifier from Component 3.
+    dry_run: decide the style for this user WITHOUT side effects - nothing is
+             logged, learned, corrected or saved. Used to re-generate an old
+             answer under a different user without touching their profile.
 
     Returns:
       {
@@ -81,12 +84,13 @@ def handle_voice_command(sinhala_text, user_id, retrieved_chunk_id=None):
     intent = intent_stage["intent"]
     english_text = intent_stage["english_translation"]
     frame = build_frame(sinhala_text, english_text, intent)
-    log_unmatched_modifiers(user_id, sinhala_text, english_text, frame)
+    if not dry_run:
+        log_unmatched_modifiers(user_id, sinhala_text, english_text, frame)
 
     # ── Delivery & Speed determination (0.8 - 1.3) ──
     delivery_profile = get_delivery_profile(user_id)
     mods = frame.get("modifiers", {})
-    if mods.get("speed") or mods.get("repeat"):
+    if (mods.get("speed") or mods.get("repeat")) and not dry_run:
         delivery_profile, _ = apply_delivery_turn(delivery_profile, frame, now)
         save_delivery_profile(user_id, delivery_profile)
 
@@ -98,7 +102,8 @@ def handle_voice_command(sinhala_text, user_id, retrieved_chunk_id=None):
     # model entirely and are never used as training evidence.
     command = detect_system_command(intent, english_text)
     if command:
-        log_interaction(user_id, intent_stage, retrieved_chunk_id=retrieved_chunk_id, style_class=None)
+        if not dry_run:
+            log_interaction(user_id, intent_stage, retrieved_chunk_id=retrieved_chunk_id, style_class=None)
         return {
             "stt_stage": stt_stage,
             "intent_stage": intent_stage,
@@ -134,14 +139,15 @@ def handle_voice_command(sinhala_text, user_id, retrieved_chunk_id=None):
     last = get_last_interaction(user_id)
 
     # 4a. Correction check — does this turn say the last turn was wrong?
-    corrected_style = detect_correction_signal(intent, last)
+    corrected_style = None if dry_run else detect_correction_signal(intent, last)
     if corrected_style is not None:
         update_interaction_style_by_timestamp(user_id, last["timestamp"], corrected_style)
         # A correction is strong, unambiguous evidence — always learn from it.
         learn_style(user_id, last["english_translation"], corrected_style)
 
     # 4b. Log this turn (style filled in below)
-    log_interaction(user_id, intent_stage, retrieved_chunk_id=retrieved_chunk_id)
+    if not dry_run:
+        log_interaction(user_id, intent_stage, retrieved_chunk_id=retrieved_chunk_id)
 
     # 4c. Decide this turn's style, in strict priority order
     intent_style = style_from_intent(intent)
@@ -158,11 +164,12 @@ def handle_voice_command(sinhala_text, user_id, retrieved_chunk_id=None):
     prompt_modifier = STYLE_PROMPT_MODIFIERS[style]
 
     # 4d. Record the decided style on this turn's log entry
-    update_last_interaction_style(user_id, style)
+    if not dry_run:
+        update_last_interaction_style(user_id, style)
 
     # 4e. Learn ONLY from real evidence. If the style came from the model's
     #     own prediction, we deliberately do not train on it.
-    if is_evidence:
+    if is_evidence and not dry_run:
         learn_style(user_id, english_text, style)
 
     return {
@@ -173,7 +180,7 @@ def handle_voice_command(sinhala_text, user_id, retrieved_chunk_id=None):
             "command": None,
             "style_class": style,
             "style_source": style_source,
-            "learned": is_evidence,
+            "learned": is_evidence and not dry_run,
             "correction_applied": corrected_style,
             "user_profile": get_user_summary(user_id),
             "speed": user_speed,

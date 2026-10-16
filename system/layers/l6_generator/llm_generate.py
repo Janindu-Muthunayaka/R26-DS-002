@@ -4,8 +4,10 @@ import os
 
 try:
     from .prompt import PROMPT
+    from .tts_clean import make_speakable
 except (ImportError, ValueError):
     from prompt import PROMPT
+    from tts_clean import make_speakable
 
 SINHALA_RANGE = (0x0D80, 0x0DFF)  # Unicode block for Sinhala script
 _llm = None
@@ -58,7 +60,8 @@ def generate_answer(query_text, intent, style_class, prompt_modifier, age_instru
         "chat_history": chat_history or "(නැත)",
     }
     response = chain.invoke(inputs)
-    answer = response.content
+    # The answer is spoken: strip markdown/symbols the TTS would read aloud.
+    answer = make_speakable(response.content)
     perplexity = _perplexity_from_response(response)
 
     # Guard: prompting alone can't guarantee zero code-switching.
@@ -71,7 +74,7 @@ def generate_answer(query_text, intent, style_class, prompt_modifier, age_instru
               "අකුරක් හෝ නොමැතිව."
         )
         retry_response = chain.invoke(strict_inputs)
-        retry_answer = retry_response.content
+        retry_answer = make_speakable(retry_response.content)
         retry_perplexity = _perplexity_from_response(retry_response)
         if _sinhala_purity(retry_answer) >= _sinhala_purity(answer):
             answer = retry_answer

@@ -431,6 +431,9 @@ import cv2
 import numpy as np
 from pathlib import Path
 
+PAD_WHITE         = 254   # >= this in the stitched strip = border/gap padding (or white paper)
+MAX_TEXT_FRACTION = 0.50  # strip more black than this = mis-thresholded (good strips: ~0.15-0.35)
+
 def binarize_strip(img_bgr: np.ndarray, is_dark_bg: bool) -> tuple[np.ndarray, np.ndarray]:
     # 1. Image Loading / Grayscale
     grey = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY)
@@ -449,15 +452,36 @@ def binarize_strip(img_bgr: np.ndarray, is_dark_bg: bool) -> tuple[np.ndarray, n
 
     # 3. Binarization (Otsu Thresholding)
     _, binary_8u = cv2.threshold(resized, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-    
+
     # We use the explicitly computed is_dark_bg from Stage 2 (CRAFT mask)
     # If the background is dark, we must invert to make the background white (255)
     if is_dark_bg:
         binary_8u = cv2.bitwise_not(binary_8u)
-        
+
     # Boolean array where True means foreground text (black pixels)
     binary = binary_8u == 0
-    
+
+    # GREY-PAPER FAILURE. The stitched strip is partly ARTIFICIAL white: the
+    # 10 px border around every CRAFT word crop and the gaps between them.
+    # On grey paper Otsu takes that white as the background class and
+    # thresholds between it and the paper, so the paper turns black and
+    # every word becomes a solid black box (most of the strip black). Only
+    # then, re-estimate the threshold from the real crop pixels alone; the
+    # padding is thresholded with it and, being 255, stays white. On white
+    # paper the global threshold is right and is left untouched: excluding
+    # paper >= PAD_WHITE there would leave only text pixels and thin the strokes.
+    if binary.mean() > MAX_TEXT_FRACTION:
+        padding = resized >= PAD_WHITE
+        content = resized[~padding]
+        if content.size >= 100:
+            thr, _ = cv2.threshold(content.reshape(-1, 1), 0, 255,
+                                   cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+            binary = resized <= thr
+            # Still mostly black: light text on a dark band. Invert the crop
+            # pixels; padding never becomes foreground.
+            if binary.mean() > MAX_TEXT_FRACTION:
+                binary = ~binary & ~padding
+
     # Remove specks and noise particles dynamically
     num_labels, labels, stats, _ = cv2.connectedComponentsWithStats(binary.astype(np.uint8), connectivity=8)
     
@@ -487,124 +511,6 @@ def binarize_strip(img_bgr: np.ndarray, is_dark_bg: bool) -> tuple[np.ndarray, n
     return binary, binarized_bgr
 
 def run(sentence_path: Path, binarized_root: Path, original_stem: str) -> Path | None:
-    # Not used in word-level architecture, keep as stub
-    pass
-
-if __name__ == "__main__":
-    pass
-
-
-"""
-Stage 5 – MAT Skeletonization (title_extractor_p3.py)
-─────────────────────────────────────────────
-Reads the binarized strips produced by Stage 4 and applies:
-  1. MAT Skeletonization.
-  2. Dilation (stroke thickening).
-  3. Final RGB formatting.
-"""
-
-
-import cv2
-import numpy as np
-from pathlib import Path
-from scipy.ndimage import distance_transform_edt
-from skimage.morphology import medial_axis, disk, dilation
-
-# ─── VISUALISATION SETTINGS ───────────────────────────────────────────────────
-EDGE_SAMPLE_GRID   = 10
-GRADIENT_MAX_STEPS = 500
-COLOUR_YELLOW      = (0, 220, 255)
-SKELETON_DILATE    = 1
-COLOUR_RED         = (0, 0, 220)
-
-def trace_yellow_lines(binary_255: np.ndarray, dist: np.ndarray) -> np.ndarray:
-    """Trace inward gradient lines from edge points toward stroke centres."""
-    h, w = binary_255.shape
-    grad_y, grad_x = np.gradient(dist)
-    mag    = np.sqrt(grad_x**2 + grad_y**2) + 1e-8
-    grad_x = grad_x / mag
-    grad_y = grad_y / mag
-
-    edges    = cv2.Canny(binary_255, 50, 150)
-    edge_pts = np.argwhere(edges > 0)
-
-    grid = {}
-    for (r, c) in edge_pts:
-        key = (r // EDGE_SAMPLE_GRID, c // EDGE_SAMPLE_GRID)
-        if key not in grid:
-            grid[key] = (r, c)
-    sampled = list(grid.values())
-
-    # Create a nice canvas: white background, light gray text
-    canvas = np.full((h, w, 3), 255, dtype=np.uint8)
-    canvas[binary_255 == 0] = [220, 220, 220]
-
-    for (r, c) in sampled:
-        pts = [(c, r)]
-        cr, cc = float(r), float(c)
-
-        for _ in range(GRADIENT_MAX_STEPS):
-            ri = int(np.clip(cr, 0, h - 1))
-            ci = int(np.clip(cc, 0, w - 1))
-
-            nr = float(np.clip(cr + grad_y[ri, ci], 0, h - 1))
-            nc = float(np.clip(cc + grad_x[ri, ci], 0, w - 1))
-
-            if binary_255[int(nr), int(nc)] == 255:
-                break
-
-            cr, cc = nr, nc
-            pts.append((int(nc), int(nr)))
-
-        if len(pts) > 2:
-            for i in range(len(pts) - 1):
-                cv2.line(canvas, pts[i], pts[i + 1], COLOUR_YELLOW, 1)
-
-    return canvas
-
-def overlay_skeleton(canvas_yellow: np.ndarray, letter_mask: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
-    """Compute medial axis skeleton and overlay in red on the yellow canvas."""
-    from skimage.morphology import skeletonize, disk, dilation
-    
-    # 4. Medial Axis Transform (MAT) Skeletonization (using skeletonize for consistency with p2_MeanAxis_v4)
-    skeleton = skeletonize(letter_mask.astype(bool))
-    skel_img = skeleton.astype(np.uint8) * 255
-
-    canvas_red = canvas_yellow.copy()
-    if SKELETON_DILATE > 0:
-        k = np.ones((3, 3), np.uint8)
-        skel_dilated = cv2.dilate(skel_img, k, iterations=SKELETON_DILATE)
-        canvas_red[skel_dilated > 0] = COLOUR_RED
-    else:
-        canvas_red[skel_img > 0] = COLOUR_RED
-
-    # 5. Stroke Thickening (Dilation) for OCR final output
-    footprint = disk(1)
-    thickened = dilation(skeleton, footprint)
-
-    return thickened, canvas_red
-
-def mat_process(binarized_bgr: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
-    # Extract binary image: text = 0 (black), background = 255 (white)
-    grey = cv2.cvtColor(binarized_bgr, cv2.COLOR_BGR2GRAY)
-    _, binary_255 = cv2.threshold(grey, 127, 255, cv2.THRESH_BINARY)
-    
-    letter_mask = (binary_255 == 0).astype(np.uint8)
-    
-    # Compute distance transform
-    dist = cv2.distanceTransform(letter_mask, cv2.DIST_L2, cv2.DIST_MASK_PRECISE)
-    
-    # Create debug visualization
-    canvas_yellow = trace_yellow_lines(binary_255, dist)
-    thickened, mat_debug = overlay_skeleton(canvas_yellow, letter_mask)
-
-    # 6. Final Rendering & Formatting for OCR
-    final_grey = np.where(thickened, 0, 255).astype(np.uint8)
-    final_bgr = cv2.cvtColor(final_grey, cv2.COLOR_GRAY2BGR)
-
-    return final_bgr, mat_debug
-
-def run(binarized_path: Path, preprocessed_root: Path, original_stem: str) -> tuple[Path | None, Path | None, Path | None]:
     # Not used in word-level architecture, keep as stub
     pass
 
