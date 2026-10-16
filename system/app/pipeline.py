@@ -137,7 +137,7 @@ class Pipeline:
                 # Title extraction (CRAFT + MAT + Tesseract) and Body extraction (Tesseract)
                 # operate on disjoint regions and are run concurrently.
                 with concurrent.futures.ThreadPoolExecutor(max_workers=2) as sub_exec:
-                    fut_title = sub_exec.submit(l4a.extract, ref, art)
+                    fut_title = sub_exec.submit(l4a.extract, ref, art, job_dir=job_dir)
                     if single_article:
                         fut_body = sub_exec.submit(self.body.read_page, imgs, art)
                     else:
@@ -150,6 +150,7 @@ class Pipeline:
                 art.title_raw = art_title.title_raw
                 art.title_mat = art_title.title_mat
                 art.title_hybrid = art_title.title_hybrid
+                art.title_images = getattr(art_title, 'title_images', {})
                 if getattr(art_title, 'note', None):
                     art.note = (art.note + '; ' if art.note else '') + art_title.note
 

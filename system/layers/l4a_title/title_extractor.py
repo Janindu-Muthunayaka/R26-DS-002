@@ -155,97 +155,102 @@ def perspective_warp(img: np.ndarray, points, expand_pct: float = 0.02) -> np.nd
     except Exception:
         return img
 
-def extract_lines_with_craft(img: np.ndarray) -> list[np.ndarray]:
-    """Uses Fast Projection first (<2ms). Falls back to CRAFT only if needed, with resolution scaling."""
-    # Fast Path: Check if horizontal projection profiling cleanly detects the headline line(s)
-    fast_lines = split_lines_fast(img)
-    if len(fast_lines) > 1 or (img.shape[1] / max(1, img.shape[0]) >= 2.5):
-        return fast_lines
+def extract_lines_with_craft(img: np.ndarray) -> tuple[list[np.ndarray], np.ndarray | None]:
+    """Runs CRAFT text detection to extract text lines and text-density heatmap visualization."""
+    density_overlay = None
 
     detector = _get_text_detector()
-    if detector is None:
-        return fast_lines
-
-    # Downscale large title crops before passing to CRAFT on CPU
-    h, w = img.shape[:2]
-    max_dim = max(h, w)
-    scale = 1.0
-    if max_dim > 960:
-        scale = 960.0 / max_dim
-        craft_img = cv2.resize(img, (int(w * scale), int(h * scale)), interpolation=cv2.INTER_AREA)
-    else:
-        craft_img = img
-
-    try:
-        det_result = detector.detect_text(craft_img)
-    except Exception:
-        return fast_lines
-
-    dt_polys = det_result.get("boxes", [])
-    if len(dt_polys) == 0:
-        return fast_lines
-
-    poly_data = []
-    for p in dt_polys:
-        try:
-            # Safely handle irregular point arrays to prevent inhomogeneous shape crash
-            pts = []
-            for pt in p:
-                if hasattr(pt, '__iter__') and len(pt) >= 2:
-                    pts.append([float(pt[0]) / scale, float(pt[1]) / scale])
-            if len(pts) < 3:
-                continue
-            arr = np.array(pts, dtype=np.float32)
-            cx, cy = np.mean(arr, axis=0)
-            lh = np.max(arr[:, 1]) - np.min(arr[:, 1])
-            poly_data.append({'poly': arr, 'cx': cx, 'cy': cy, 'h': lh})
-        except Exception:
-            continue
-
-    if not poly_data:
-        return fast_lines
-
-    poly_data.sort(key=lambda d: d['cy'])
-    avg_h = np.mean([d['h'] for d in poly_data])
-    y_threshold = avg_h * 0.5
-
-    lines = []
-    current_line = [poly_data[0]]
-    for d in poly_data[1:]:
-        if abs(d['cy'] - current_line[-1]['cy']) < y_threshold:
-            current_line.append(d)
+    if detector is not None:
+        # Downscale large title crops before passing to CRAFT on CPU
+        h, w = img.shape[:2]
+        max_dim = max(h, w)
+        scale = 1.0
+        if max_dim > 960:
+            scale = 960.0 / max_dim
+            craft_img = cv2.resize(img, (int(w * scale), int(h * scale)), interpolation=cv2.INTER_AREA)
         else:
-            lines.append(current_line)
-            current_line = [d]
-    lines.append(current_line)
+            craft_img = img
 
-    sorted_polys = []
-    for line in lines:
-        line.sort(key=lambda d: d['cx'])
-        sorted_polys.extend([d['poly'] for d in line])
+        try:
+            det_result = detector.detect_text(craft_img)
+            dt_polys = det_result.get("boxes", [])
 
-    line_crops = []
-    for poly in sorted_polys:
-        pts = np.asarray(poly, dtype=np.float32)
-        if len(pts) >= 4:
-            width_top = np.linalg.norm(pts[0] - pts[1])
-            width_bottom = np.linalg.norm(pts[2] - pts[3])
-            max_w = int(max(width_top, width_bottom))
-            height_left = np.linalg.norm(pts[0] - pts[3])
-            height_right = np.linalg.norm(pts[1] - pts[2])
-            max_h = int(max(height_left, height_right))
-            if max_w < max_h:
-                continue  # skip vertical words
+            # Generate density heatmap visualization
+            heatmap = det_result.get("heatmaps", {}).get("text_score_heatmap")
+            if heatmap is not None:
+                hm_resized = cv2.resize(heatmap, (w, h))
+                density_overlay = cv2.addWeighted(img, 0.45, hm_resized, 0.55, 0)
+                # Draw detected text word polygons
+                for poly in dt_polys:
+                    pts = (np.array(poly, dtype=np.float32) / scale).astype(np.int32).reshape((-1, 1, 2))
+                    cv2.polylines(density_overlay, [pts], isClosed=True, color=(0, 255, 0), thickness=2)
 
-        line_crop = perspective_warp(img, poly)
-        lh, lw = line_crop.shape[:2]
-        if lh < MIN_LINE_H or lw < MIN_LINE_W:
-            continue
+            if len(dt_polys) > 0:
+                poly_data = []
+                for p in dt_polys:
+                    try:
+                        pts = []
+                        for pt in p:
+                            if hasattr(pt, '__iter__') and len(pt) >= 2:
+                                pts.append([float(pt[0]) / scale, float(pt[1]) / scale])
+                        if len(pts) < 3:
+                            continue
+                        arr = np.array(pts, dtype=np.float32)
+                        cx, cy = np.mean(arr, axis=0)
+                        lh = np.max(arr[:, 1]) - np.min(arr[:, 1])
+                        poly_data.append({'poly': arr, 'cx': cx, 'cy': cy, 'h': lh})
+                    except Exception:
+                        continue
 
-        line_crop = cv2.copyMakeBorder(line_crop, 10, 10, 10, 10, cv2.BORDER_CONSTANT, value=[255, 255, 255])
-        line_crops.append(line_crop)
+                if poly_data:
+                    poly_data.sort(key=lambda d: d['cy'])
+                    avg_h = np.mean([d['h'] for d in poly_data])
+                    y_threshold = avg_h * 0.5
 
-    return line_crops if line_crops else fast_lines
+                    lines = []
+                    current_line = [poly_data[0]]
+                    for d in poly_data[1:]:
+                        if abs(d['cy'] - current_line[-1]['cy']) < y_threshold:
+                            current_line.append(d)
+                        else:
+                            lines.append(current_line)
+                            current_line = [d]
+                    lines.append(current_line)
+
+                    sorted_polys = []
+                    for line in lines:
+                        line.sort(key=lambda d: d['cx'])
+                        sorted_polys.extend([d['poly'] for d in line])
+
+                    line_crops = []
+                    for poly in sorted_polys:
+                        pts = np.asarray(poly, dtype=np.float32)
+                        if len(pts) >= 4:
+                            width_top = np.linalg.norm(pts[0] - pts[1])
+                            width_bottom = np.linalg.norm(pts[2] - pts[3])
+                            max_w = int(max(width_top, width_bottom))
+                            height_left = np.linalg.norm(pts[0] - pts[3])
+                            height_right = np.linalg.norm(pts[1] - pts[2])
+                            max_h = int(max(height_left, height_right))
+                            if max_w < max_h:
+                                continue  # skip vertical words
+
+                        line_crop = perspective_warp(img, poly)
+                        lh, lw = line_crop.shape[:2]
+                        if lh < MIN_LINE_H or lw < MIN_LINE_W:
+                            continue
+
+                        line_crop = cv2.copyMakeBorder(line_crop, 10, 10, 10, 10, cv2.BORDER_CONSTANT, value=[255, 255, 255])
+                        line_crops.append(line_crop)
+
+                    if line_crops:
+                        return line_crops, density_overlay
+        except Exception as e:
+            print(f"  [CRAFT] Text detection warning: {e}")
+
+    # Fallback to fast projection profiling if CRAFT fails or finds no lines
+    fast_lines = split_lines_fast(img)
+    return fast_lines, density_overlay
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 def _resize_to_height(img: np.ndarray, target_h: int) -> np.ndarray:
@@ -304,10 +309,11 @@ def stitch_images(line_imgs: list[np.ndarray]) -> np.ndarray | None:
 
     return strip
 
-def extract_and_stitch_title(img_bgr: np.ndarray) -> np.ndarray | None:
-    """End-to-end processing for a title region crop: CRAFT line extraction + Stitching."""
-    line_imgs = extract_lines_with_craft(img_bgr)
-    return stitch_images(line_imgs)
+def extract_and_stitch_title(img_bgr: np.ndarray) -> tuple[np.ndarray | None, np.ndarray | None]:
+    """End-to-end processing for a title region crop: CRAFT line extraction + Stitching + Heatmap density overlay."""
+    line_imgs, density_overlay = extract_lines_with_craft(img_bgr)
+    stitched = stitch_images(line_imgs)
+    return stitched, density_overlay
 
 # ── Public API ────────────────────────────────────────────────────────────────
 def run(crop_input: Path | list[Path],

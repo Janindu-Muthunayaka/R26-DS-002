@@ -64,6 +64,7 @@ class Article(BaseModel):
     title_mat: str = ''                          # MAT OCR output (sin_custom)
     title_hybrid: str = ''                       # Approach 1: confidence-routed hybrid selection
     title: str = ''
+    title_images: dict = {}                      # Intermediate images: {'crop': '...', 'craft': '...', 'bin': '...', 'mat': '...'}
 
     # ---- Layer 4B writes these (Component 2 — correction) ----
     body_raw: str = ''                          # OCR output, uncorrected
