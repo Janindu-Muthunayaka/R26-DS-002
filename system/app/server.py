@@ -393,7 +393,7 @@ def build(pipeline, web_dir: Path):
         turn_info = {
             'index': len(doc.generations) + 1,
             'query': q.text,
-            'answer': res['speakable'] or res['answer_si'],
+            'answer': speakable_out or res['answer_si'],
             'answer_si': res['answer_si'],
             'route': res['route'],
             'intent': res['intent'],
