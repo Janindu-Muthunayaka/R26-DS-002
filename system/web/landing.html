@@ -472,7 +472,7 @@
         }
 
         .node2.h-long {
-            min-height: 150px;
+            min-height: 90px;
             height: auto;
         }
 
@@ -610,9 +610,105 @@
             border-radius: 4px;
             transition: color 0.15s, background 0.15s;
         }
-        .hw-close:hover {
+        /* ---- User Selection Overlay ---- */
+        #user-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.72);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+        }
+        #user-overlay.active {
+            display: flex;
+        }
+        #user-popup {
+            background: var(--card);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 24px 28px 22px;
+            box-shadow: 0 8px 40px rgba(0,0,0,0.55);
+            width: 520px;
+            max-width: 94vw;
+            position: relative;
+        }
+        #user-popup h4 {
+            margin: 0 0 4px;
+            font-size: 15px;
+            font-weight: 700;
             color: var(--ink);
+            letter-spacing: -0.01em;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        #user-popup .user-subtitle {
+            font-size: 11.5px;
+            color: var(--ink-soft);
+            margin-bottom: 18px;
+            line-height: 1.4;
+        }
+        .user-card {
             background: var(--bg-soft);
+            border: 1.5px solid var(--card-border);
+            border-radius: 12px;
+            padding: 12px 14px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.18s ease;
+            position: relative;
+        }
+        .user-card:hover {
+            border-color: var(--accent);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+        }
+        .user-card.active {
+            border-color: var(--accent);
+            background: rgba(217, 119, 87, 0.08);
+            box-shadow: 0 0 0 1px var(--accent);
+        }
+        .user-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+        .user-card-title {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--ink);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .user-card-tag {
+            font-size: 9.5px;
+            font-weight: 700;
+            padding: 2px 7px;
+            border-radius: 10px;
+            background: rgba(217, 119, 87, 0.15);
+            color: var(--accent-deep);
+            border: 1px solid rgba(217, 119, 87, 0.35);
+        }
+        .user-card-desc {
+            font-size: 11.5px;
+            color: var(--ink);
+            line-height: 1.4;
+            margin-bottom: 8px;
+        }
+        .user-card-weights {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+        .user-weight-pill {
+            font-size: 9px;
+            font-weight: 600;
+            padding: 2px 6px;
+            border-radius: 4px;
+            line-height: 1.2;
         }
     </style>
 </head>
@@ -878,6 +974,16 @@
         </div>
     </div>
 
+    <!-- User Selection Overlay -->
+    <div id="user-overlay" onclick="closeUserOverlay(event)">
+        <div id="user-popup" onclick="event.stopPropagation()">
+            <button class="hw-close" onclick="closeUserOverlay()">&#x2715;</button>
+            <h4>👤 Select User Profile</h4>
+            <div class="user-subtitle">Choose an active user profile to switch the communication persona and baseline style weights</div>
+            <div id="user-cards-list"></div>
+        </div>
+    </div>
+
     <script>
         let lastJob = null;
         let lastGenCount = -1;
@@ -893,10 +999,22 @@
             document.getElementById('lightbox').classList.remove('active');
         }
 
-        function openLightbox(url, wrapperEl) {
+        function openLightbox(url, wrapperEl, caption) {
             const lb = document.getElementById('lightbox');
             const content = lb.querySelector('.lightbox-content');
             content.innerHTML = '';
+
+            if (caption) {
+                const capEl = document.createElement('div');
+                capEl.style.color = '#fff';
+                capEl.style.fontSize = '14px';
+                capEl.style.fontWeight = '600';
+                capEl.style.marginBottom = '10px';
+                capEl.style.textAlign = 'center';
+                capEl.style.letterSpacing = '0.02em';
+                capEl.textContent = caption;
+                content.appendChild(capEl);
+            }
 
             if (wrapperEl) {
                 const clone = wrapperEl.cloneNode(true);
@@ -908,6 +1026,10 @@
             } else {
                 const img = document.createElement('img');
                 img.src = url;
+                img.style.maxWidth = '90vw';
+                img.style.maxHeight = '80vh';
+                img.style.borderRadius = '6px';
+                img.style.boxShadow = '0 8px 30px rgba(0,0,0,0.5)';
                 content.appendChild(img);
             }
             lb.classList.add('active');
@@ -1167,20 +1289,20 @@
                     const prevPct = Math.round(prevVal * 100);
                     const diff = curPct - prevPct;
                     if (diff > 0) {
-                        diffHtml = ` <span style="font-size: 8px; font-weight: 700; color: #10b981;">+${diff}%</span>`;
+                        diffHtml = ` <span style="font-size: 7.5px; font-weight: 700; color: #10b981;">+${diff}%</span>`;
                     } else if (diff < 0) {
-                        diffHtml = ` <span style="font-size: 8px; font-weight: 700; color: #ef4444;">${diff}%</span>`;
+                        diffHtml = ` <span style="font-size: 7.5px; font-weight: 700; color: #ef4444;">${diff}%</span>`;
                     } else {
-                        diffHtml = ` <span style="font-size: 8px; color: var(--ink-soft);">=</span>`;
+                        diffHtml = ` <span style="font-size: 7.5px; color: var(--ink-soft);">=</span>`;
                     }
                 }
 
-                return `<span style="background:${s.bg}; border:1px solid ${s.border}; border-radius:3px; padding:1px 4px; color:${s.color}; font-weight:600; white-space:nowrap;">${s.label}: ${curPct}%${diffHtml}</span>`;
+                return `<span style="background:${s.bg}; border:1px solid ${s.border}; border-radius:3px; padding:0 3px; color:${s.color}; font-weight:600; white-space:nowrap; display:inline-flex; align-items:center; line-height:1.2;">${s.label}: ${curPct}%${diffHtml}</span>`;
             }).join('');
 
-            return `<div style="margin: 2px 0;">
-                        <div style="font-size: 8.5px; font-weight: 600; color: var(--ink-soft); margin-bottom: 1px;">Weights:</div>
-                        <div style="display: flex; flex-wrap: wrap; gap: 2px; font-size: 8.5px;">${pills}</div>
+            return `<div style="margin: 1px 0 1px 0; line-height: 1.1;">
+                        <span style="font-size: 8px; font-weight: 600; color: var(--ink-soft); display: block; margin-bottom: 1px;">Weights:</span>
+                        <div style="display: flex; flex-wrap: wrap; gap: 2px; font-size: 8px; line-height: 1.1;">${pills}</div>
                     </div>`;
         }
 
@@ -1293,16 +1415,59 @@
                         let allTitles = [];
                         let allBodies = [];
                         
-                        doc.articles.forEach(art => {
-                            if (art.title_raw || art.title) {
-                                allTitles.push(`<b>Article ${art.index + 1}:</b><br>${art.title || art.title_raw}`);
+                        doc.articles.forEach((art, aIdx) => {
+                            // Title Block
+                            let tHtml = `<div style="${aIdx > 0 ? 'margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--card-border);' : ''}">`;
+                            tHtml += `<div style="font-weight: 700; font-size: 11px; color: var(--ink); margin-bottom: 2px;">Article ${art.index + 1}:</div>`;
+                            
+                            const titleText = art.title || art.title_raw || art.title_mat || '';
+                            if (titleText) {
+                                tHtml += `<div style="font-size: 12px; font-weight: 600; line-height: 1.35; margin-bottom: 4px; color: var(--ink); word-break: break-word;">${titleText}</div>`;
+                            } else if (!doc.timings.total) {
+                                tHtml += `<div style="font-size: 11px; color: var(--ink-soft); font-style: italic; margin-bottom: 4px;">Extracting title...</div>`;
+                            } else {
+                                tHtml += `<div style="font-size: 11px; color: var(--ink-soft); font-style: italic; margin-bottom: 4px;">(No headline text)</div>`;
                             }
+
+                            if (art.note && (art.note.toLowerCase().includes('title') || art.note.toLowerCase().includes('empty'))) {
+                                tHtml += `<div style="font-size: 10px; color: var(--accent-orange, #d97706); line-height: 1.25; margin-bottom: 4px;">${art.note}</div>`;
+                            }
+
+                            // Intermediate Stage Buttons: Crop, CRAFT, Binarize, MAT
+                            const tImgs = art.title_images || {};
+                            let buttons = [];
+
+                            let cropFile = tImgs.crop;
+                            if (!cropFile && art.regions) {
+                                const tReg = art.regions.find(r => r.label === 'title' && r.crop_path);
+                                if (tReg) cropFile = tReg.crop_path;
+                            }
+                            if (cropFile) {
+                                buttons.push(`<button class="manual-btn" style="position:relative; top:0; right:0; padding: 2px 6px; font-size: 10px; line-height: 1.2; margin: 0; display: inline-block; cursor: pointer;" onclick="openLightbox('/work/${data.job}/${cropFile}', null, 'Article ${art.index + 1} Title Crop')">Crop</button>`);
+                            }
+                            if (tImgs.craft) {
+                                buttons.push(`<button class="manual-btn" style="position:relative; top:0; right:0; padding: 2px 6px; font-size: 10px; line-height: 1.2; margin: 0; display: inline-block; cursor: pointer;" onclick="openLightbox('/work/${data.job}/${tImgs.craft}', null, 'Article ${art.index + 1} CRAFT Stitched Strip')">CRAFT</button>`);
+                            }
+                            if (tImgs.bin) {
+                                buttons.push(`<button class="manual-btn" style="position:relative; top:0; right:0; padding: 2px 6px; font-size: 10px; line-height: 1.2; margin: 0; display: inline-block; cursor: pointer;" onclick="openLightbox('/work/${data.job}/${tImgs.bin}', null, 'Article ${art.index + 1} Binarized Strip')">Binarize</button>`);
+                            }
+                            if (tImgs.mat) {
+                                buttons.push(`<button class="manual-btn" style="position:relative; top:0; right:0; padding: 2px 6px; font-size: 10px; line-height: 1.2; margin: 0; display: inline-block; cursor: pointer;" onclick="openLightbox('/work/${data.job}/${tImgs.mat}', null, 'Article ${art.index + 1} MAT Skeleton')">MAT</button>`);
+                            }
+
+                            if (buttons.length > 0) {
+                                tHtml += `<div style="display: flex; gap: 3px; flex-wrap: wrap; margin-top: 4px;">${buttons.join('')}</div>`;
+                            }
+                            tHtml += `</div>`;
+                            allTitles.push(tHtml);
+
+                            // Body Block
                             if (art.body_raw || art.body) {
                                 allBodies.push(`<b>Article ${art.index + 1}:</b><br>${art.body || art.body_raw}`);
                             }
                         });
                         
-                        updateData('title', allTitles.length > 0 ? allTitles.join('<br><br>') : 'Processing title...', true);
+                        updateData('title', allTitles.length > 0 ? allTitles.join('') : (!doc.timings.total ? 'Processing title...' : '(No headline regions)'), true);
                         updateData('body', allBodies.length > 0 ? allBodies.join('<br><br>') : 'Processing body...', true);
                     } else {
                         updateData('title', '(No articles)');
@@ -1422,17 +1587,18 @@
                         });
 
                         // Show intent, style, weight change, and prompt for every turn
-                        persHtml += `<div style="margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--line);">`;
+                        persHtml += `<div style="margin-top: 3px; padding-top: 3px; border-top: 1px solid var(--line);">`;
                         generations.forEach((turn, idx) => {
                             const prevTurn = idx > 0 ? generations[idx - 1] : null;
-                            persHtml += `<div style="margin-bottom: 5px;">`;
-                            persHtml += `<div style="line-height: 1.25; margin-bottom: 2px;"><b>Turn ${turn.index} Detected Intent:</b> <span style="color:var(--accent-deep);">${turn.intent || 'NONE'}</span></div>`;
+                            const turnDivider = idx > 0 ? 'margin-top: 3px; padding-top: 3px; border-top: 1px dashed var(--line);' : '';
+                            persHtml += `<div style="margin-bottom: 2px; ${turnDivider}">`;
+                            persHtml += `<div style="line-height: 1.15; margin-bottom: 1px; font-size: 9.5px;"><b>Turn ${turn.index} Intent:</b> <span style="color:var(--accent-deep);">${turn.intent || 'NONE'}</span></div>`;
                             if (turn.style_class) {
-                                persHtml += `<div style="line-height: 1.25; margin-bottom: 2px;"><b>Turn ${turn.index} Applied Style:</b> <span style="color:var(--accent-deep);">${turn.style_class}</span></div>`;
+                                persHtml += `<div style="line-height: 1.15; margin-bottom: 1px; font-size: 9.5px;"><b>Turn ${turn.index} Style:</b> <span style="color:var(--accent-deep);">${turn.style_class}</span></div>`;
                             }
                             persHtml += buildTurnWeightHtml(turn, prevTurn, prof ? prof.history_weights : null);
                             if (turn.prompt_modifier) {
-                                persHtml += `<div style="margin-top: 2px; padding: 2px 5px; background: rgba(0,0,0,0.03); border-radius: 4px; font-family: monospace; font-size: 9px; line-height: 1.25; border-left: 2px solid var(--accent); white-space: pre-wrap; word-break: break-word;">"${turn.prompt_modifier}"</div>`;
+                                persHtml += `<div style="margin-top: 1px; padding: 1px 4px; background: rgba(0,0,0,0.03); border-radius: 3px; font-family: monospace; font-size: 8px; line-height: 1.15; border-left: 2px solid var(--accent); white-space: pre-wrap; word-break: break-word;">"${turn.prompt_modifier}"</div>`;
                             }
                             persHtml += `</div>`;
                         });
@@ -1520,15 +1686,15 @@
                         }
 
                         // Show intent, style, weight change, and prompt for this turn
-                        persHtml += `<div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line);">`;
-                        persHtml += `<div style="margin-bottom: 8px;">`;
-                        persHtml += `<b>Turn 1 Intent:</b> <span style="color:var(--accent-deep);">${ans.intent || 'NONE'}</span><br>`;
+                        persHtml += `<div style="margin-top: 3px; padding-top: 3px; border-top: 1px solid var(--line);">`;
+                        persHtml += `<div style="margin-bottom: 2px;">`;
+                        persHtml += `<div style="line-height: 1.15; margin-bottom: 1px; font-size: 9.5px;"><b>Turn 1 Intent:</b> <span style="color:var(--accent-deep);">${ans.intent || 'NONE'}</span></div>`;
                         if (ans.style_class) {
-                            persHtml += `<b>Turn 1 Style:</b> <span style="color:var(--accent-deep);">${ans.style_class}</span><br>`;
+                            persHtml += `<div style="line-height: 1.15; margin-bottom: 1px; font-size: 9.5px;"><b>Turn 1 Style:</b> <span style="color:var(--accent-deep);">${ans.style_class}</span></div>`;
                         }
                         persHtml += buildTurnWeightHtml(null, null, prof ? prof.history_weights : null);
                         if (ans.prompt_modifier) {
-                            persHtml += `<div style="margin-top: 4px; padding: 4px 6px; background: rgba(0,0,0,0.03); border-radius: 4px; font-family: monospace; font-size: 9.5px; border-left: 2px solid var(--accent); white-space: pre-wrap; word-break: break-word;">"${ans.prompt_modifier}"</div>`;
+                            persHtml += `<div style="margin-top: 1px; padding: 1px 4px; background: rgba(0,0,0,0.03); border-radius: 3px; font-family: monospace; font-size: 8px; line-height: 1.15; border-left: 2px solid var(--accent); white-space: pre-wrap; word-break: break-word;">"${ans.prompt_modifier}"</div>`;
                         }
                         persHtml += `</div></div>`;
 
@@ -1617,29 +1783,142 @@
             }
         });
 
-        document.getElementById('switch-user-btn').addEventListener('click', async () => {
-            const users = ['user_001', 'user_002', 'user_003'];
-            let idx = users.indexOf(activeUser);
-            activeUser = users[(idx + 1) % users.length];
-            const displayUser = activeUser.replace('user_0', 'User 0');
-            document.getElementById('switch-user-btn').textContent = displayUser;
-            
-            try {
-                const res = await fetch(`/profile/${activeUser}`);
-                if (res.ok) {
-                    activeUserProfile = await res.json();
-                    
-                    // Trick pollLatest to force a redraw
-                    const savedJob = lastJob;
-                    lastJob = null; 
-                    setTimeout(() => {
-                        lastJob = savedJob;
-                        pollLatest();
-                    }, 10);
-                }
-            } catch(e) {
-                console.error("Failed to load user profile", e);
+        // ============================================================
+        // User Profile Selection Overlay
+        // ============================================================
+        const USER_PROFILES_META = [
+            {
+                id: 'user_001',
+                displayName: 'User 001',
+                tag: 'Simple Preference',
+                desc: 'For people who prefer simple, concise explanations in clear everyday language without jargon.',
+                defaultWeights: { Simple: 0.45, Detailed: 0.24, StepByStep: 0.31 }
+            },
+            {
+                id: 'user_002',
+                displayName: 'User 002',
+                tag: 'Detailed Preference',
+                desc: 'For people interested in depth and detail, comprehensive context, and thorough background.',
+                defaultWeights: { Detailed: 0.45, Simple: 0.24, StepByStep: 0.31 }
+            },
+            {
+                id: 'user_003',
+                displayName: 'User 003',
+                tag: 'Step-by-Step Preference',
+                desc: 'For people who follow structured, numbered steps, sequential walkthroughs, and clear progression.',
+                defaultWeights: { StepByStep: 0.45, Simple: 0.24, Detailed: 0.31 }
             }
+        ];
+
+        let cachedUserProfiles = {};
+
+        async function fetchUserProfileData(uid) {
+            try {
+                const res = await fetch(`/profile/${uid}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    cachedUserProfiles[uid] = data;
+                    return data;
+                }
+            } catch (e) {
+                console.warn(`Could not fetch profile for ${uid}`, e);
+            }
+            return null;
+        }
+
+        async function openUserOverlay() {
+            const overlay = document.getElementById('user-overlay');
+            if (!overlay) return;
+            renderUserCardsList();
+            overlay.classList.add('active');
+
+            // Fetch live profiles in background and re-render with fresh weights
+            Promise.all(USER_PROFILES_META.map(u => fetchUserProfileData(u.id))).then(() => {
+                renderUserCardsList();
+            });
+        }
+
+        function closeUserOverlay(e) {
+            if (e && e.target !== document.getElementById('user-overlay') && !e.target.classList.contains('hw-close')) {
+                return;
+            }
+            const overlay = document.getElementById('user-overlay');
+            if (overlay) overlay.classList.remove('active');
+        }
+
+        function renderUserCardsList() {
+            const container = document.getElementById('user-cards-list');
+            if (!container) return;
+
+            const stylesConfig = [
+                { key: 'Simple', label: 'Simple', color: '#10b981', bg: 'rgba(16, 185, 129, 0.12)', border: 'rgba(16, 185, 129, 0.28)' },
+                { key: 'Detailed', label: 'Detail', color: '#3b82f6', bg: 'rgba(59, 130, 246, 0.12)', border: 'rgba(59, 130, 246, 0.28)' },
+                { key: 'StepByStep', label: 'Step by Step', color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.12)', border: 'rgba(245, 158, 11, 0.28)' }
+            ];
+
+            let html = '';
+            USER_PROFILES_META.forEach(u => {
+                const isSelected = (u.id === activeUser);
+                const prof = cachedUserProfiles[u.id] || (isSelected ? activeUserProfile : null);
+                const hw = (prof && prof.history_weights) ? prof.history_weights : u.defaultWeights;
+
+                const pillsHtml = stylesConfig.map(s => {
+                    const val = extractWeightVal(hw, s.key, s.key.toLowerCase(), s.label);
+                    const pct = Math.round(val * 100);
+                    return `<span class="user-weight-pill" style="background:${s.bg}; border:1px solid ${s.border}; color:${s.color};">${s.label}: ${pct}%</span>`;
+                }).join('');
+
+                html += `
+                    <div class="user-card ${isSelected ? 'active' : ''}" onclick="selectUser('${u.id}')">
+                        <div class="user-card-header">
+                            <div class="user-card-title">
+                                <span>${isSelected ? '●' : '○'}</span>
+                                <span>${u.displayName}</span>
+                                ${isSelected ? '<span style="font-size:10px; color:var(--accent-deep); font-weight:600;">(Current)</span>' : ''}
+                            </div>
+                            <span class="user-card-tag">${u.tag}</span>
+                        </div>
+                        <div class="user-card-desc">${u.desc}</div>
+                        <div class="user-card-weights">
+                            <span style="font-size:9.5px; color:var(--ink-soft); font-weight:600; align-self:center; margin-right:2px;">Weights:</span>
+                            ${pillsHtml}
+                        </div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+        }
+
+        async function selectUser(userId) {
+            activeUser = userId;
+            const displayUser = activeUser.replace('user_0', 'User 0');
+            const btn = document.getElementById('switch-user-btn');
+            if (btn) btn.textContent = displayUser;
+
+            // Close overlay
+            const overlay = document.getElementById('user-overlay');
+            if (overlay) overlay.classList.remove('active');
+
+            try {
+                const prof = await fetchUserProfileData(activeUser);
+                if (prof) {
+                    activeUserProfile = prof;
+                }
+                // Force immediate redraw
+                const savedJob = lastJob;
+                lastJob = null;
+                setTimeout(() => {
+                    lastJob = savedJob;
+                    pollLatest();
+                }, 10);
+            } catch (e) {
+                console.error("Failed to update active user profile", e);
+            }
+        }
+
+        document.getElementById('switch-user-btn').addEventListener('click', () => {
+            openUserOverlay();
         });
 
         setInterval(pollLatest, 1500);
