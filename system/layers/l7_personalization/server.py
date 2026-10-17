@@ -25,16 +25,24 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from typing import Optional, Dict, Any
 
+# Import under the SAME module names main_flow uses (`personalization.*`,
+# from the L7 folder on sys.path). Importing style_model as
+# `layers.l7_personalization.personalization.style_model` instead loads a
+# second copy with its own in-memory weights: /profile then served weights
+# frozen at startup while main_flow's copy learned and saved.
 try:
-    from layers.l7_personalization.personalization.main_flow import handle_voice_command
-    from layers.l7_personalization.personalization.style_model import get_user_summary
-    from layers.l7_personalization.delivery.planner import plan_speech
-    from layers.l7_personalization.delivery.voice_profile import get_profile as get_voice_delivery_profile
-except ImportError:
     from personalization.main_flow import handle_voice_command
-    from personalization.style_model import get_user_summary
+    from personalization import style_model, users as user_registry
+    from personalization.logger import db as l7_db, export_logs_to_csv
     from delivery.planner import plan_speech
     from delivery.voice_profile import get_profile as get_voice_delivery_profile
+except ImportError:
+    from layers.l7_personalization.personalization.main_flow import handle_voice_command
+    from layers.l7_personalization.personalization import style_model, users as user_registry
+    from layers.l7_personalization.personalization.logger import db as l7_db, export_logs_to_csv
+    from layers.l7_personalization.delivery.planner import plan_speech
+    from layers.l7_personalization.delivery.voice_profile import get_profile as get_voice_delivery_profile
+get_user_summary = style_model.get_user_summary
 
 app = FastAPI(title="L7 Personalization Service")
 
@@ -42,6 +50,13 @@ class InterpretRequest(BaseModel):
     text: str
     user_id: Optional[str] = "user_001"
     retrieved_chunk_id: Optional[str] = None
+    dry_run: Optional[bool] = False   # decide style only: no logging / learning
+
+class NewUserRequest(BaseModel):
+    base_weights: Dict[str, float]    # Simple / Detailed / StepByStep (fractions or %)
+    description: Optional[str] = ""
+    name: Optional[str] = ""
+    tag: Optional[str] = ""
 
 class DeliverRequest(BaseModel):
     answer_si: str
@@ -59,7 +74,8 @@ def interpret(req: InterpretRequest):
         if not req.text.strip():
             raise HTTPException(status_code=400, detail="Text cannot be empty.")
             
-        result = handle_voice_command(req.text, req.user_id, retrieved_chunk_id=req.retrieved_chunk_id)
+        result = handle_voice_command(req.text, req.user_id, retrieved_chunk_id=req.retrieved_chunk_id,
+                                      dry_run=bool(req.dry_run))
         
         # The main pipeline (l0_voice) only needs the final prompt dictionary
         final_prompt = result.get("final_prompt", {})
@@ -108,6 +124,70 @@ def get_profile(user_id: str):
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
+
+# ── User registry ─────────────────────────────────────────────────────────
+
+def _user_view(u):
+    """Registry record plus the live learned weights."""
+    return {**u, "profile": get_user_summary(u["user_id"])}
+
+
+def _purge_user_rows(user_id):
+    """Drop a deleted user's rows from every L7 table (logs, voice profile...)."""
+    from tinydb import Query
+    for name in l7_db.tables():
+        if name != "user_profiles":
+            l7_db.table(name).remove(Query().user_id == user_id)
+    style_model.delete_user_state(user_id)
+
+
+def _rename_user_rows(old_id, new_id):
+    """Move a renumbered user's rows in every L7 table to the new id."""
+    from tinydb import Query
+    for name in l7_db.tables():
+        if name != "user_profiles":
+            l7_db.table(name).update({"user_id": new_id}, Query().user_id == old_id)
+    style_model.rename_user_state(old_id, new_id)
+
+
+@app.get("/users")
+def list_users():
+    return {"users": [_user_view(u) for u in user_registry.list_users()]}
+
+
+@app.post("/users")
+def add_user(req: NewUserRequest):
+    try:
+        u = user_registry.add_user(req.base_weights, req.description, req.name, req.tag)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    style_model.reset_user(u["user_id"])          # start them at their base split
+    return {"user": _user_view(u)}
+
+
+@app.post("/users/{user_id}/delete")
+def delete_user(user_id: str):
+    try:
+        renames = user_registry.delete_user(user_id, _purge_user_rows, _rename_user_rows)
+    except PermissionError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+    except KeyError:
+        raise HTTPException(status_code=404, detail=f"no user {user_id}")
+    try:
+        export_logs_to_csv()
+    except Exception:
+        pass
+    return {"deleted": user_id, "renamed": [{"from": a, "to": b} for a, b in renames],
+            "users": [_user_view(u) for u in user_registry.list_users()]}
+
+
+@app.post("/users/{user_id}/reset")
+def reset_user(user_id: str):
+    if user_registry.get_user(user_id) is None:
+        raise HTTPException(status_code=404, detail=f"no user {user_id}")
+    style_model.reset_user(user_id)
+    return {"user": _user_view(user_registry.get_user(user_id))}
+
 
 @app.post("/deliver")
 def deliver(req: DeliverRequest):

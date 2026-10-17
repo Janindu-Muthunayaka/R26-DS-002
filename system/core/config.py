@@ -275,8 +275,9 @@ RAG_TIMEOUT_S = float(os.getenv('SINHALA_RAG_TIMEOUT', '3000'))
 # 'stub' keeps Layer 4A returning the article unchanged; 'mat' or other values enable it.
 # See layers/l4a_title/title.py.
 TITLE_MODE = os.getenv('SINHALA_TITLE_MODE', 'mat')
-# Headline extraction engine: 'raw' (default, fast direct OCR without MAT skeletonization),
-# 'hybrid' (runs RAW and MAT in parallel with confidence gate), or 'mat' (MAT skeletonized only).
+# NO LONGER READ. Layer 4A is RAW-only (sin_raw on the binarized strip); the MAT
+# skeletonization and the 'hybrid'/'mat' engines were removed. Kept so an
+# existing .env setting does not break anything.
 TITLE_ENGINE = os.getenv('SINHALA_TITLE_ENGINE', 'raw').lower()
 
 
@@ -297,6 +298,12 @@ SESSION_MAX   = int(os.getenv('SINHALA_SESSION_MAX', '32'))
 # 0.0757. If a general-purpose model rewrites that output, the number being
 # measured is no longer the model the thesis is about.
 POLISH_MODE = os.getenv('SINHALA_POLISH_MODE', 'off')
+
+# The chat model used by L4C only. Kept apart from OPENAI_CHAT_MODEL so the
+# polish layer can use a stronger model without changing L6/L7. Empty means
+# fall back to OPENAI_CHAT_MODEL. Read at call time (see polish.py) because
+# core/env.py may load .env after this module is imported.
+POLISH_MODEL_ENV = 'OPENAI_POLISH_MODEL'
 
 # A repair that rewrote a quarter of the characters is not a repair. NOT
 # MEASURED — a deliberately conservative choice, and the value that decides

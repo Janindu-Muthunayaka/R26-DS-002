@@ -90,14 +90,13 @@ def main():
     print(f'  key     : {env.redact(llm.key())}')
     print(f'  llm     : {"ready" if ok else "NOT CONFIGURED — " + why}')
     print(f'  polish  : {a.polish or os.getenv("SINHALA_POLISH_MODE", "off")}')
-    print(f'  title   : {a.title or os.getenv("SINHALA_TITLE_MODE", "stub")}')
+    title_mode = a.title or os.getenv("SINHALA_TITLE_MODE", "mat")
+    print(f'  title   : {title_mode}')
     print()
 
-    reader_env = {'SINHALA_ROOT': a.root}
+    reader_env = {'SINHALA_ROOT': a.root, 'SINHALA_TITLE_MODE': title_mode}
     if a.polish:
         reader_env['SINHALA_POLISH_MODE'] = a.polish
-    if a.title:
-        reader_env['SINHALA_TITLE_MODE'] = a.title
 
     signal.signal(signal.SIGINT, lambda *x: (stop_all(), sys.exit(0)))
 

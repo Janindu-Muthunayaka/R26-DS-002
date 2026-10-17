@@ -155,97 +155,102 @@ def perspective_warp(img: np.ndarray, points, expand_pct: float = 0.02) -> np.nd
     except Exception:
         return img
 
-def extract_lines_with_craft(img: np.ndarray) -> list[np.ndarray]:
-    """Uses Fast Projection first (<2ms). Falls back to CRAFT only if needed, with resolution scaling."""
-    # Fast Path: Check if horizontal projection profiling cleanly detects the headline line(s)
-    fast_lines = split_lines_fast(img)
-    if len(fast_lines) > 1 or (img.shape[1] / max(1, img.shape[0]) >= 2.5):
-        return fast_lines
+def extract_lines_with_craft(img: np.ndarray) -> tuple[list[np.ndarray], np.ndarray | None]:
+    """Runs CRAFT text detection to extract text lines and text-density heatmap visualization."""
+    density_overlay = None
 
     detector = _get_text_detector()
-    if detector is None:
-        return fast_lines
-
-    # Downscale large title crops before passing to CRAFT on CPU
-    h, w = img.shape[:2]
-    max_dim = max(h, w)
-    scale = 1.0
-    if max_dim > 960:
-        scale = 960.0 / max_dim
-        craft_img = cv2.resize(img, (int(w * scale), int(h * scale)), interpolation=cv2.INTER_AREA)
-    else:
-        craft_img = img
-
-    try:
-        det_result = detector.detect_text(craft_img)
-    except Exception:
-        return fast_lines
-
-    dt_polys = det_result.get("boxes", [])
-    if len(dt_polys) == 0:
-        return fast_lines
-
-    poly_data = []
-    for p in dt_polys:
-        try:
-            # Safely handle irregular point arrays to prevent inhomogeneous shape crash
-            pts = []
-            for pt in p:
-                if hasattr(pt, '__iter__') and len(pt) >= 2:
-                    pts.append([float(pt[0]) / scale, float(pt[1]) / scale])
-            if len(pts) < 3:
-                continue
-            arr = np.array(pts, dtype=np.float32)
-            cx, cy = np.mean(arr, axis=0)
-            lh = np.max(arr[:, 1]) - np.min(arr[:, 1])
-            poly_data.append({'poly': arr, 'cx': cx, 'cy': cy, 'h': lh})
-        except Exception:
-            continue
-
-    if not poly_data:
-        return fast_lines
-
-    poly_data.sort(key=lambda d: d['cy'])
-    avg_h = np.mean([d['h'] for d in poly_data])
-    y_threshold = avg_h * 0.5
-
-    lines = []
-    current_line = [poly_data[0]]
-    for d in poly_data[1:]:
-        if abs(d['cy'] - current_line[-1]['cy']) < y_threshold:
-            current_line.append(d)
+    if detector is not None:
+        # Downscale large title crops before passing to CRAFT on CPU
+        h, w = img.shape[:2]
+        max_dim = max(h, w)
+        scale = 1.0
+        if max_dim > 960:
+            scale = 960.0 / max_dim
+            craft_img = cv2.resize(img, (int(w * scale), int(h * scale)), interpolation=cv2.INTER_AREA)
         else:
-            lines.append(current_line)
-            current_line = [d]
-    lines.append(current_line)
+            craft_img = img
 
-    sorted_polys = []
-    for line in lines:
-        line.sort(key=lambda d: d['cx'])
-        sorted_polys.extend([d['poly'] for d in line])
+        try:
+            det_result = detector.detect_text(craft_img)
+            dt_polys = det_result.get("boxes", [])
 
-    line_crops = []
-    for poly in sorted_polys:
-        pts = np.asarray(poly, dtype=np.float32)
-        if len(pts) >= 4:
-            width_top = np.linalg.norm(pts[0] - pts[1])
-            width_bottom = np.linalg.norm(pts[2] - pts[3])
-            max_w = int(max(width_top, width_bottom))
-            height_left = np.linalg.norm(pts[0] - pts[3])
-            height_right = np.linalg.norm(pts[1] - pts[2])
-            max_h = int(max(height_left, height_right))
-            if max_w < max_h:
-                continue  # skip vertical words
+            # Generate density heatmap visualization
+            heatmap = det_result.get("heatmaps", {}).get("text_score_heatmap")
+            if heatmap is not None:
+                hm_resized = cv2.resize(heatmap, (w, h))
+                density_overlay = cv2.addWeighted(img, 0.45, hm_resized, 0.55, 0)
+                # Draw detected text word polygons
+                for poly in dt_polys:
+                    pts = (np.array(poly, dtype=np.float32) / scale).astype(np.int32).reshape((-1, 1, 2))
+                    cv2.polylines(density_overlay, [pts], isClosed=True, color=(0, 255, 0), thickness=2)
 
-        line_crop = perspective_warp(img, poly)
-        lh, lw = line_crop.shape[:2]
-        if lh < MIN_LINE_H or lw < MIN_LINE_W:
-            continue
+            if len(dt_polys) > 0:
+                poly_data = []
+                for p in dt_polys:
+                    try:
+                        pts = []
+                        for pt in p:
+                            if hasattr(pt, '__iter__') and len(pt) >= 2:
+                                pts.append([float(pt[0]) / scale, float(pt[1]) / scale])
+                        if len(pts) < 3:
+                            continue
+                        arr = np.array(pts, dtype=np.float32)
+                        cx, cy = np.mean(arr, axis=0)
+                        lh = np.max(arr[:, 1]) - np.min(arr[:, 1])
+                        poly_data.append({'poly': arr, 'cx': cx, 'cy': cy, 'h': lh})
+                    except Exception:
+                        continue
 
-        line_crop = cv2.copyMakeBorder(line_crop, 10, 10, 10, 10, cv2.BORDER_CONSTANT, value=[255, 255, 255])
-        line_crops.append(line_crop)
+                if poly_data:
+                    poly_data.sort(key=lambda d: d['cy'])
+                    avg_h = np.mean([d['h'] for d in poly_data])
+                    y_threshold = avg_h * 0.5
 
-    return line_crops if line_crops else fast_lines
+                    lines = []
+                    current_line = [poly_data[0]]
+                    for d in poly_data[1:]:
+                        if abs(d['cy'] - current_line[-1]['cy']) < y_threshold:
+                            current_line.append(d)
+                        else:
+                            lines.append(current_line)
+                            current_line = [d]
+                    lines.append(current_line)
+
+                    sorted_polys = []
+                    for line in lines:
+                        line.sort(key=lambda d: d['cx'])
+                        sorted_polys.extend([d['poly'] for d in line])
+
+                    line_crops = []
+                    for poly in sorted_polys:
+                        pts = np.asarray(poly, dtype=np.float32)
+                        if len(pts) >= 4:
+                            width_top = np.linalg.norm(pts[0] - pts[1])
+                            width_bottom = np.linalg.norm(pts[2] - pts[3])
+                            max_w = int(max(width_top, width_bottom))
+                            height_left = np.linalg.norm(pts[0] - pts[3])
+                            height_right = np.linalg.norm(pts[1] - pts[2])
+                            max_h = int(max(height_left, height_right))
+                            if max_w < max_h:
+                                continue  # skip vertical words
+
+                        line_crop = perspective_warp(img, poly)
+                        lh, lw = line_crop.shape[:2]
+                        if lh < MIN_LINE_H or lw < MIN_LINE_W:
+                            continue
+
+                        line_crop = cv2.copyMakeBorder(line_crop, 10, 10, 10, 10, cv2.BORDER_CONSTANT, value=[255, 255, 255])
+                        line_crops.append(line_crop)
+
+                    if line_crops:
+                        return line_crops, density_overlay
+        except Exception as e:
+            print(f"  [CRAFT] Text detection warning: {e}")
+
+    # Fallback to fast projection profiling if CRAFT fails or finds no lines
+    fast_lines = split_lines_fast(img)
+    return fast_lines, density_overlay
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 def _resize_to_height(img: np.ndarray, target_h: int) -> np.ndarray:
@@ -304,10 +309,11 @@ def stitch_images(line_imgs: list[np.ndarray]) -> np.ndarray | None:
 
     return strip
 
-def extract_and_stitch_title(img_bgr: np.ndarray) -> np.ndarray | None:
-    """End-to-end processing for a title region crop: CRAFT line extraction + Stitching."""
-    line_imgs = extract_lines_with_craft(img_bgr)
-    return stitch_images(line_imgs)
+def extract_and_stitch_title(img_bgr: np.ndarray) -> tuple[np.ndarray | None, np.ndarray | None]:
+    """End-to-end processing for a title region crop: CRAFT line extraction + Stitching + Heatmap density overlay."""
+    line_imgs, density_overlay = extract_lines_with_craft(img_bgr)
+    stitched = stitch_images(line_imgs)
+    return stitched, density_overlay
 
 # ── Public API ────────────────────────────────────────────────────────────────
 def run(crop_input: Path | list[Path],
@@ -425,6 +431,9 @@ import cv2
 import numpy as np
 from pathlib import Path
 
+PAD_WHITE         = 254   # >= this in the stitched strip = border/gap padding (or white paper)
+MAX_TEXT_FRACTION = 0.50  # strip more black than this = mis-thresholded (good strips: ~0.15-0.35)
+
 def binarize_strip(img_bgr: np.ndarray, is_dark_bg: bool) -> tuple[np.ndarray, np.ndarray]:
     # 1. Image Loading / Grayscale
     grey = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY)
@@ -443,15 +452,36 @@ def binarize_strip(img_bgr: np.ndarray, is_dark_bg: bool) -> tuple[np.ndarray, n
 
     # 3. Binarization (Otsu Thresholding)
     _, binary_8u = cv2.threshold(resized, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-    
+
     # We use the explicitly computed is_dark_bg from Stage 2 (CRAFT mask)
     # If the background is dark, we must invert to make the background white (255)
     if is_dark_bg:
         binary_8u = cv2.bitwise_not(binary_8u)
-        
+
     # Boolean array where True means foreground text (black pixels)
     binary = binary_8u == 0
-    
+
+    # GREY-PAPER FAILURE. The stitched strip is partly ARTIFICIAL white: the
+    # 10 px border around every CRAFT word crop and the gaps between them.
+    # On grey paper Otsu takes that white as the background class and
+    # thresholds between it and the paper, so the paper turns black and
+    # every word becomes a solid black box (most of the strip black). Only
+    # then, re-estimate the threshold from the real crop pixels alone; the
+    # padding is thresholded with it and, being 255, stays white. On white
+    # paper the global threshold is right and is left untouched: excluding
+    # paper >= PAD_WHITE there would leave only text pixels and thin the strokes.
+    if binary.mean() > MAX_TEXT_FRACTION:
+        padding = resized >= PAD_WHITE
+        content = resized[~padding]
+        if content.size >= 100:
+            thr, _ = cv2.threshold(content.reshape(-1, 1), 0, 255,
+                                   cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+            binary = resized <= thr
+            # Still mostly black: light text on a dark band. Invert the crop
+            # pixels; padding never becomes foreground.
+            if binary.mean() > MAX_TEXT_FRACTION:
+                binary = ~binary & ~padding
+
     # Remove specks and noise particles dynamically
     num_labels, labels, stats, _ = cv2.connectedComponentsWithStats(binary.astype(np.uint8), connectivity=8)
     
@@ -481,124 +511,6 @@ def binarize_strip(img_bgr: np.ndarray, is_dark_bg: bool) -> tuple[np.ndarray, n
     return binary, binarized_bgr
 
 def run(sentence_path: Path, binarized_root: Path, original_stem: str) -> Path | None:
-    # Not used in word-level architecture, keep as stub
-    pass
-
-if __name__ == "__main__":
-    pass
-
-
-"""
-Stage 5 – MAT Skeletonization (title_extractor_p3.py)
-─────────────────────────────────────────────
-Reads the binarized strips produced by Stage 4 and applies:
-  1. MAT Skeletonization.
-  2. Dilation (stroke thickening).
-  3. Final RGB formatting.
-"""
-
-
-import cv2
-import numpy as np
-from pathlib import Path
-from scipy.ndimage import distance_transform_edt
-from skimage.morphology import medial_axis, disk, dilation
-
-# ─── VISUALISATION SETTINGS ───────────────────────────────────────────────────
-EDGE_SAMPLE_GRID   = 10
-GRADIENT_MAX_STEPS = 500
-COLOUR_YELLOW      = (0, 220, 255)
-SKELETON_DILATE    = 1
-COLOUR_RED         = (0, 0, 220)
-
-def trace_yellow_lines(binary_255: np.ndarray, dist: np.ndarray) -> np.ndarray:
-    """Trace inward gradient lines from edge points toward stroke centres."""
-    h, w = binary_255.shape
-    grad_y, grad_x = np.gradient(dist)
-    mag    = np.sqrt(grad_x**2 + grad_y**2) + 1e-8
-    grad_x = grad_x / mag
-    grad_y = grad_y / mag
-
-    edges    = cv2.Canny(binary_255, 50, 150)
-    edge_pts = np.argwhere(edges > 0)
-
-    grid = {}
-    for (r, c) in edge_pts:
-        key = (r // EDGE_SAMPLE_GRID, c // EDGE_SAMPLE_GRID)
-        if key not in grid:
-            grid[key] = (r, c)
-    sampled = list(grid.values())
-
-    # Create a nice canvas: white background, light gray text
-    canvas = np.full((h, w, 3), 255, dtype=np.uint8)
-    canvas[binary_255 == 0] = [220, 220, 220]
-
-    for (r, c) in sampled:
-        pts = [(c, r)]
-        cr, cc = float(r), float(c)
-
-        for _ in range(GRADIENT_MAX_STEPS):
-            ri = int(np.clip(cr, 0, h - 1))
-            ci = int(np.clip(cc, 0, w - 1))
-
-            nr = float(np.clip(cr + grad_y[ri, ci], 0, h - 1))
-            nc = float(np.clip(cc + grad_x[ri, ci], 0, w - 1))
-
-            if binary_255[int(nr), int(nc)] == 255:
-                break
-
-            cr, cc = nr, nc
-            pts.append((int(nc), int(nr)))
-
-        if len(pts) > 2:
-            for i in range(len(pts) - 1):
-                cv2.line(canvas, pts[i], pts[i + 1], COLOUR_YELLOW, 1)
-
-    return canvas
-
-def overlay_skeleton(canvas_yellow: np.ndarray, letter_mask: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
-    """Compute medial axis skeleton and overlay in red on the yellow canvas."""
-    from skimage.morphology import skeletonize, disk, dilation
-    
-    # 4. Medial Axis Transform (MAT) Skeletonization (using skeletonize for consistency with p2_MeanAxis_v4)
-    skeleton = skeletonize(letter_mask.astype(bool))
-    skel_img = skeleton.astype(np.uint8) * 255
-
-    canvas_red = canvas_yellow.copy()
-    if SKELETON_DILATE > 0:
-        k = np.ones((3, 3), np.uint8)
-        skel_dilated = cv2.dilate(skel_img, k, iterations=SKELETON_DILATE)
-        canvas_red[skel_dilated > 0] = COLOUR_RED
-    else:
-        canvas_red[skel_img > 0] = COLOUR_RED
-
-    # 5. Stroke Thickening (Dilation) for OCR final output
-    footprint = disk(1)
-    thickened = dilation(skeleton, footprint)
-
-    return thickened, canvas_red
-
-def mat_process(binarized_bgr: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
-    # Extract binary image: text = 0 (black), background = 255 (white)
-    grey = cv2.cvtColor(binarized_bgr, cv2.COLOR_BGR2GRAY)
-    _, binary_255 = cv2.threshold(grey, 127, 255, cv2.THRESH_BINARY)
-    
-    letter_mask = (binary_255 == 0).astype(np.uint8)
-    
-    # Compute distance transform
-    dist = cv2.distanceTransform(letter_mask, cv2.DIST_L2, cv2.DIST_MASK_PRECISE)
-    
-    # Create debug visualization
-    canvas_yellow = trace_yellow_lines(binary_255, dist)
-    thickened, mat_debug = overlay_skeleton(canvas_yellow, letter_mask)
-
-    # 6. Final Rendering & Formatting for OCR
-    final_grey = np.where(thickened, 0, 255).astype(np.uint8)
-    final_bgr = cv2.cvtColor(final_grey, cv2.COLOR_GRAY2BGR)
-
-    return final_bgr, mat_debug
-
-def run(binarized_path: Path, preprocessed_root: Path, original_stem: str) -> tuple[Path | None, Path | None, Path | None]:
     # Not used in word-level architecture, keep as stub
     pass
 

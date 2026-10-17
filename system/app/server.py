@@ -66,6 +66,24 @@ from core.config import (WORK_DIR, HOST, PORT, SESSION_MAX, SESSION_TTL_S,
 from core import quality
 from core.imaging import imdecode_upright
 from core.schemas import Answer, Question, Document
+from pydantic import BaseModel
+
+
+class NewUser(BaseModel):
+    base_weights: dict                 # {Simple, Detailed, StepByStep}, % or fractions
+    description: str = ''
+    name: str = ''
+    tag: str = ''
+
+
+class ActiveUser(BaseModel):
+    user_id: str
+
+
+class Regenerate(BaseModel):
+    job: str
+    index: int                         # 1-based turn index
+    user_id: str
 from core.session import SessionStore
 from layers.l0_voice import voice as l0
 from layers.l5_assemble.payload import article_text
@@ -133,6 +151,43 @@ def _document_to_reply(doc, job):
     }
 
 
+def _user_meta(user_id):
+    """Snapshot of who answered: name, tag, description, base weights.
+    Stored on each answer so the compare view still shows the user as they
+    were, even if the registry changes later. Best effort, never raises."""
+    meta = {'user_id': user_id, 'name': user_id, 'tag': '', 'description': '',
+            'base_weights': None}
+    try:
+        reply, _ = l0.list_users()
+        for u in (reply or {}).get('users', []):
+            if u.get('user_id') == user_id:
+                meta.update({k: u.get(k) for k in ('name', 'tag', 'description', 'base_weights')})
+                break
+    except Exception:
+        pass
+    return meta
+
+
+def _speakable(res, voice):
+    """Natural TTS pause formatting, as /ask does."""
+    out = res['speakable']
+    if out:
+        try:
+            from layers.l7_personalization.delivery.planner import format_text_with_tts_pauses
+            out = format_text_with_tts_pauses(out, style=voice.get('style_class', 'Detailed'))
+        except Exception:
+            pass
+    return out
+
+
+# The fields of a turn that belong to ONE generated answer. A re-generation
+# replaces these; the question and its index stay.
+VERSION_FIELDS = ('user_id', 'user_meta', 'answer', 'answer_si', 'route', 'intent',
+                  'prompt_modifier', 'style_class', 'style_source', 'user_profile',
+                  'learned', 'english_translation', 'correction_applied',
+                  'warnings', 'timings')
+
+
 def build(pipeline, web_dir: Path):
     app = FastAPI(title='Sinhala Reader')
     app.add_middleware(CORSMiddleware, allow_origins=['*'],
@@ -144,6 +199,9 @@ def build(pipeline, web_dir: Path):
     # and why that is stated as a limitation rather than papered over.
     sessions = SessionStore(ttl_s=SESSION_TTL_S, max_items=SESSION_MAX)
     app.state.sessions = sessions
+    # The user picked in the web UI. Used whenever a request does not name
+    # one: the phone's /capture never does, and /ask may not.
+    app.state.active_user = VOICE_USER_ID
 
     def _page(name):
         p = web_dir / name
@@ -223,12 +281,17 @@ def build(pipeline, web_dir: Path):
             reply = _document_to_reply(doc, job)
             
             if reply['ok']:
+                # Styled for the active user, read-only: their dominant style
+                # and its prompt. Nothing is learned from a turn the user
+                # did not ask.
+                scan_uid = app.state.active_user
+                scan_style = l0.style_for_user(scan_uid)
                 first_scan_voice = {
                     'route': 'GENERATE',
                     'intent': 'FIRST_SCAN',
                     'english_translation': 'Tell the number of articles detected,and tell the title of each article along with its article no.',
-                    'style_class': 'Detailed',
-                    'prompt_modifier': '',
+                    'style_class': scan_style['style_class'],
+                    'prompt_modifier': scan_style['prompt_modifier'],
                     'personalization_flags': {},
                     'sinhala_input': 'හඳුනාගත් ලිපි සංඛ්‍යාව සහ එක් එක් ලිපියේ ශීර්ෂය එහි ලිපි අංකය සමඟ පවසන්න.',
                     'source': 'component4'
@@ -253,6 +316,11 @@ def build(pipeline, web_dir: Path):
                 turn_info = {
                     'index': len(doc.generations) + 1,
                     'query': first_scan_voice['sinhala_input'],
+                    'user_id': scan_uid,
+                    'user_meta': _user_meta(scan_uid),
+                    'style_source': scan_style['style_source'],
+                    'user_profile': scan_style['user_profile'],
+                    'learned': False,
                     'answer': res['speakable'] or res['answer_si'],
                     'answer_si': res['answer_si'],
                     'route': res['route'],
@@ -326,7 +394,7 @@ def build(pipeline, web_dir: Path):
             ).model_dump(), status_code=404)
 
         try:
-            voice = l0.interpret(q.text, user_id=q.user_id or VOICE_USER_ID)
+            voice = l0.interpret(q.text, user_id=q.user_id or app.state.active_user)
             voice.setdefault('sinhala_input', q.text)
             voice.setdefault('session_id', q.job)
             if hasattr(doc, 'generations') and doc.generations:
@@ -390,9 +458,12 @@ def build(pipeline, web_dir: Path):
         
         if not hasattr(doc, 'generations') or doc.generations is None:
             doc.generations = []
+        uid = q.user_id or app.state.active_user
         turn_info = {
             'index': len(doc.generations) + 1,
             'query': q.text,
+            'user_id': uid,
+            'user_meta': _user_meta(uid),
             'answer': speakable_out or res['answer_si'],
             'answer_si': res['answer_si'],
             'route': res['route'],
@@ -416,6 +487,110 @@ def build(pipeline, web_dir: Path):
         sessions.set_answer(q.job, ans_dict)
         sessions.put(q.job, doc)
         return ans_dict
+
+    # -- Users (Component 4 registry, proxied) ------------------------------
+    def _proxy(reply_reason):
+        reply, reason = reply_reason
+        if reply is None:
+            code = (403 if 'HTTP 403' in reason else 404 if 'HTTP 404' in reason
+                    else 400 if 'HTTP 400' in reason else 503)
+            return JSONResponse({'ok': False, 'error': reason}, status_code=code)
+        return {'ok': True, **reply}
+
+    @app.get('/users')
+    def users_list():
+        return _proxy(l0.list_users())
+
+    @app.post('/users')
+    def users_add(u: NewUser):
+        return _proxy(l0.add_user(u.base_weights, u.description, u.name, u.tag))
+
+    @app.delete('/users/{user_id}')
+    def users_delete(user_id: str):
+        return _proxy(l0.delete_user(user_id))
+
+    @app.post('/users/{user_id}/reset')
+    def users_reset(user_id: str):
+        return _proxy(l0.reset_user(user_id))
+
+    @app.get('/active-user')
+    def active_user_get():
+        return {'ok': True, 'user_id': app.state.active_user}
+
+    @app.post('/active-user')
+    def active_user_set(a: ActiveUser):
+        app.state.active_user = a.user_id or VOICE_USER_ID
+        return {'ok': True, 'user_id': app.state.active_user}
+
+    @app.post('/regenerate')
+    def regenerate(r: Regenerate):
+        """Re-answer ONE earlier question as another user.
+
+        Only that turn changes. Its previous answer is kept in
+        `turn['versions']` (the compare view reads it); the new one becomes the
+        turn's visible answer. Personalisation runs as a dry run, so the chosen
+        user's profile learns nothing from a replay, and the RAG history is
+        neither read past this turn nor appended to.
+        """
+        doc = sessions.get(r.job)
+        if doc is None:
+            return JSONResponse({'ok': False, 'error': 'not in session'}, status_code=404)
+        gens = getattr(doc, 'generations', None) or []
+        if not (1 <= r.index <= len(gens)):
+            return JSONResponse({'ok': False, 'error': f'no turn {r.index}'}, status_code=404)
+        turn = gens[r.index - 1]
+
+        t0 = time.time()
+        try:
+            voice = l0.interpret(turn.get('query') or '', user_id=r.user_id, dry_run=True)
+            voice.setdefault('sinhala_input', turn.get('query') or '')
+            voice['session_id'] = r.job
+            voice['chat_history'] = [
+                {'question': g.get('query') or '',
+                 'standalone_question': g.get('standalone_query') or g.get('query') or '',
+                 'answer': g.get('answer') or g.get('answer_si') or ''}
+                for g in gens[:r.index - 1]
+            ]
+            voice['history_override'] = True
+            voice['no_history_write'] = True
+            t_voice = round(time.time() - t0, 2)
+            t1 = time.time()
+            res = l6gen.answer(doc, voice, cursor=sessions.cursor(r.job))
+            t_gen = round(time.time() - t1, 2)
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            return JSONResponse({'ok': False, 'error': f'{type(e).__name__}: {e}'},
+                                status_code=500)
+
+        speakable_out = _speakable(res, voice)
+        new_version = {
+            'user_id': r.user_id,
+            'user_meta': _user_meta(r.user_id),
+            'answer': speakable_out or res['answer_si'],
+            'answer_si': res['answer_si'],
+            'route': res['route'],
+            'intent': res['intent'],
+            'prompt_modifier': voice.get('prompt_modifier', ''),
+            'style_class': voice.get('style_class', ''),
+            'style_source': voice.get('style_source'),
+            'user_profile': voice.get('user_profile'),
+            'learned': False,
+            'english_translation': voice.get('english_translation', ''),
+            'correction_applied': None,
+            'warnings': res['warnings'],
+            'timings': {'voice': t_voice, 'generate': t_gen,
+                        'total': round(time.time() - t0, 2)},
+            'regenerated': True,
+        }
+        versions = turn.setdefault('versions', [])
+        if not versions:                         # keep the original answer
+            versions.append({k: turn.get(k) for k in VERSION_FIELDS})
+        versions.append(new_version)
+        turn['active_version'] = len(versions) - 1
+        turn.update({k: new_version.get(k) for k in VERSION_FIELDS})
+        sessions.put(r.job, doc)
+        return {'ok': True, 'job': r.job, 'turn': turn}
 
     @app.get('/session/{job}')
     def session(job: str):

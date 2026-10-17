@@ -31,6 +31,12 @@ class Pipeline:
 
         self.dev = 'cuda' if torch.cuda.is_available() else 'cpu'
 
+        # Load the CRAFT title detector now, in the background, so the first
+        # scan does not pay for it. Its own lock makes an early request wait.
+        from threading import Thread
+        from layers.l4a_title.title_extractor import _get_text_detector
+        Thread(target=_get_text_detector, name='craft-preload', daemon=True).start()
+
         w = next((p for p in YOLO_WEIGHTS if p.exists()), None)
         if w is None:
             raise SystemExit('YOLO weights not found — check core/config.py')
@@ -134,14 +140,22 @@ class Pipeline:
                         r.crop_path = str(r_path.name)
 
                 # 3. Parallel Title OCR & Body OCR
-                # Title extraction (CRAFT + MAT + Tesseract) and Body extraction (Tesseract)
+                # Title extraction (CRAFT + Tesseract) and Body extraction (Tesseract)
                 # operate on disjoint regions and are run concurrently.
+                # Each status flips the moment its own future finishes, so the
+                # UI shows a finished title while the body is still running.
+                art.title_status = 'running'
+                art.body_status = 'running'
                 with concurrent.futures.ThreadPoolExecutor(max_workers=2) as sub_exec:
-                    fut_title = sub_exec.submit(l4a.extract, ref, art)
+                    fut_title = sub_exec.submit(l4a.extract, ref, art, job_dir=job_dir)
                     if single_article:
                         fut_body = sub_exec.submit(self.body.read_page, imgs, art)
                     else:
                         fut_body = sub_exec.submit(self.body.read, imgs, art)
+                    fut_title.add_done_callback(lambda f: setattr(
+                        art, 'title_status', 'failed' if f.exception() else 'done'))
+                    fut_body.add_done_callback(lambda f: setattr(
+                        art, 'body_status', 'failed' if f.exception() else 'ocr_done'))
 
                     art_title = fut_title.result()
                     art_body = fut_body.result()
@@ -150,6 +164,7 @@ class Pipeline:
                 art.title_raw = art_title.title_raw
                 art.title_mat = art_title.title_mat
                 art.title_hybrid = art_title.title_hybrid
+                art.title_images = getattr(art_title, 'title_images', {})
                 if getattr(art_title, 'note', None):
                     art.note = (art.note + '; ' if art.note else '') + art_title.note
 
@@ -159,15 +174,21 @@ class Pipeline:
 
                 # 4. Correct OCR via mT5
                 if correct:
+                    art.body_status = 'correcting'
                     art = self.body.correct(art)
                 else:
                     art.body = art.body_raw
+                art.body_status = 'done'
 
                 doc.progress_log.append(f"Article {art.index + 1} scanned")
                 return art
             except Exception as e:
                 import traceback
                 traceback.print_exc()
+                if art.title_status != 'done':
+                    art.title_status = 'failed'
+                if art.body_status != 'done':
+                    art.body_status = 'failed'
                 with extra_warnings_lock:
                     extra_warnings.append(f"Article {art.index + 1} failed: {e}")
                 return art
@@ -180,30 +201,48 @@ class Pipeline:
             futures = []
             for art, group in art_groups:
                 futures.append(executor.submit(process_article, art, group))
-            
+
             for future in concurrent.futures.as_completed(futures):
                 final_arts.append(future.result())
 
         # Sort articles back to reading order (index)
         final_arts.sort(key=lambda a: a.index)
         t['processing_parallel'] = round(time.time() - t0, 2)
-        
+
         # Replace document articles with completed ones
         doc.articles = final_arts
 
-        # 6. Polish (Batch)
+        # 6. Polish (Batch). ONE LLM call for every article, sent once all of
+        # L4A + L4B are done (cheaper than a call per article). polish_status
+        # still moves waiting -> correcting -> done so the UI shows progress.
         if POLISH_MODE.lower() != 'off':
             t0_polish = time.time()
-            from layers.l4c_polish import polish as _polish
-            results = _polish.polish_articles(final_arts)
-            for art, res in zip(final_arts, results):
-                art.polish_reason = res['reason']
-                if res['applied']:
-                    art.body_polished = res['body']
-                    art.title_polished = res['title']
-                if res['applied'] or 'REJECTED' in res['reason']:
-                    extra_warnings.append(f"Article {art.index + 1}: {res['reason']}")
+            for art in final_arts:
+                art.polish_status = 'correcting'
+            doc.progress_log.append(f"Polishing {len(final_arts)} article(s) in one batch...")
+            try:
+                results = _polish.polish_articles(final_arts)
+            except Exception as e:
+                results = None
+                for art in final_arts:
+                    art.polish_status = 'failed'
+                    art.polish_reason = f'polish: failed ({e})'
+                extra_warnings.append(f'polish: batch failed ({e})')
+            if results is not None:
+                for art, res in zip(final_arts, results):
+                    art.polish_reason = res['reason']
+                    if res['applied']:
+                        art.body_polished = res['body']
+                        art.title_polished = res['title']
+                    if res['applied'] or 'REJECTED' in res['reason']:
+                        extra_warnings.append(f"Article {art.index + 1}: {res['reason']}")
+                    art.polish_status = 'done'
+                doc.progress_log.append("Polish batch done")
             t['polish_batch'] = round(time.time() - t0_polish, 2)
+        else:
+            for art in final_arts:
+                art.polish_status = 'skipped'
+                art.polish_reason = art.polish_reason or 'polish: off'
 
         # Final assembly
         t0 = time.time()

@@ -44,38 +44,63 @@ MODEL_PATH = os.path.join(
     "data", "style_model.pkl"
 )
 
+# Base splits now live in the user registry (personalization/users.py):
+# 50/25/25 for the three built-ins, custom for added users. This map is only
+# the fallback if the registry cannot be read.
 USER_DOMINANT_STYLES = {
     "user_001": "Simple",
     "user_002": "Detailed",
     "user_003": "StepByStep",
 }
-DOMINANT_BASE_MIN = 0.45
+
+# A fresh user starts with this much total history mass (1.0 / 0.5 / 0.5 for
+# a 50/25/25 split), so the first few confirmations move it noticeably but do
+# not swamp it.
+BASE_HISTORY_MASS = 2.0
+
+
+def _base_weights(user_id):
+    """The user's registered base split (fractions summing to 1), or None."""
+    try:
+        from .users import get_base_weights
+        w = get_base_weights(user_id)
+        if w:
+            return w
+    except Exception:
+        pass
+    dominant = USER_DOMINANT_STYLES.get(user_id)
+    if not dominant:
+        return None
+    return {c: (0.50 if c == dominant else 0.25) for c in STYLE_CLASSES}
 
 
 def _enforce_base_limits(state, user_id):
-    """Guarantees that a user's dominant style ratio never drops below DOMINANT_BASE_MIN (45%)."""
-    if not user_id or user_id not in USER_DOMINANT_STYLES:
+    """A user's dominant style never drops below its base share (50% for the
+    built-ins). Learning moves the rest of the mass between styles freely."""
+    base = _base_weights(user_id) if user_id else None
+    if not base:
         return
-    dominant = USER_DOMINANT_STYLES[user_id]
+    dominant = max(STYLE_CLASSES, key=lambda c: base.get(c, 0))
+    floor = base[dominant]
     hist = state.setdefault("history", {cls: 0.0 for cls in STYLE_CLASSES})
     others = sum(v for k, v in hist.items() if k != dominant)
     if others <= 0:
         if hist.get(dominant, 0) <= 0:
             hist[dominant] = 1.0
         return
-    min_dominant = others * (DOMINANT_BASE_MIN / (1.0 - DOMINANT_BASE_MIN))
+    if floor >= 1.0:
+        return
+    min_dominant = others * (floor / (1.0 - floor))
     if hist.get(dominant, 0) < min_dominant:
         hist[dominant] = min_dominant
 
 
 def _fresh_user_state(user_id=None):
-    dominant = USER_DOMINANT_STYLES.get(user_id)
+    base = _base_weights(user_id)
     hist = {cls: 0.0 for cls in STYLE_CLASSES}
-    if dominant:
-        other_classes = [c for c in STYLE_CLASSES if c != dominant]
-        hist[dominant] = 1.10
-        hist[other_classes[0]] = 0.45
-        hist[other_classes[1]] = 0.45
+    if base:
+        for cls in STYLE_CLASSES:
+            hist[cls] = base.get(cls, 0.0) * BASE_HISTORY_MASS
     return {
         "model": compose.Pipeline(
             compose.TransformerUnion(
@@ -85,8 +110,26 @@ def _fresh_user_state(user_id=None):
             linear_model.SoftmaxRegression(),
         ),
         "history": hist,
-        "n_confirmed": 3 if dominant else 0,
+        "n_confirmed": 3 if base else 0,
     }
+
+
+# The pre-registry starting split (1.10 / 0.45 / 0.45, i.e. 55/22.5/22.5).
+# A user still sitting exactly on it has learned nothing, so it is moved to
+# the new 50/25/25 baseline. Anyone who has learned keeps their weights.
+_OLD_BASELINE = (1.10, 0.45, 0.45)
+
+
+def _migrate_untouched(users):
+    changed = False
+    for uid, state in users.items():
+        if state.get("n_confirmed") != 3:
+            continue
+        vals = sorted(state.get("history", {}).values(), reverse=True)
+        if len(vals) == 3 and all(abs(a - b) < 1e-9 for a, b in zip(vals, _OLD_BASELINE)):
+            users[uid] = _fresh_user_state(uid)
+            changed = True
+    return changed
 
 
 def _load_all_users():
@@ -110,6 +153,8 @@ def _save_all_users():
 
 
 _users = _load_all_users()
+if _migrate_untouched(_users):
+    _save_all_users()
 
 
 def _get_user_state(user_id):
@@ -225,9 +270,22 @@ def get_user_summary(user_id):
 
 
 def reset_user(user_id):
-    """Wipes one user's learned profile (used to reset a demo)."""
+    """Wipes one user's learned profile back to their base split."""
     _users[user_id] = _fresh_user_state(user_id)
     _save_all_users()
+
+
+def delete_user_state(user_id):
+    """Forget a deleted user's learned profile."""
+    if _users.pop(user_id, None) is not None:
+        _save_all_users()
+
+
+def rename_user_state(old_id, new_id):
+    """Move a user's learned profile to a new id (user renumbering)."""
+    if old_id in _users:
+        _users[new_id] = _users.pop(old_id)
+        _save_all_users()
 
 
 def reset_all():

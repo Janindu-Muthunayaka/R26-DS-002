@@ -64,6 +64,7 @@ class Article(BaseModel):
     title_mat: str = ''                          # MAT OCR output (sin_custom)
     title_hybrid: str = ''                       # Approach 1: confidence-routed hybrid selection
     title: str = ''
+    title_images: dict = {}                      # Intermediate images: {'crop': '...', 'craft': '...', 'bin': '...', 'mat': '...'}
 
     # ---- Layer 4B writes these (Component 2 — correction) ----
     body_raw: str = ''                          # OCR output, uncorrected
@@ -83,6 +84,16 @@ class Article(BaseModel):
     ocr_scale: Optional[float] = None
     verdict: Literal['ok', 'warn', 'reject', 'unknown'] = 'unknown'
     note: str = ''
+
+    # ---- live progress, set by app/pipeline.py, shown by the web UI ----
+    # waiting: L3 has not given this article its regions yet.
+    title_status: Literal['waiting', 'running', 'done', 'failed'] = 'waiting'
+    # ocr_done: body OCR finished, mT5 waits for the title to finish too.
+    body_status: Literal['waiting', 'running', 'ocr_done', 'correcting',
+                         'done', 'failed'] = 'waiting'
+    # waiting: title + body not both ready yet. skipped: POLISH_MODE is off.
+    polish_status: Literal['waiting', 'correcting', 'done', 'skipped',
+                           'failed'] = 'waiting'
 
 
 class Document(BaseModel):
