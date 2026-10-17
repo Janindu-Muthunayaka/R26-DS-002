@@ -1,0 +1,165 @@
+# Component 3 (RAG & Generation) — Application Architecture, Comparison & Integration Plan
+
+## 1. Application Code & Component Inventory
+
+### Core Application & Pipeline
+- `app.py` — Streamlit interactive interface. Collects OCR text, a user question, style and age settings, retrieval mode (hybrid/dense/bm25), chat-history toggles, and web-search preference; executes the pipeline and displays answer, evidence sources, and retrieval diagnostics.
+- `main.py` — Command-line entry point. Loads environment settings, builds/checks the vector store, runs the pipeline on sample fixtures, and outputs the result.
+- `pipeline.py` — Orchestrates end-to-end request handling: validates inputs, rewrites follow-up questions into standalone queries, inserts current OCR text into the store, runs hybrid/dense/BM25 retrieval, calls the generator, triggers web search fallback upon refusal, and persists multi-turn session history.
+- `adapters.py` — Normalizes external OCR, voice, and request-context dictionaries into standard internal schemas; handles age-to-band mapping and optional fields (`session_id`, `original_text`).
+- `contracts.py` — Test and demo data fixtures: real Sinhala OCR text with token correction diffs, sample voice/query input, and request context.
+- `ingest.py` — Reads `corpus/articles_fixed.jsonl` (500 articles), performs Unicode normalization (NFC) while preserving ZWJ (U+200D), splits long paragraphs at sentence boundaries (max 900 chars), merges short fragments (min 60 chars), and builds headline (`::p000`) and paragraph (`::p001`...) chunk documents with rich metadata.
+- `vectorstore.py` — Manages persistent Chroma vector storage using `intfloat/multilingual-e5-small` embeddings; handles idempotent corpus indexing and dynamic replacement of the active OCR page chunk (`ocr_current`).
+- `bm25_index.py` — Builds an in-memory keyword index using `rank_bm25.BM25Okapi` over the paragraph chunks. Tokenizes Sinhala words into character 3-grams and 4-grams to match inflected morphological variants.
+- `hybrid.py` — Runs dense and BM25 retrievers in parallel and merges their rankings using Reciprocal Rank Fusion (RRF, $k=60$).
+- `retrieve.py` — Assembles the final 4 context chunks: (1) active OCR page chunk, (2) explicit anchor chunk (if specified by Voice), and (3) top results from hybrid search over the article corpus.
+- `query_si.py` — Translates English questions into newspaper-style Sinhala using an LLM with `@lru_cache(1024)`, or directly uses native Sinhala voice input when provided (`original_text`).
+- `generate.py` — Formats evidence and prompt constraints, invokes the LLM with `temperature=0.2` and `logprobs=True`, measures generated answer perplexity, and enforces a strict retry if Sinhala character purity drops below 85%.
+- `prompt.py` — Defines the grounded Sinhala system prompt, age-band profiles (`10-13`, `14-16`, `17-18`, `18+`), age-to-group mapping (`age_to_group`), and word limits resolved from style class, detail level, and age caps.
+- `rewrite.py` — Resolves conversational dependencies (pronouns, ellipsis, follow-ups like "tell me more") into single standalone English queries using recent conversation turns before retrieval.
+- `history.py` — Manages per-session JSON conversation logs in `chat_sessions/session_<session_id>.json`; keeps the last 4 turns with thread locks for concurrent requests.
+- `history_prompt.py` — Formats recent non-refusal turns into a concise context block for the LLM prompt (truncated to 400 chars per turn), strictly separated from factual evidence.
+- `websearch.py` — Fallback search via Tavily API triggered when the model returns a refusal ("ප්‍රමාණවත් තොරතුරු නොමැත"); appends web results marked `[වෙබ්]` and prompts for clear attribution.
+
+### Evaluation and Helper Scripts
+- `eval_rag.py` — End-to-end evaluation harness over 72 benchmark questions: evaluates retrieval hit rate, fact accuracy, Sinhala purity, word limits, abstentions, and LLM-as-a-judge faithfulness.
+- `eval_retrieval.py` — Compares retrieval recall and MRR across dense-only, BM25-only, and hybrid configurations.
+- `eval_perplexity.py` — Runs perplexity benchmarks across 25 queries and 3 style classes (Detailed, Simple, StepByStep).
+- `check_embeddings.py` — Verifies embedding model dimension (384 for `multilingual-e5-small`).
+- `check_llm.py` — Verifies OpenAI API connectivity with a Sinhala test prompt.
+- `quick_test.py` — Verifies answer generation against synthetic evidence without running retrieval.
+- `test.py` — Smoke tests for edge cases (invalid routes, missing chunks, empty OCR).
+- `test_history.py` — Tests session persistence, turn limits, and query rewriting.
+- `test_prompt_history.py` — Compares generation outputs with history included vs. omitted from prompt context.
+- `test_sessions.py` — Verifies multi-session isolation and path safety.
+- `test_websearch.py` — Validates refusal phrase detection and Tavily fallback retrieval.
+- `dump_result.py` — Executes the pipeline on fixture data and dumps complete JSON output to `last_result.json`.
+
+### Corpus and Benchmark Datasets
+- `corpus/articles_fixed.jsonl` — 500 cleaned Sinhala news articles with headline, category, publication date, raw body, clean body, and URL.
+- `eval_set.jsonl` — 72 curated evaluation queries with ground truth article IDs, question types, Sinhala/English translations, and reference answers.
+- `queries_corpus.json` — 25 real-world OCR text samples for perplexity and style evaluation.
+
+---
+
+## 2. Comparative Analysis: `Work/Nadee` vs. `system/layers/l6_generator` & `services/rag`
+
+### Architecture Overview
+In the integrated system:
+- **`system/layers/l6_generator/generate.py`** is the in-process reader layer. It guarantees that local voice commands (`STOP`, `REPEAT`, `NEXT`, `PREVIOUS`, `FIRST`, `LENGTH`, `TITLE`, `WARNINGS`, `FIRST_SCAN`, `ARTICLE_1..5`) execute instantly in-memory without network or LLM dependencies. When generation is required (`route == 'GENERATE'`), it calls the external RAG microservice via HTTP `POST /answer`.
+- **`services/rag/`** is the standalone microservice (port 8102) housing Component 3. It was initially configured as a minimal numpy-based vector store to prevent heavy dependency conflicts (PyTorch, Chroma, HuggingFace transformers) with the main reader pipeline.
+- **`Work/Nadee/`** is Nadee's upgraded research and development application, featuring significant advancements in retrieval quality, conversational interaction, personalization, and web fallback.
+
+### Detailed Comparison Table
+
+| Capability / Feature | `system/layers/l6_generator` + `services/rag` (Integrated Baseline) | `Work/Nadee` (Upgraded Version) | Gap / Advancement in `Work/Nadee` |
+| :--- | :--- | :--- | :--- |
+| **Retrieval Architecture** | **Dense-only**: Computes dot-product cosine similarity over OpenAI vector embeddings in `store.py`. | **Hybrid (Dense + BM25 + RRF)**: Combines dense embeddings with character 3/4-gram BM25Okapi using Reciprocal Rank Fusion ($k=60$). | **High impact**: Sinhala is an inflected, agglutinative language. BM25 with character n-grams captures exact morphological roots that dense vectors miss, outperforming dense search on 34/56 test queries. |
+| **Sinhala Query Processing** | Uses incoming `sinhala_input` or passes translated English query directly to dense search. | `query_si.py`: Inspects `original_text`/`sinhala_input`; if missing, translates English query into formal Sinhala via LLM with `@lru_cache`. | Required for BM25 since BM25 cannot match English search queries against Sinhala newspaper articles. |
+| **Multi-Turn Chat History** | **Stateless**: Each question is answered independently; no session tracking or history memory. | `history.py` & `history_prompt.py`: Per-session JSON tracking (`session_<id>.json`), maintains 4 turns, injects recent non-refusal turns into prompt. | Enables conversational follow-ups (crucial for blind users who cannot see the screen and ask sequential questions). |
+| **Follow-up Query Rewriting** | **None**: The incoming user question is searched verbatim. | `rewrite.py`: LLM rewrites ambiguous follow-up questions ("tell me more", "why did he do that?", "and the second one?") into standalone English queries. | Without query rewriting, follow-up questions fail retrieval because pronouns lack keyword context. |
+| **Web Search Fallback** | **None**: Returns "කියවන ලද පාඨයේ මෙම ප්‍රශ්නයට ප්‍රමාණවත් තොරතුරු නොමැත" (refusal) if corpus lacks answer. | `websearch.py`: Detects refusal and queries Tavily API for relevant web articles, injecting `[වෙබ්]` evidence for a second-pass generation. | Allows answering current events or out-of-newspaper questions with explicit source attribution. |
+| **Age-Adaptive Persona & Limits** | Basic `detail_level` / `style_class` word caps only. | `prompt.py`: Full age banding (`10-13`, `14-16`, `17-18`, `18+`), age-to-band mapping, and age-specific Sinhala instructional directives. | Tailors cognitive complexity and tone for school students vs. adult readers. |
+| **Generation Quality & Perplexity** | Enforces Sinhala purity threshold (< 85% retry) only. | `generate.py`: Measures self-perplexity from API logprobs in addition to Sinhala purity guard. | Provides quantifiable linguistic confidence and fluency metrics for evaluation and monitoring. |
+| **Article Corpus Availability** | Previously unseeded (corpus file was missing; only indexed articles read during user sessions). | 500 fixed, cleaned articles (`corpus/articles_fixed.jsonl`) ready for pre-indexing. | Pre-loaded domain corpus allows answering general newspaper questions immediately during demos/viva. |
+| **User Interface** | Terminal output, web debug endpoint (`/debug`), and Android app. | Streamlit web application (`app.py`) with parameter controls. | Provides a dedicated, rich GUI for demonstration, parameter tuning, and evaluation inspection. |
+
+---
+
+## 3. Migration & Integration Plan
+
+To bring the upgraded capabilities from `Work/Nadee` into the production system while adhering to `docs/INTEGRATION_CONTRACT.md` and maintaining runtime stability:
+
+```mermaid
+flowchart TD
+    subgraph Client / Reader Layer
+        A[Android / Capture Request] --> B[system/app/server.py: POST /ask]
+        B --> C[l0_voice: interpret]
+        C --> D[l6_generator: answer]
+        D -->|Local Navigation/Intents| E[In-Memory Local Handler]
+        D -->|route == GENERATE| F[POST RAG_URL/answer]
+    end
+
+    subgraph svc-rag Microservice (Port 8102)
+        F --> G[services/rag/app.py]
+        G --> H[Session & Query Rewriting]
+        H --> I[Hybrid Retrieval: BM25 n-grams + Dense Store + RRF]
+        I --> J[Grounded Generation + Age Profiles + Perplexity]
+        J -->|Refusal & WebSearch Enabled| K[Tavily Web Search Fallback]
+        K --> J
+        J --> L[Save Session Turn & Return JSON]
+    end
+
+    L --> D
+```
+
+### Phase 1: Service Contract & Data Flow Update
+1. **Extend Contract Schema (`system/docs/INTEGRATION_CONTRACT.md` §3.2)**:
+   - Request to `POST /answer`:
+     ```json
+     {
+       "ocr": <rag_payload>,
+       "voice": {
+         "route": "GENERATE",
+         "intent": "...",
+         "english_translation": "...",
+         "sinhala_input": "...",
+         "style_class": "Detailed",
+         "prompt_modifier": "...",
+         "personalization_flags": {"age_group": "14-16", "detail_level": "moderate"},
+         "session_id": "session_abc123"
+       },
+       "context": {"age_group": "14-16", "retrieval_mode": "hybrid", "use_web_search": true}
+     }
+     ```
+   - Response from `POST /answer`:
+     Maintain required fields (`ok`, `intent`, `answer_si`, `retrieved_sources`, `speakable_text`, `notes`) and add optional diagnostic metadata:
+     `{"standalone_query": "...", "retrieval_mode": "hybrid", "web_used": false, "perplexity": 2.14}`.
+
+2. **Update `system/layers/l6_generator/generate.py`**:
+   - Forward `session_id` and `personalization_flags` (including `age_group` or `age`) from `voice` into the `POST /answer` payload.
+   - Forward extended diagnostic metadata to the response object for frontend logging.
+
+### Phase 2: Upgrading `services/rag` Microservice
+1. **BM25 & Morphological Tokenizer (`services/rag/bm25_index.py`)**:
+   - Add `rank-bm25` to `services/rag/requirements.txt` (pure Python, lightweight, no PyTorch conflict).
+   - Implement Sinhala character 3-gram and 4-gram tokenization and in-memory BM25 index built from the corpus chunks.
+2. **Hybrid Search & RRF (`services/rag/hybrid.py`)**:
+   - Combine dense search results (from `store.py` / embeddings) with BM25Okapi rankings using Reciprocal Rank Fusion ($k=60$).
+3. **Conversational Multi-Turn Session Management (`services/rag/history.py` & `history_prompt.py`)**:
+   - Implement session JSON storage under `services/rag/chat_sessions/`.
+   - Thread-safe turn appending and formatting of recent turns into the prompt context.
+4. **Follow-up Query Rewriter (`services/rag/rewrite.py`)**:
+   - Use `core.llm` (or OpenAI client) at `temperature=0` to rewrite follow-up queries before executing retrieval.
+5. **Web Search Fallback (`services/rag/websearch.py`)**:
+   - Integrate Tavily search client triggered conditionally upon refusal detection (`is_refusal`), utilizing `TAVILY_API_KEY` from repository `.env`.
+6. **Age-Adaptive Prompting & Perplexity (`services/rag/answer.py`)**:
+   - Port `AGE_BAND_PROFILES`, `age_to_group`, and `resolve_age_profile` into `answer.py`.
+   - Update prompt formatting to include `{age_instruction}` and `{chat_history}`.
+   - Enable token logprobs in generation to compute `perplexity`.
+
+### Phase 3: Seeding the Corpus
+1. **Corpus Ingestion**:
+   - Copy or symlink `Work/Nadee/corpus/articles_fixed.jsonl` to `services/rag/corpus/articles_fixed.jsonl`.
+   - Run ingestion to pre-populate both `services/rag/store/` (vectors) and the BM25 index at startup via `app.py --seed`.
+
+### Phase 4: Testing & Verification
+1. **Unit & Integration Tests**:
+   - Run `python system/tests/test_services_http.py` to verify contract compliance.
+   - Run `python system/tests/test_local_commands.py` to ensure local navigation commands remain untouched and functional.
+   - Run `python services/rag/test_sessions.py` and `services/rag/test_websearch.py` to verify upgraded modules.
+2. **End-to-End Evaluation**:
+   - Run `eval_rag.py` and `eval_retrieval.py` against `eval_set.jsonl` to benchmark accuracy and verify hybrid retrieval superiority.
+
+### Phase 5: Multi-Turn RAG Troubleshooting & Grounded Answering Fixes
+During live integration testing (`run_tools.bat`), multi-turn queries like Turn 2 (`මෙයින් ඇතිවිය හැකි අනතුර කුමක්ද?`) and Turn 3 (`මේක ගාල්ලේ කොහෙද තියෙන්නේ?`) were returning the abstention sentence (`කියවන ලද පාඨයේ මෙම ප්රශ්නයට ප්රමාණවත් තොරතුරු නොමැත.`) with warning `rag: the service reported a failure`.
+
+**Root Causes Identified & Resolved:**
+1. **Missing Initial Turn History**: Turn 1 (`FIRST_SCAN` / `_document_to_reply`) was processed locally in `l6_generator/generate.py` and never sent to `services/rag`. When Turn 2 arrived, `services/rag` had 0 history. Updated `system/app/server.py` and `system/layers/l6_generator/generate.py` to pass `doc.generations` as `chat_history` so subsequent turns always have the full conversational context.
+2. **Over-Strict Prompt Refusal**: The Sinhala prompt instructions were hyper-literal, causing GPT-4o to refuse queries containing Sinhala pronouns ("මෙයින්", "මේක") even when evidence contained the facts. Updated the prompt to explicitly permit pronoun and context resolution from evidence and conversation history, while strictly preserving refusal for truly out-of-scope queries.
+3. **Query Rewriting Subject Extraction**: `rewrite_query` in `services/rag/rewrite.py` previously attempted to rewrite questions by substituting locations rather than subjects (e.g. converting "Where in Galle is this?" to "Where in Karapitiya Hospital is the radiation machine?"). Updated rewrite rules to extract the core subject/device without pre-injecting the answer, producing clean standalone questions:
+   - Turn 2: `කියවන ලද ලිපි වලින් ඇතිවිය හැකි අනතුර කුමක්ද?`
+   - Turn 3: `විකිරණ යන්ත්‍රය ගාල්ලේ කොහෙද තියෙන්නේ?`
+4. **Natural Reading Order Retrieval**: `store.search` was returning fragmented 400-char chunks in cosine distance order, which scrambled sentences. Updated `retrieve()` to fetch `ocr_current` chunks sorted in original sequential order so intact articles are presented to the model.
+5. **OCR Glyph Cleaning**: Common OCR character confusions (e.g. `ඟාල්ල` instead of `ගාල්ල`, split `ප් රතිකාර` -> `ප්‍රතිකාර`) were normalized before indexing via `clean_ocr_sinhala()`.
+6. **Clean Response Status**: Abstentions (`NO_EVIDENCE`) are legitimate grounded responses, not server failures. Marked successful generations with `ok: True` and `is_abstention: True` in metadata so `rag: the service reported a failure` is not logged.

@@ -84,15 +84,26 @@ class BodyReader:
     def read(self, frames_imgs, article: Article) -> Article:
         """frames_imgs: list of images (the selected frames). Multi-frame
         consensus is applied when more than one is supplied."""
+        import concurrent.futures
+
+        text_regions = [r for r in article.regions if r.label == 'text']
+        if not text_regions:
+            article.body_raw = ''
+            return article
+
         per_frame = []
         p90 = scale = None
         for img in frames_imgs:
+            if len(text_regions) == 1:
+                results = [self.ocr_region(img, text_regions[0].box)]
+            else:
+                max_w = min(4, len(text_regions))
+                with concurrent.futures.ThreadPoolExecutor(max_workers=max_w) as executor:
+                    results = list(executor.map(lambda r: self.ocr_region(img, r.box), text_regions))
+
             parts = []
-            for r in article.regions:
-                if r.label != 'text':
-                    continue
-                t, p, s = self.ocr_region(img, r.box)
-                if p90 is None:
+            for t, p, s in results:
+                if p90 is None and p is not None:
                     p90, scale = p, s
                 if t:
                     parts.append(t)

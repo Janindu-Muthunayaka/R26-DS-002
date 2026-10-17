@@ -1,0 +1,44 @@
+{
+  "n_total": 1,
+  "n_errors": 0,
+  "n_answerable": 1,
+  "n_unanswerable": 0,
+  "retrieval": {
+    "article_hit@1": 1.0,
+    "article_hit@3": 1.0,
+    "article_hit@5": 1.0,
+    "article_hit@any": 1.0,
+    "evidence_hit@1": 1.0,
+    "evidence_hit@3": 1.0,
+    "evidence_hit@5": 1.0,
+    "evidence_hit@any": 1.0,
+    "article_MRR": 1.0,
+    "evidence_MRR": 1.0
+  },
+  "generation": {
+    "key_fact_in_answer_rate": 1.0,
+    "correctness_mean_0to2": null,
+    "faithfulness_rate": null,
+    "false_refusal_rate": 0.0,
+    "correct_abstention_rate": null,
+    "correct_abstention_far": null,
+    "correct_abstention_near": null
+  },
+  "format": {
+    "sinhala_purity_mean": 1.0,
+    "purity_ge_0.85_rate": 1.0,
+    "within_word_limit_rate": 1.0
+  },
+  "perplexity_answered_questions": {
+    "mean": 1.126,
+    "median": 1.126,
+    "by_intent": {
+      "direct_answer": 1.126
+    },
+    "correct_answers_only": null,
+    "wrong_or_partial_only": null
+  },
+  "by_intent_correctness": {
+    "direct_answer": null
+  }
+}

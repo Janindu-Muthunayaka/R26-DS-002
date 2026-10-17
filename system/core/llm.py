@@ -57,9 +57,9 @@ def embed_model() -> str:
 
 def timeout_s() -> float:
     try:
-        return float(os.getenv('OPENAI_TIMEOUT') or 60)
+        return float(os.getenv('OPENAI_TIMEOUT') or 300)
     except ValueError:
-        return 60.0
+        return 300.0
 
 
 def available() -> Tuple[bool, str]:

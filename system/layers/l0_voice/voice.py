@@ -47,16 +47,21 @@ REQUIRED = ('route', 'intent', 'english_translation', 'style_class',
 # THE SINHALA HERE WAS NOT WRITTEN BY A NATIVE SPEAKER. The English aliases
 # work regardless, so testing is never blocked on getting the Sinhala right.
 _COMMANDS = [
-    ('STOP',     ('නවත්වන්න', 'නවතන්න', 'නවත්තන්න', 'stop', 'quiet')),
-    ('NEXT',     ('ඊළඟ', 'මීළඟ', 'next', 'continue')),
-    ('PREVIOUS', ('කලින්', 'පෙර ', 'previous', 'back', 'go back')),
-    ('FIRST',    ('මුල සිට', 'මුලින්', 'ආරම්භයේ', 'from the start',
-                  'start again', 'beginning')),
-    ('LENGTH',   ('කොපමණ', 'දිගද', 'වචන කීයද', 'how long', 'how many words')),
-    ('TITLE',    ('ශීර්ෂය', 'මාතෘකාව', 'headline', 'title')),
-    ('WARNINGS', ('මඟ හැරුණ', 'මගහැරුණ', 'what did i miss', 'did i miss',
-                  'missed')),
-    ('REPEAT',   ('නැවත', 'ආපසු', 'යළි', 'repeat', 'again')),
+    ('STOP',      ('නවත්වන්න', 'නවතන්න', 'නවත්තන්න', 'stop', 'quiet')),
+    ('NEXT',      ('ඊළඟ', 'මීළඟ', 'next', 'continue')),
+    ('PREVIOUS',  ('කලින්', 'පෙර ', 'previous', 'back', 'go back')),
+    ('FIRST',     ('මුල සිට', 'මුලින්', 'ආරම්භයේ', 'from the start',
+                   'start again', 'beginning')),
+    ('LENGTH',    ('කොපමණ', 'දිගද', 'වචන කීයද', 'how long', 'how many words')),
+    ('TITLE',     ('ශීර්ෂය', 'මාතෘකාව', 'headline', 'title')),
+    ('WARNINGS',  ('මඟ හැරුණ', 'මගහැරුණ', 'what did i miss', 'did i miss',
+                   'missed')),
+    ('REPEAT',    ('නැවත', 'ආපසු', 'යළි', 'repeat', 'again')),
+    ('ARTICLE_1', ('ලිපිය 1', 'ලිපිය එක', 'පළමු ලිපිය', 'පළමුවෙනි', '1 වන ලිපිය', 'article 1', 'article one')),
+    ('ARTICLE_2', ('ලිපිය 2', 'ලිපිය දෙක', 'දෙවන ලිපිය', 'දෙවැනි ලිපිය', '2 වන ලිපිය', 'article 2', 'article two')),
+    ('ARTICLE_3', ('ලිපිය 3', 'ලිපිය තුන', 'තුන්වන ලිපිය', 'තුන්වැනි ලිපිය', '3 වන ලිපිය', 'article 3', 'article three')),
+    ('ARTICLE_4', ('ලිපිය 4', 'ලිපිය හතර', 'සිව්වන ලිපිය', '4 වන ලිපිය', 'article 4', 'article four')),
+    ('ARTICLE_5', ('ලිපිය 5', 'ලිපිය පහ', 'පස්වන ලිපිය', '5 වන ලිපිය', 'article 5', 'article five')),
     # 'කියන්න' ("say / tell me") is NOT here, deliberately. It swallowed
     # "මේ ලිපිය ගැන කියන්න" — "tell me about this article" — and routed a real
     # question to READ_ALOUD. A word that appears in ordinary questions is not
@@ -69,23 +74,46 @@ def _stub(text: str) -> dict:
     t = (text or '').strip()
     low = t.lower()
     intent, route = 'ASK', 'GENERATE'
-    for name, words in _COMMANDS:
-        if any(w in low for w in words):
-            intent, route = name, 'LOCAL'
-            break
+    
+    # Prefix / exact word check for article numbers in Sinhala
+    if low.startswith('තුන') or low == '3' or ' 3' in low:
+        intent, route = 'ARTICLE_3', 'LOCAL'
+    elif low.startswith('එක') or low == '1' or ' 1' in low:
+        intent, route = 'ARTICLE_1', 'LOCAL'
+    elif low.startswith('දෙක') or low == '2' or ' 2' in low:
+        intent, route = 'ARTICLE_2', 'LOCAL'
+    elif low.startswith('හතර') or low == '4' or ' 4' in low:
+        intent, route = 'ARTICLE_4', 'LOCAL'
+    elif low.startswith('පහ') or low == '5' or ' 5' in low:
+        intent, route = 'ARTICLE_5', 'LOCAL'
+    else:
+        for name, words in _COMMANDS:
+            if any(w in low for w in words):
+                intent, route = name, 'LOCAL'
+                break
     return {
         'route': route,
         'intent': intent,
+        'sinhala_input': t,
         # NOT a translation. The stub does not translate; it passes the
         # Sinhala through under the contract's field name, so the shape is
         # right and the content is visibly untranslated.
         'english_translation': t,
         'style_class': 'Detailed',
-        'prompt_modifier': '',
+        'prompt_modifier': 'Provide a thorough, in-depth explanation with full context, reasoning, and supporting detail. Do not shorten or oversimplify.',
         'personalization_flags': {},
         'retrieved_chunk_id': None,
         'correction_applied': None,
         'source': 'stub',
+        'style_source': 'cold_start',
+        'user_profile': {
+            'n_confirmed': 0,
+            'history_weights': {'Simple': 0.0, 'Detailed': 0.0, 'StepByStep': 0.0},
+            'dominant_preference': None
+        },
+        'speed': 1.0,
+        'speech_rate': 1.0,
+        'learned': False,
     }
 
 
@@ -94,24 +122,56 @@ def _degraded(text: str, reason: str) -> dict:
     carry the reason so `/ask` can log why the personalisation is missing."""
     out = _stub(text)
     out['source'] = 'stub-fallback'
+    out['style_source'] = 'degraded_fallback'
     out['warning'] = f'voice service unavailable ({reason})'
     return out
 
 
 def interpret(text: str, user_id: str = None,
-              retrieved_chunk_id: str = None, mode: str = None) -> dict:
-    """Sinhala utterance -> Component 4's routing dict. Never raises."""
+              retrieved_chunk_id: str = None, mode: str = None,
+              dry_run: bool = False) -> dict:
+    """Sinhala utterance -> Component 4's routing dict. Never raises.
+
+    dry_run: Component 4 decides the style for `user_id` but logs and learns
+    nothing. Used to re-generate an old answer under another user."""
+    # Connect l8a_listen: if no text was provided (e.g. debugging/testing), 
+    # optionally grab it from the local microphone if PyAudio is installed.
+    if not text:
+        try:
+            from layers.l8a_listen.stt.google_stt_live import listen_and_transcribe
+            print("[l8a_listen] Connecting to microphone...")
+            captured = listen_and_transcribe()
+            if captured:
+                text = captured
+        except ImportError:
+            pass
+
     mode = (mode or VOICE_MODE or 'stub').lower()
     if mode != 'http':
         return _stub(text)
 
     body = {'text': text or '',
             'user_id': user_id or VOICE_USER_ID,
-            'retrieved_chunk_id': retrieved_chunk_id}
+            'retrieved_chunk_id': retrieved_chunk_id,
+            'dry_run': bool(dry_run)}
     reply, reason = svc.post_json(f'{VOICE_URL.rstrip("/")}/interpret', body,
                                   timeout_s=VOICE_TIMEOUT_S)
     if reply is None:
         return _degraded(text, reason)
+
+    # For SYSTEM_COMMAND or navigation routes, personalization style fields
+    # do not apply; populate sensible defaults so validation succeeds and
+    # the command is mapped for local session handling.
+    if reply.get('route') == 'SYSTEM_COMMAND':
+        reply.setdefault('style_class', 'Detailed')
+        reply.setdefault('prompt_modifier', 'Provide a thorough, in-depth explanation with full context, reasoning, and supporting detail. Do not shorten or oversimplify.')
+        reply.setdefault('personalization_flags', {})
+        reply['route'] = 'LOCAL'
+        cmd = reply.get('command')
+        if cmd == 'GO_FORWARD':
+            reply['intent'] = 'NEXT'
+        elif cmd == 'STOP':
+            reply['intent'] = 'STOP'
 
     missing = [k for k in REQUIRED if k not in reply]
     if missing:
@@ -121,9 +181,90 @@ def interpret(text: str, user_id: str = None,
 
     reply.setdefault('retrieved_chunk_id', retrieved_chunk_id)
     reply.setdefault('correction_applied', None)
+    reply.setdefault('speed', 1.0)
+    reply.setdefault('speech_rate', 1.0)
+    reply['sinhala_input'] = text
     # tools/stub_services.py answers this endpoint with `stub: true`. Without
     # this line a stub service passes validation and is stamped 'component4',
     # and the "nothing routed through a stub is a result" guarantee quietly
     # stops holding for exactly the setup most likely to be used in testing.
     reply['source'] = 'stub-service' if reply.get('stub') else 'component4'
     return reply
+
+# Same text as Component 4's STYLE_PROMPT_MODIFIERS (l7 main_flow.py). Kept
+# here so a turn the server starts itself (the first scan after a capture)
+# can be styled for the user without running intent detection on it.
+STYLE_PROMPT_MODIFIERS = {
+    "Simple": "Use very simple everyday words, short sentences, avoid technical terms.",
+    "Detailed": "Provide a thorough, in-depth explanation with full context, reasoning, and supporting detail. Do not shorten or oversimplify.",
+    "StepByStep": "Break the explanation into clear numbered steps, one action or idea per step.",
+}
+
+
+def style_for_user(user_id: str) -> dict:
+    """The user's current dominant style, read from their profile. Nothing is
+    logged or learned. Falls back to Detailed if the profile is unavailable."""
+    profile = get_profile(user_id)
+    style = (profile or {}).get('dominant_preference')
+    source = 'user_profile'
+    if style not in STYLE_PROMPT_MODIFIERS:
+        style, source = 'Detailed', 'default'
+    return {'style_class': style, 'prompt_modifier': STYLE_PROMPT_MODIFIERS[style],
+            'style_source': source, 'user_profile': profile}
+
+
+def get_profile(user_id: str) -> dict:
+    mode = (VOICE_MODE or 'stub').lower()
+    if mode == 'http':
+        reply, _ = svc.get_json(f'{VOICE_URL.rstrip("/")}/profile/{user_id}', timeout_s=5)
+        if reply: return reply
+    return {
+        'n_confirmed': 0,
+        'history_weights': {'Simple': 0.0, 'Detailed': 0.0, 'StepByStep': 0.0},
+        'dominant_preference': None
+    }
+
+
+
+# ==========================================================================
+# USER REGISTRY (Component 4). Proxied so the web UI talks to one server.
+# Returns (reply, '') or (None, reason); never raises.
+# ==========================================================================
+def _voice_url(path: str) -> str:
+    return f'{VOICE_URL.rstrip("/")}{path}'
+
+
+def _need_http():
+    if (VOICE_MODE or 'stub').lower() != 'http':
+        return 'user profiles need SINHALA_VOICE_MODE=http (the L7 service)'
+    return ''
+
+
+def list_users():
+    why = _need_http()
+    if why:
+        return None, why
+    return svc.get_json(_voice_url('/users'), timeout_s=10)
+
+
+def add_user(base_weights: dict, description: str = '', name: str = '', tag: str = ''):
+    why = _need_http()
+    if why:
+        return None, why
+    return svc.post_json(_voice_url('/users'), {
+        'base_weights': base_weights, 'description': description,
+        'name': name, 'tag': tag}, timeout_s=10)
+
+
+def delete_user(user_id: str):
+    why = _need_http()
+    if why:
+        return None, why
+    return svc.post_json(_voice_url(f'/users/{user_id}/delete'), {}, timeout_s=10)
+
+
+def reset_user(user_id: str):
+    why = _need_http()
+    if why:
+        return None, why
+    return svc.post_json(_voice_url(f'/users/{user_id}/reset'), {}, timeout_s=10)

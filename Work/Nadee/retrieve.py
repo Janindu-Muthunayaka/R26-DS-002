@@ -1,13 +1,33 @@
+# retrieve.py
 from langchain_core.documents import Document
+
+from hybrid import hybrid_search
+
+PASSAGE_PREFIX = "passage: "
+
+
+def _strip_prefix(doc: Document) -> Document:
+    text = doc.page_content
+    if text.startswith(PASSAGE_PREFIX):
+        text = text[len(PASSAGE_PREFIX):]
+    return Document(page_content=text, metadata=doc.metadata)
+
 
 def _docs_from_get(result):
     docs = []
     for text, meta in zip(result.get("documents", []), result.get("metadatas", [])):
-        docs.append(Document(page_content=text, metadata=meta))
+        docs.append(_strip_prefix(Document(page_content=text, metadata=meta)))
     return docs
 
-def retrieve_context(vectorstore, query_text, intent, retrieved_chunk_id=None, top_k=4):
-    query_text = f"query: {query_text}"  # E5 prefix convention
+
+def retrieve_context(vectorstore, query_text, intent, retrieved_chunk_id=None,
+                     top_k=4, use_ocr=True, sparse_query=None,
+                     retrieval_mode="hybrid"):
+    """
+    query_text     : standalone English query (used for the dense search)
+    sparse_query   : Sinhala query (used for BM25)
+    retrieval_mode : "hybrid" (dense + BM25 + RRF) | "dense" | "bm25"
+    """
     collected = []
     seen_chunk_ids = set()
 
@@ -20,21 +40,31 @@ def retrieve_context(vectorstore, query_text, intent, retrieved_chunk_id=None, t
                 seen_chunk_ids.add(cid)
             collected.append(d)
 
-    # 1. Always pull in the current OCR page being read
-    ocr_docs = vectorstore.similarity_search(query_text, k=1, filter={"source_type": "ocr_current"})
-    add(ocr_docs)
+    # 1. Pull in the current OCR page being read (skipped during evaluation)
+    if use_ocr:
+        ocr_docs = vectorstore.similarity_search(
+            f"query: {query_text}", k=1, filter={"source_type": "ocr_current"}
+        )
+        add([_strip_prefix(d) for d in ocr_docs])
 
     # 2. Direct anchor: the specific chunk Voice module already picked
+    #    (ids that do not exist, e.g. the old "chunk_article_3" sample, are ignored)
     if retrieved_chunk_id:
         anchor_result = vectorstore.get(where={"chunk_id": retrieved_chunk_id})
         add(_docs_from_get(anchor_result))
 
-    # 3. Fill remaining slots with semantic search over the article corpus
-    remaining = top_k - len(collected)
-    if remaining > 0:
-        article_docs = vectorstore.similarity_search(
-            query_text, k=remaining, filter={"source_type": "article"}
+    # 3. Fill the remaining slots with dense + BM25 + RRF over the article corpus
+    if len(collected) < top_k:
+        article_docs = hybrid_search(
+            vectorstore,
+            dense_query=query_text,
+            sparse_query=sparse_query,
+            top_k=top_k,
+            mode=retrieval_mode,
         )
-        add(article_docs)
+        for d in article_docs:
+            if len(collected) >= top_k:
+                break
+            add([d])
 
     return collected[:top_k]

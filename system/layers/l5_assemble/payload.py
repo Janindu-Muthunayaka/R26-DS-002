@@ -94,15 +94,25 @@ def article_text(article) -> str:
     Precedence: the accepted LLM post-edit if there is one, else the mT5
     correction, else the raw OCR.
     """
-    return ((article.body_polished or '').strip()
-            or (article.body or '').strip()
-            or (article.body_raw or '').strip())
+    cand = (article.body_polished or '').strip()
+    if cand == "[DISCARD]":
+        return ""
+    return cand or (article.body or '').strip() or (article.body_raw or '').strip()
+
+
+def article_title(article) -> str:
+    """The title to use, preferring the polished output, then hybrid, then default."""
+    cand = (getattr(article, 'title_polished', '') or '').strip()
+    if cand == "[DISCARD]":
+        return ""
+    return cand or (getattr(article, 'title_hybrid', '') or '').strip() or (article.title or '').strip() or (getattr(article, 'title_raw', '') or '').strip()
 
 
 def rag_payload(document: Document, with_tokens: bool = True) -> dict:
     """Flatten a Document into what Component 3 consumes."""
     bodies, raws, articles = [], [], []
-    for art in document.articles:
+    formatted_bodies = []
+    for idx, art in enumerate(document.articles):
         body = article_text(art)
         raw = (art.body_raw or '').strip()
         if body:
@@ -111,15 +121,29 @@ def rag_payload(document: Document, with_tokens: bool = True) -> dict:
             raws.append(raw)
         articles.append({
             'index': art.index,
-            'title': (art.title or '').strip(),
+            'title': article_title(art),
+            'title_raw': getattr(art, 'title_raw', ''),
+            'title_mat': getattr(art, 'title_mat', ''),
+            'title_hybrid': getattr(art, 'title_hybrid', ''),
+            'title_polished': getattr(art, 'title_polished', ''),
             'body': body,
             'polished': bool((art.body_polished or '').strip()),
             'glyph_p75': art.glyph_p75,
             'ocr_scale': art.ocr_scale,
             'verdict': art.verdict,
         })
+        
+        num = idx + 1
+        t = article_title(art)
+        header = f"Article {num}"
+        if t:
+            header += f": {t}"
+        if body:
+            formatted_bodies.append(f"{header}\n{body}")
+        else:
+            formatted_bodies.append(f"{header}\n(Empty)")
 
-    corrected_text = '\n\n'.join(bodies)
+    corrected_text = '\n\n'.join(formatted_bodies)
     return {
         'corrected_text': corrected_text,
         'tokens': (diff_tokens('\n'.join(raws), corrected_text)

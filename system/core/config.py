@@ -268,16 +268,21 @@ WORK_DIR = Path(os.getenv('SINHALA_WORK', './work')).resolve()
 
 VOICE_MODE      = os.getenv('SINHALA_VOICE_MODE', 'stub')     # stub | http
 VOICE_URL       = os.getenv('SINHALA_VOICE_URL', 'http://127.0.0.1:8101')
-VOICE_TIMEOUT_S = float(os.getenv('SINHALA_VOICE_TIMEOUT', '20'))
+VOICE_TIMEOUT_S = float(os.getenv('SINHALA_VOICE_TIMEOUT', '1200'))
 VOICE_USER_ID   = os.getenv('SINHALA_USER_ID', 'user_001')
 
 RAG_MODE      = os.getenv('SINHALA_RAG_MODE', 'off')          # off | http
 RAG_URL       = os.getenv('SINHALA_RAG_URL', 'http://127.0.0.1:8102')
-RAG_TIMEOUT_S = float(os.getenv('SINHALA_RAG_TIMEOUT', '60'))
+RAG_TIMEOUT_S = float(os.getenv('SINHALA_RAG_TIMEOUT', '3000'))
 
-# 'stub' keeps Layer 4A returning the article unchanged; 'mat' reads the
-# headline with Janindu's sin_raw model. See layers/l4a_title/title.py.
-TITLE_MODE = os.getenv('SINHALA_TITLE_MODE', 'stub')
+# 'stub' keeps Layer 4A returning the article unchanged; 'mat' or other values enable it.
+# See layers/l4a_title/title.py.
+TITLE_MODE = os.getenv('SINHALA_TITLE_MODE', 'mat')
+# NO LONGER READ. Layer 4A is RAW-only (sin_raw on the binarized strip); the MAT
+# skeletonization and the 'hybrid'/'mat' engines were removed. Kept so an
+# existing .env setting does not break anything.
+TITLE_ENGINE = os.getenv('SINHALA_TITLE_ENGINE', 'raw').lower()
+
 
 # See core/session.py. Neither number is measured; both are design choices.
 SESSION_TTL_S = float(os.getenv('SINHALA_SESSION_TTL', '1800'))   # 30 min
@@ -297,12 +302,18 @@ SESSION_MAX   = int(os.getenv('SINHALA_SESSION_MAX', '32'))
 # measured is no longer the model the thesis is about.
 POLISH_MODE = os.getenv('SINHALA_POLISH_MODE', 'off')
 
+# The chat model used by L4C only. Kept apart from OPENAI_CHAT_MODEL so the
+# polish layer can use a stronger model without changing L6/L7. Empty means
+# fall back to OPENAI_CHAT_MODEL. Read at call time (see polish.py) because
+# core/env.py may load .env after this module is imported.
+POLISH_MODEL_ENV = 'OPENAI_POLISH_MODEL'
+
 # A repair that rewrote a quarter of the characters is not a repair. NOT
 # MEASURED — a deliberately conservative choice, and the value that decides
 # how much a language model is allowed to invent.
-POLISH_MIN_SIMILARITY = float(os.getenv('SINHALA_POLISH_MIN_SIM', '0.75'))
-POLISH_MIN_LEN_RATIO = 0.70
-POLISH_MAX_LEN_RATIO = 1.30
+POLISH_MIN_SIMILARITY = float(os.getenv('SINHALA_POLISH_MIN_SIM', '0.55'))
+POLISH_MIN_LEN_RATIO = 0.60
+POLISH_MAX_LEN_RATIO = 1.40
 POLISH_MAX_CHARS = int(os.getenv('SINHALA_POLISH_MAX_CHARS', '4000'))
 
 # ==========================================================================
