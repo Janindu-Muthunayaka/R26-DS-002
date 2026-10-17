@@ -18,7 +18,7 @@ CHUNK_MIN, CHUNK_MAX = 1, 6
 
 # Pause after each segment, before pause_scale. StepByStep gets the longest
 # pause so each step can sink in.
-BASE_PAUSE_MS = {"Simple": 400, "Detailed": 600, "StepByStep": 800}
+BASE_PAUSE_MS = {"Simple": 600, "Detailed": 400, "StepByStep": 600}
 FALLBACK_PAUSE_MS = 600
 
 # A new segment starts before each spoken ordinal, even without a full stop,
@@ -51,14 +51,30 @@ def _ends_with_abbreviation(text):
     return bool(tokens) and tokens[-1].lower() in ABBREVIATIONS
 
 
+# A blank line is a boundary of its own: it separates a headline from its
+# body ("ලිපිය 2: <title>" + blank line + "<body>") and one article from the
+# next. A SINGLE line break is not one: OCR text keeps the printed line wraps,
+# often in the middle of a sentence.
+_PARAGRAPH_RE = re.compile(r"\n[ \t\r]*\n")
+
+
 def split_segments(text):
     """
     Splits an answer into speakable segments.
 
-    Breaks after ".", "?" or "!" when followed by whitespace or the end of the
-    text — so "25.50" never splits — unless the full stop closes a known
-    abbreviation ("ප.ව."). Then breaks again before each spoken ordinal.
+    First at blank lines (a headline ends there even without a full stop, so a
+    pause follows it). Then, inside each paragraph, after ".", "?" or "!" when
+    followed by whitespace or the end of the text — so "25.50" never splits —
+    unless the full stop closes a known abbreviation ("ප.ව."). Then again
+    before each spoken ordinal.
     """
+    segments = []
+    for paragraph in _PARAGRAPH_RE.split(str(text or "")):
+        segments.extend(_split_paragraph(paragraph))
+    return segments
+
+
+def _split_paragraph(text):
     text = " ".join(str(text or "").split())
     if not text:
         return []
@@ -80,34 +96,56 @@ def split_segments(text):
     return segments
 
 
-def format_text_with_tts_pauses(answer_si, style="Detailed", pause_scale=1.0):
+PAUSE_LEVELS = ["none", "low", "mid", "high"]
+# Base level by style; None = a local read or a short system line.
+# Base level by style (17 Oct 2026): Detailed low, Simple mid, StepByStep mid.
+STYLE_PAUSE_BASE = {"Simple": 2, "Detailed": 1, "StepByStep": 2}
+# What each level puts between segments. Phone TTS cannot take millisecond
+# pauses, but it does pause at a full stop, longer at a line break, and
+# longest at an ellipsis.
+PAUSE_SEPARATORS = {"none": " ", "low": " \n", "mid": " \n\n", "high": " ... \n"}
+
+
+def pause_level(style=None, pause_scale=1.0, base=None):
+    """
+    The pause level actually used: the style gives the base (Detailed low,
+    Simple mid, StepByStep mid; `base` overrides it), and the user's learned
+    pause_scale moves it (<= 0.8 one down, >= 1.2 one up, >= 1.6 two up).
+    """
+    idx = STYLE_PAUSE_BASE.get(style, 1) if base is None else PAUSE_LEVELS.index(base)
+    ps = float(pause_scale or 1.0)
+    if ps <= 0.8:
+        idx -= 1
+    elif ps >= 1.6:
+        idx += 2
+    elif ps >= 1.2:
+        idx += 1
+    return PAUSE_LEVELS[_clamp(idx, 0, len(PAUSE_LEVELS) - 1)]
+
+
+def format_text_with_tts_pauses(answer_si, style="Detailed", pause_scale=1.0, level=None):
     """
     Formats Sinhala text with natural punctuation / spacing pause tokens.
     Most TTS engines (e.g., Android TextToSpeech, Google TTS) do not accept
-    explicit pause millisecond timings, but naturally pause at punctuation marks:
-      - StepByStep: Inserts deliberate ellipsis pauses (' ... ') and newlines
-        between numbered steps to give users time to comprehend each step.
-      - Detailed: Uses standard full stops followed by double spacing.
-      - Simple: Uses single clean full stops.
+    explicit pause millisecond timings, but naturally pause at punctuation and
+    line breaks. The gap between segments follows pause_level(): none = a
+    space, low = a line break, mid = a blank line, high = an ellipsis.
+    Each segment keeps its own end mark, so a question still ends in "?".
     """
     segments = split_segments(answer_si)
     if not segments:
         return ""
+    sep = PAUSE_SEPARATORS[level or pause_level(style, pause_scale)]
 
-    if style == "StepByStep":
-        separator = " ... \n"
-    elif style == "Detailed":
-        separator = ".  \n" if pause_scale >= 1.0 else ". "
-    else:
-        separator = ". \n"
-
-    cleaned_segments = []
+    out = []
     for seg in segments:
-        s = seg.strip().rstrip(".?! ")
-        if s:
-            cleaned_segments.append(s)
-
-    return separator.join(cleaned_segments) + "."
+        s = seg.strip()
+        if not s:
+            continue
+        if s[-1] not in ".?!":
+            s += "."
+        out.append(s)
+    return sep.join(out)
 
 
 def _preview(texts, chunk_size):

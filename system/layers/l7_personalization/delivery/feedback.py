@@ -23,9 +23,12 @@ except ImportError:
 # ── Tunable rule constants (ADAPTIVE_VOICE_PLAN.md, "Feedback rules") ─────
 RATE_MIN, RATE_MAX = 0.8, 1.3
 CHUNK_MIN, CHUNK_MAX = 1, 6
-PAUSE_SCALE_MAX = 2.0
+PAUSE_SCALE_MIN, PAUSE_SCALE_MAX = 0.5, 2.0
 SLOWER_FACTOR, FASTER_FACTOR = 0.90, 1.10
 REPEAT_RATE_FACTOR, REPEAT_PAUSE_STEP = 0.95, 0.1
+# TURN_CONDITIONS.xlsx G5: faster always pairs with fewer pauses, slower (and
+# repeat) with more. An explicit "more / fewer pauses" moves twice as far.
+SPEED_PAUSE_STEP, EXPLICIT_PAUSE_STEP = 0.1, 0.2
 DRIFT_FACTOR, CLEAN_ANSWERS_FOR_DRIFT = 1.02, 3
 LONG_ANSWER_SEGMENTS = 3       # an answer this long counts for chunk_size rules
 STYLE_INTENTS = {"SIMPLIFY", "ELABORATE", "STEP_BY_STEP"}
@@ -99,6 +102,11 @@ def _scale_rate(profile, decision, factor):
     _set(profile, decision, "rate", rate)
 
 
+def _step_pause(profile, decision, step):
+    pause = round(min(PAUSE_SCALE_MAX, max(PAUSE_SCALE_MIN, profile["pause_scale"] + step)), 2)
+    _set(profile, decision, "pause_scale", pause)
+
+
 def _add_channel(decision, channel):
     if channel not in decision["channels"]:
         decision["channels"].append(channel)
@@ -130,7 +138,8 @@ def apply_turn(profile, frame, now):
     """
     p, d = copy.deepcopy(profile), _decision()
     label = frame["intent"]
-    speed = frame["modifiers"]["speed"]
+    mods = frame["modifiers"]
+    speed = mods["speed"]
     d["speed"] = speed
 
     if frame["modifiers"]["repeat"]:
@@ -142,8 +151,8 @@ def apply_turn(profile, frame, now):
             d["reasons"].append("repeat: nothing to repeat (none spoken, or older than 30 min)")
         elif is_next_turn(p):
             _add_channel(d, "delivery")
-            _set(p, d, "pause_scale", round(min(PAUSE_SCALE_MAX, p["pause_scale"] + REPEAT_PAUSE_STEP), 2))
-            if not speed:   # an explicit slower/faster below replaces the ×0.95
+            if not speed:   # an explicit slower/faster below replaces both
+                _step_pause(p, d, REPEAT_PAUSE_STEP)
                 _scale_rate(p, d, REPEAT_RATE_FACTOR)
             p["clean_streak"] = 0
             d["reasons"].append("repeat on the very next turn: didn't hear")
@@ -153,12 +162,24 @@ def apply_turn(profile, frame, now):
     if speed:
         _add_channel(d, "delivery")
         _scale_rate(p, d, SLOWER_FACTOR if speed == "slower" else FASTER_FACTOR)
+        if not mods.get("pause"):
+            _step_pause(p, d, SPEED_PAUSE_STEP if speed == "slower" else -SPEED_PAUSE_STEP)
         p["counts"][speed] += 1
         p["clean_streak"] = 0
         d["reasons"].append(f"asked {speed}")
-    elif label == "CHANGE_SPEED":
+    elif label == "CHANGE_SPEED" and not (mods.get("pause") or mods.get("chunk")):
         d["ask"] = {"about": "speed", "question": SPEED_QUESTION_SI}
         d["reasons"].append("CHANGE_SPEED without a slower/faster word: ask slower or faster")
+
+    if mods.get("pause"):
+        _add_channel(d, "delivery")
+        _step_pause(p, d, EXPLICIT_PAUSE_STEP if mods["pause"] == "more" else -EXPLICIT_PAUSE_STEP)
+        d["reasons"].append(f"asked {mods['pause']} pauses")
+
+    if mods.get("chunk") == "smaller":
+        _add_channel(d, "delivery")
+        _set(p, d, "chunk_size", max(CHUNK_MIN, p["chunk_size"] - 1))
+        d["reasons"].append("asked for smaller parts")
 
     if label in STYLE_INTENTS and not d["repeat"]:
         _add_channel(d, "content")

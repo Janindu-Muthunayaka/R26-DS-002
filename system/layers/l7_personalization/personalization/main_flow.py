@@ -56,13 +56,57 @@ STYLE_PROMPT_MODIFIERS = {
 }
 
 
-def handle_voice_command(sinhala_text, user_id, retrieved_chunk_id=None, dry_run=False):
+# Turns that only change HOW the last answer is spoken (TURN_CONDITIONS.xlsx
+# section 1). They are routed LOCAL and are never style evidence: "more
+# pauses" contains "more", which the keyword list reads as Detailed.
+DELIVERY_ONLY_INTENTS = {"CHANGE_SPEED", "UNKNOWN", "READ_ALOUD"}
+
+
+def _is_delivery_only(intent, mods):
+    if mods.get("style") or mods.get("repeat"):
+        return False
+    if not (mods.get("speed") or mods.get("pause") or mods.get("chunk") or mods.get("volume")):
+        return intent == "CHANGE_SPEED"
+    return intent in DELIVERY_ONLY_INTENTS
+
+
+def _with_last_spoken(profile, ctx, now):
+    """The main server owns what was last spoken (per session). It tells us
+    whether there is something to replay and whether this is the very next
+    turn, which is all feedback.apply_turn needs for its REPEAT rules."""
+    if not isinstance(ctx, dict):
+        return profile
+    if not ctx.get("has_last"):
+        profile["last_spoken"] = None
+        return profile
+    age = float(ctx.get("age_s") or 0)
+    profile["last_spoken"] = {
+        "text": "", "kind": "answer", "style": None, "completed": True, "resume_at": None,
+        "finished_at": datetime.fromtimestamp(now.timestamp() - age).isoformat(timespec="seconds"),
+        "turns_since": 0 if ctx.get("next_turn") else 1,
+    }
+    return profile
+
+
+def _delivery_fields(profile, before):
+    return {
+        "speed": round(max(0.8, min(1.3, float(profile.get("rate", 1.0)))), 2),
+        "pause_scale": round(float(profile.get("pause_scale", 1.0)), 2),
+        "chunk_size": int(profile.get("chunk_size", 3)),
+        "delivery_before": before,
+    }
+
+
+def handle_voice_command(sinhala_text, user_id, retrieved_chunk_id=None, dry_run=False,
+                         last_spoken_ctx=None):
     """
     Runs one full turn.
     retrieved_chunk_id: optional chunk identifier from Component 3.
     dry_run: decide the style for this user WITHOUT side effects - nothing is
              logged, learned, corrected or saved. Used to re-generate an old
              answer under a different user without touching their profile.
+    last_spoken_ctx: {"has_last", "next_turn", "age_s"} from the main server,
+             which holds what was last spoken in this session.
 
     Returns:
       {
@@ -89,13 +133,48 @@ def handle_voice_command(sinhala_text, user_id, retrieved_chunk_id=None, dry_run
 
     # ── Delivery & Speed determination (0.8 - 1.3) ──
     delivery_profile = get_delivery_profile(user_id)
+    before = {k: delivery_profile.get(k) for k in ("rate", "pause_scale", "chunk_size")}
     mods = frame.get("modifiers", {})
-    if (mods.get("speed") or mods.get("repeat")) and not dry_run:
+    if (mods.get("speed") or mods.get("repeat") or mods.get("pause") or mods.get("chunk")) \
+            and not dry_run:
+        delivery_profile = _with_last_spoken(delivery_profile, last_spoken_ctx, now)
         delivery_profile, _ = apply_delivery_turn(delivery_profile, frame, now)
         save_delivery_profile(user_id, delivery_profile)
+    delivery = _delivery_fields(delivery_profile, before)
 
     # Ensure rate is strictly clamped between 0.8 and 1.3
-    user_speed = round(max(0.8, min(1.3, float(delivery_profile.get("rate", 1.0)))), 2)
+    user_speed = delivery["speed"]
+
+    # ── Delivery-only turn: change how it sounds, never what it says ──
+    if _is_delivery_only(intent, mods):
+        last = get_last_interaction(user_id)
+        style = (last or {}).get("style_class") or "Detailed"
+        if style not in STYLE_PROMPT_MODIFIERS:
+            style = "Detailed"
+        return {
+            "stt_stage": stt_stage,
+            "intent_stage": intent_stage,
+            "personalization_stage": {
+                "is_system_command": False, "command": None,
+                "style_class": style, "style_source": "delivery_only",
+                "learned": False, "correction_applied": None,
+                "user_profile": get_user_summary(user_id),
+                "speed": user_speed, "delivery_profile": delivery_profile,
+            },
+            "final_prompt": {
+                "route": "LOCAL",
+                "intent": "CHANGE_SPEED" if intent == "UNKNOWN" else intent,
+                "english_translation": english_text,
+                "style_class": style,
+                "prompt_modifier": STYLE_PROMPT_MODIFIERS[style],
+                "personalization_flags": {},
+                "retrieved_chunk_id": retrieved_chunk_id,
+                "correction_applied": None,
+                "speech_rate": user_speed,
+                **delivery,
+            },
+            "frame": frame,
+        }
 
     # ── Stage 3: System command check (before anything personalization) ──
     # Navigation commands carry no style information, so they bypass the
@@ -129,8 +208,8 @@ def handle_voice_command(sinhala_text, user_id, retrieved_chunk_id=None, dry_run
                 "personalization_flags": {},
                 "retrieved_chunk_id": retrieved_chunk_id,
                 "correction_applied": None,
-                "speed": user_speed,
                 "speech_rate": user_speed,
+                **delivery,
             },
             "frame": frame,
         }
@@ -195,8 +274,8 @@ def handle_voice_command(sinhala_text, user_id, retrieved_chunk_id=None, dry_run
             "personalization_flags": {},   # kept for the Component 3 contract
             "retrieved_chunk_id": retrieved_chunk_id,
             "correction_applied": corrected_style,
-            "speed": user_speed,
             "speech_rate": user_speed,
+            **delivery,
         },
         "frame": frame,
     }

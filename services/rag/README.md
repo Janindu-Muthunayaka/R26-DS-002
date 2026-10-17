@@ -7,7 +7,7 @@ python app.py --port 8102
 ```
 
 Needs `OPENAI_API_KEY`, `OPENAI_CHAT_MODEL` and `OPENAI_EMBED_MODEL` in the
-repository-root `.env`. `python tools\check_llm.py` lists what your key can
+`system/.env`. `python tools\check_llm.py` lists what your key can
 actually reach — do not guess a model name.
 
 ## The corpus problem, and what this does about it

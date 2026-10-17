@@ -42,7 +42,7 @@ def main():
 
     if not llm.key():
         print('OPENAI_API_KEY is not set.')
-        print('Copy services\\.env.example to .env at the repository root and '
+        print('Copy system\\.env.example to system\\.env and '
               'fill it in.\n.env is gitignored. Never commit a key: git does '
               'not forget, and a key\nthat reaches the repo has to be ROTATED, '
               'not deleted.')

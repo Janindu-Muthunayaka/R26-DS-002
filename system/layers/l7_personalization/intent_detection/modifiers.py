@@ -162,6 +162,68 @@ def speed_request(sinhala, english):
     return _speed_with_source(sinhala, english)[0]
 
 
+# ── Pauses / part size / volume (TURN_CONDITIONS.xlsx D8-D11) ──────────────
+# "නවත්තලා නවත්තලා" (stopping now and then) = more pauses; "නොනවත්වා" (without
+# stopping) = fewer. නොනවත්වා is checked first: it contains නවත්.
+LESS_PAUSE_SI = [r"නොනවත්ව", r"නොනැවතී", r"එක දිගට", r"පරතරය අඩු", r"නැවතීම් අඩු"]
+MORE_PAUSE_SI = [r"නවත්තලා", r"නවත්වලා", r"නවත්තමින්", r"ඉඩ තියලා", r"ඉඩ තබා",
+                 r"පරතරය වැඩි", r"නැවතීම් වැඩි", r"නැවතී නැවතී"]
+LESS_PAUSE_EN = [r"\b(fewer|less|shorter|no) pauses?\b", r"\bwithout (stopping|pausing|pauses)\b"]
+MORE_PAUSE_EN = [r"\bmore pauses?\b", r"\blonger pauses?\b", r"\bpause (more|between)\b"]
+SMALLER_CHUNK_SI = [r"කෑලි කෑලි", r"කොටසින් කොටස", r"ටික ටික", r"පොඩි කොටස්"]
+SMALLER_CHUNK_EN = [r"\bsmaller (parts|pieces|chunks)\b", r"\bbit by bit\b", r"\bpiece by piece\b"]
+VOLUME_SI = [r"ශබ්දය", r"සද්දෙ", r"සද්දය", r"හයියෙන්"]
+VOLUME_EN = [r"\bvolume\b", r"\blouder\b", r"\bquieter\b"]
+
+
+def pause_request(sinhala, english):
+    """'more' | 'less' | None — an explicit request about pauses."""
+    si, en = _clean(sinhala), _clean(english)
+    if si:
+        if _any(LESS_PAUSE_SI, si):
+            return "less"
+        if _any(MORE_PAUSE_SI, si):
+            return "more"
+        return None
+    if _any(LESS_PAUSE_EN, en):
+        return "less"
+    if _any(MORE_PAUSE_EN, en):
+        return "more"
+    return None
+
+
+def chunk_request(sinhala, english):
+    """'smaller' | None — "say it in smaller parts"."""
+    si, en = _clean(sinhala), _clean(english)
+    if si:
+        return "smaller" if _any(SMALLER_CHUNK_SI, si) else None
+    return "smaller" if _any(SMALLER_CHUNK_EN, en) else None
+
+
+SPEED_MENTION_EN = [r"\bspeed\b", r"\bpace\b"]
+SUMMARY_SI = [r"සාරාංශ", r"සංක්ෂේප"]
+SUMMARY_EN = [r"\bsummar", r"\bin short\b", r"\bgist\b"]
+
+
+def speed_mentioned(sinhala, english):
+    """True if the sentence talks about speed at all ("වේගය වෙනස් කරන්න",
+    change the speed) — with or without saying slower or faster."""
+    si, en = _clean(sinhala), _clean(english)
+    return bool(re.search(_SPEED_SI, si)) if si else _any(SPEED_MENTION_EN, en)
+
+
+def summary_request(sinhala, english):
+    """True if the user asks for a summary ("සාරාංශයක්", summarise)."""
+    si, en = _clean(sinhala), _clean(english)
+    return _any(SUMMARY_SI, si) if si else _any(SUMMARY_EN, en)
+
+
+def volume_request(sinhala, english):
+    """True if the user is asking about loudness (a phone setting)."""
+    si, en = _clean(sinhala), _clean(english)
+    return _any(VOLUME_SI, si) if si else _any(VOLUME_EN, en)
+
+
 # ── Style (English keywords, moved from personalization/diagnostic.py) ─────
 # Lexical grounding: words in the English translation that genuinely
 # indicate each style. diagnostic.py imports these back unchanged — the style
@@ -296,7 +358,9 @@ def build_frame(sinhala, english, llm_intent):
     {
       "intent":    final main action (LLM label, or REPEAT by the fusion rule),
       "modifiers": {"repeat": bool, "speed": "slower"|"faster"|None,
-                    "style": "Simple"|"Detailed"|"StepByStep"|None},
+                    "style": "Simple"|"Detailed"|"StepByStep"|None,
+                    "pause": "more"|"less"|None, "chunk": "smaller"|None,
+                    "volume": bool},
       "evidence":  {"llm_intent": label as the LLM gave it,
                     "intent_from": "llm" | "fusion",
                     "fusion": note | None,
@@ -325,6 +389,11 @@ def build_frame(sinhala, english, llm_intent):
     evidence["unmatched"] = unmatched_modifiers(intent, evidence)
     return {
         "intent": intent,
-        "modifiers": {"repeat": repeat, "speed": speed, "style": style},
+        "modifiers": {"repeat": repeat, "speed": speed, "style": style,
+                      "pause": pause_request(sinhala, english),
+                      "chunk": chunk_request(sinhala, english),
+                      "volume": volume_request(sinhala, english),
+                      "speed_mentioned": speed_mentioned(sinhala, english),
+                      "summary": summary_request(sinhala, english)},
         "evidence": evidence,
     }

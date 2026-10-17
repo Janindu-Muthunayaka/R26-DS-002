@@ -27,7 +27,7 @@ from core import svc
 from core.config import RAG_MODE, RAG_TIMEOUT_S, RAG_URL
 from core.schemas import Document
 from core.textutils import sentences
-from layers.l5_assemble.payload import rag_payload, article_text
+from layers.l5_assemble.payload import rag_payload, article_text, article_evidence
 
 try:
     from .tts_clean import make_speakable
@@ -53,8 +53,12 @@ LOCAL_INTENTS = {
     'ARTICLE_1', 'ARTICLE_2', 'ARTICLE_3', 'ARTICLE_4', 'ARTICLE_5'
 }
 
+# Change HOW it is spoken, never WHAT: no generation, ever.
+DELIVERY_INTENTS = {'CHANGE_SPEED', 'CHANGE_DELIVERY', 'CHANGE_PAUSE', 'VOLUME'}
+
 PART_MAX_CHARS = 400
 
+SI_OK = 'හරි.'
 SI_NO_SERVICE = 'පිළිතුරු සේවාව දැනට නොමැත.'
 SI_FAILED = 'පිළිතුර ලබාගැනීමට නොහැකි විය. කරුණාකර නැවත උත්සාහ කරන්න.'
 SI_NOTHING_TO_REPEAT = 'නැවත කියවීමට කිසිවක් නොමැත.'
@@ -152,11 +156,16 @@ def _local(document, intent, cursor, warnings) -> dict:
                     warnings=warnings, cursor=cursor)
 
     if intent == 'TITLE':
-        titles = [a.title.strip() for a in document.articles if a.title.strip()]
+        # Numbered, same format as FIRST_SCAN (TURN_CONDITIONS.xlsx N3).
+        titles = []
+        for idx, a in enumerate(document.articles):
+            t = (a.title_polished or a.title or a.title_raw or '').strip()
+            if t:
+                titles.append(f'ලිපිය {idx + 1}: {t}')
         if not titles:
             return _out(False, 'LOCAL', intent, SI_NO_TITLE,
                         warnings=warnings, cursor=cursor)
-        return _out(True, 'LOCAL', intent, ' '.join(titles),
+        return _out(True, 'LOCAL', intent, ', '.join(titles),
                     warnings=warnings, cursor=cursor)
 
     if intent == 'WARNINGS':
@@ -208,6 +217,12 @@ def _run_inprocess(document: Document, voice: dict, warnings: list) -> dict | No
             'corrected_text': ocr_payload.get('corrected_text', ''),
             'tokens': ocr_payload.get('tokens', []),
         }
+        # A request about ONE article uses only that article's text, under its
+        # real number, so the answer cannot mix in another article.
+        only = article_evidence(document, voice.get('article_no')) if document else ''
+        if only:
+            raw_ocr = {'corrected_text': only, 'tokens': []}
+            warnings.append(f"rag: evidence limited to article {voice.get('article_no')}")
 
         age_val = voice.get('age_group') or (voice.get('personalization_flags') or {}).get('age_group')
         ctx = {'age_group': age_val}
@@ -245,6 +260,14 @@ def answer(document: Document, voice: dict, mode: str = None,
     if intent == 'STOP':
         return _out(True, 'LOCAL', 'STOP', speakable='', warnings=warnings,
                     cursor=cursor)
+
+    # ---- a delivery request is never a question ---------------------------
+    # The turn policy (turns.py) handles these with a confirmation and a
+    # replay. If one reaches here directly it is still answered locally:
+    # on 17 Oct 2026 "speak fast" was sent to RAG and came back as
+    # "not enough information".
+    if intent in DELIVERY_INTENTS:
+        return _out(True, 'LOCAL', intent, SI_OK, warnings=warnings, cursor=cursor)
 
     # ---- answerable from session ----------------------------------------
     if route in ('LOCAL', 'TTS_REPLAY') or intent in LOCAL_INTENTS:

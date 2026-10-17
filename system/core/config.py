@@ -279,6 +279,10 @@ TITLE_MODE = os.getenv('SINHALA_TITLE_MODE', 'mat')
 # skeletonization and the 'hybrid'/'mat' engines were removed. Kept so an
 # existing .env setting does not break anything.
 TITLE_ENGINE = os.getenv('SINHALA_TITLE_ENGINE', 'raw').lower()
+# SHOW ONLY: the MAT skeleton drawn on each binarized title (the MAT button),
+# made in a separate idle-priority process AFTER the capture has been answered,
+# so the scan's own time is unchanged (layers/l4a_title/mat.py). 'off' disables it.
+TITLE_MAT_MODE = os.getenv('SINHALA_TITLE_MAT', 'background').lower()
 
 
 # See core/session.py. Neither number is measured; both are design choices.
@@ -298,6 +302,14 @@ SESSION_MAX   = int(os.getenv('SINHALA_SESSION_MAX', '32'))
 # 0.0757. If a general-purpose model rewrites that output, the number being
 # measured is no longer the model the thesis is about.
 POLISH_MODE = os.getenv('SINHALA_POLISH_MODE', 'off')
+# How long a reasoning model (gpt-5-mini) "thinks" before a polish batch. The
+# task is mechanical repair, and the output guards in polish.py reject bad
+# edits either way; 'low' cuts most of the wait. minimal | low | medium | high.
+POLISH_REASONING = os.getenv('SINHALA_POLISH_REASONING', 'low').lower()
+# L4C also reports OBVIOUS segmentation mistakes (one story cut in two, two
+# stories in one segment); layers/l5_assemble/segfix.py checks each report
+# against the text and applies only those that pass. 'off' disables it.
+ARTICLE_FIX_MODE = os.getenv('SINHALA_ARTICLE_FIX', 'on').lower()
 
 # The chat model used by L4C only. Kept apart from OPENAI_CHAT_MODEL so the
 # polish layer can use a stronger model without changing L6/L7. Empty means

@@ -1,13 +1,13 @@
 """
-Load `.env` from the repository root, once, without a dependency.
+Load `system/.env`, once, without a dependency.
 
 WHY NOT python-dotenv: this project pins library versions for measured
 reasons (core/config.py). A twenty-line parser is a better trade than another
 entry in requirements.txt for something this simple.
 
 WHY A FILE AND NOT A CONSTANT: an API key in a source file is a key in git
-history, and git does not forget. `.env` is gitignored at the repository root;
-`services/.env.example` documents the shape with no values in it.
+history, and git does not forget. `system/.env` is gitignored;
+`system/.env.example` documents the shape with no values in it.
 
 Existing environment variables WIN. A value exported in the shell is a
 deliberate override — `set OPENAI_CHAT_MODEL=...` for one run must not be
@@ -24,8 +24,8 @@ _loaded = False
 def _candidates() -> list:
     here = Path(__file__).resolve()
     system = here.parent.parent          # .../system
-    return [system.parent / '.env',      # repository root — the documented spot
-            system / '.env',             # convenient when running from system/
+    return [system / '.env',             # system/.env — the documented spot
+            system.parent / '.env',      # repository root (legacy location)
             Path.cwd() / '.env']
 
 
