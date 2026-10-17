@@ -114,7 +114,9 @@ def test_a_crash_in_the_generator_is_spoken_not_traced(tmp_path, monkeypatch):
     monkeypatch.setattr(srv.l6gen, 'answer',
                         lambda *a, **k: (_ for _ in ()).throw(
                             RuntimeError('generator exploded')))
-    r = _ask(c, job, 'නැවත කියවන්න')
+    # A real question: "repeat" is answered from the session and never
+    # reaches the generator (TURN_CONDITIONS.xlsx R1).
+    r = _ask(c, job, 'මේ ලිපිය ගැන කියන්න')
     assert r.status_code == 500
     j = r.json()
     assert j['ok'] is False
@@ -132,9 +134,39 @@ def test_every_field_the_phone_reads_is_present(tmp_path):
 
 
 # ---- the local intents, which must work with nothing running -------------
-def test_repeat_returns_the_article_with_no_service(tmp_path):
+def test_repeat_replays_what_was_last_said_with_no_service(tmp_path):
+    """TURN_CONDITIONS.xlsx R1: repeat replays the last thing spoken — right
+    after a capture that is the title list — not the whole article."""
     c, job = _captured(tmp_path)
     j = _ask(c, job, 'නැවත කියවන්න').json()
+    assert j['ok'] is True
+    assert j['route'] == 'LOCAL' and j['action'] == 'REPLAY'
+    assert 'නගර සභා තීරණය' in j['speakable']
+
+
+def test_speak_fast_is_not_sent_to_the_generator(tmp_path, monkeypatch):
+    """17 Oct 2026: "වේගයෙන් කතා කරන්න" reached RAG and came back as "not
+    enough information". Now: confirm, replay the titles, faster."""
+    from app import server as srv
+    c, job = _captured(tmp_path)
+    real = srv.l6gen.answer
+
+    def no_rag(doc, voice, **kw):
+        assert str(voice.get('route')).upper() != 'GENERATE' \
+            or voice.get('intent') in srv.l6gen.LOCAL_INTENTS, 'sent to RAG'
+        return real(doc, voice, **kw)
+    monkeypatch.setattr(srv.l6gen, 'answer', no_rag)
+    j = _ask(c, job, 'වේගයෙන් කතා කරන්න').json()
+    assert j['route'] == 'LOCAL' and j['action'] == 'CONFIRM + REPLAY'
+    assert 'නගර සභා තීරණය' in j['speakable']
+    assert j['speed'] > 1.0 and j['pause_level']
+    gens = c.get('/latest').json()['document']['generations']
+    assert gens[-1]['speed'] == j['speed'] and gens[-1]['pause_level'] == j['pause_level']
+
+
+def test_read_returns_the_article_with_no_service(tmp_path):
+    c, job = _captured(tmp_path)
+    j = _ask(c, job, 'කියවන්න').json()
     assert j['ok'] is True
     assert j['route'] == 'LOCAL'
     assert 'කුරුණෑගල' in j['speakable']

@@ -168,7 +168,7 @@ class Answer(BaseModel):
     """What `/ask` returns. The phone reads `speakable` and nothing else."""
     ok: bool = True                       # was an answer actually generated
     job: str = ''
-    route: str = ''                       # GENERATE | TTS_REPLAY | LOCAL
+    route: str = ''                       # GENERATE | LOCAL
     intent: str = ''
     speakable: str = ''                   # <-- the phone speaks THIS
     answer_si: str = ''                   # the generated answer alone
@@ -182,6 +182,12 @@ class Answer(BaseModel):
     learned: bool = False
     speed: float = 1.0                    # speech rate for mobile TTS (0.8 - 1.3)
     speech_rate: float = 1.0              # alias for mobile TTS
+    # ADDITIVE 17 Oct 2026 (TURN_CONDITIONS.xlsx). pause_scale is already
+    # applied to `speakable`; pause_level is what L8 shows.
+    pause_scale: float = 1.0              # 0.5 - 2.0, per user
+    pause_level: str = ''                 # none | low | mid | high
+    chunk_size: int = 3
+    action: str = ''                      # REPLAY | REGEN | READ | NAV | CONFIRM | ASK | MSG | STOP
     warnings: List[str] = []
     timings: dict = {}
     error: Optional[str] = None

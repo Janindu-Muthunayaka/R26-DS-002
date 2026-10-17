@@ -65,7 +65,7 @@ def timeout_s() -> float:
 def available() -> Tuple[bool, str]:
     """Can a call even be attempted? Cheap, no network."""
     if not key():
-        return False, 'OPENAI_API_KEY is not set (see services/.env.example)'
+        return False, 'OPENAI_API_KEY is not set (see system/.env.example)'
     if not chat_model():
         return False, 'OPENAI_CHAT_MODEL is not set — run tools/check_llm.py'
     return True, ''
@@ -106,6 +106,9 @@ def _request(path: str, payload: Optional[dict], method='POST'
             last = f'HTTP {e.code}: {_msg(body)}'
             if e.code not in RETRY_STATUSES:
                 return None, last
+            # Out of credits is a 429 too, but waiting does not refill it.
+            if e.code == 429 and ('insufficient_quota' in body or 'exceeded your current quota' in body):
+                return None, f'{last} (out of credits)'
         except urllib.error.URLError as e:
             last = f'unreachable: {e.reason}'
         except Exception as e:
@@ -140,16 +143,30 @@ def _offending_param(reason: str, sent: dict) -> Optional[str]:
     return None
 
 
+def _is_reasoning_model(mdl: str) -> bool:
+    """GPT-5 and the o-series: they reject a non-default temperature and take
+    reasoning_effort instead."""
+    m = (mdl or '').lower()
+    return m.startswith(('gpt-5', 'o1', 'o3', 'o4'))
+
+
 def chat(messages, model: str = None, temperature: float = 0.0,
-         max_tokens: int = None) -> Tuple[Optional[str], str]:
-    """One chat completion. Returns (text, '') or (None, reason)."""
+         max_tokens: int = None, reasoning_effort: str = None) -> Tuple[Optional[str], str]:
+    """One chat completion. Returns (text, '') or (None, reason).
+
+    reasoning_effort ('minimal' | 'low' | 'medium' | 'high') is sent only to
+    reasoning models; temperature is NOT sent to them. Sending it made every
+    call fail once with HTTP 400 and go out a second time."""
     mdl = (model or chat_model()).strip()
     if not mdl:
         return None, 'OPENAI_CHAT_MODEL is not set — run tools/check_llm.py'
 
     payload = {'model': mdl, 'messages': messages}
-    if temperature is not None:
+    reasoning = _is_reasoning_model(mdl)
+    if temperature is not None and not reasoning:
         payload['temperature'] = temperature
+    if reasoning_effort and reasoning:
+        payload['reasoning_effort'] = reasoning_effort
     if max_tokens:
         payload['max_tokens'] = int(max_tokens)
 

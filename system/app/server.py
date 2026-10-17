@@ -88,6 +88,10 @@ from core.session import SessionStore
 from layers.l0_voice import voice as l0
 from layers.l5_assemble.payload import article_text
 from layers.l6_generator import generate as l6gen
+from layers.l6_generator import turns as l6turns
+from layers.l4a_title import mat as l4a_mat
+from layers.l7_personalization.delivery.planner import (
+    format_text_with_tts_pauses, pause_level as _pause_level)
 from layers.l8b_speech import speech as l6
 
 
@@ -173,10 +177,41 @@ def _speakable(res, voice):
     out = res['speakable']
     if out:
         try:
-            from layers.l7_personalization.delivery.planner import format_text_with_tts_pauses
             out = format_text_with_tts_pauses(out, style=voice.get('style_class', 'Detailed'))
         except Exception:
             pass
+    return out
+
+
+def _format_turn(res):
+    """(speakable, pause_level) for one policy result. The style gives the
+    base pause, the user's pause_scale moves it (TURN_CONDITIONS.xlsx G6)."""
+    text = res.get('speakable') or ''
+    d = res.get('delivery') or {}
+    level = _pause_level(res.get('style_class') or None, d.get('pause_scale', 1.0),
+                         base=res.get('pause_base'))
+    if not text:
+        return '', level
+    try:
+        return format_text_with_tts_pauses(text, level=level), level
+    except Exception:
+        return text, level
+
+
+def _rag_history(generations):
+    """Chat history for RAG: generated answers only, each under the question
+    that was actually asked. A local turn ("speak fast" -> "හරි, ...") or a
+    style command ("සරලව කියන්න") would otherwise be read as a question by
+    the query rewriter."""
+    out = []
+    for g in generations or []:
+        if g.get('route') != 'GENERATE' or g.get('kind') == 'error':
+            continue
+        q = g.get('effective_query') or {}
+        question = q.get('si') or g.get('query') or ''
+        out.append({'question': question,
+                    'standalone_question': g.get('standalone_query') or q.get('en') or question,
+                    'answer': g.get('answer') or g.get('answer_si') or ''})
     return out
 
 
@@ -281,17 +316,18 @@ def build(pipeline, web_dir: Path):
             reply = _document_to_reply(doc, job)
             
             if reply['ok']:
-                # Styled for the active user, read-only: their dominant style
-                # and its prompt. Nothing is learned from a turn the user
-                # did not ask.
+                # Turn 1 is GENERIC: the same fixed command for everyone (how
+                # many articles, and each article's number and title). It is
+                # not styled by any user's weights and changes none: no
+                # profile is read, nothing is logged or learned, and no
+                # weights are stored on the turn.
                 scan_uid = app.state.active_user
-                scan_style = l0.style_for_user(scan_uid)
                 first_scan_voice = {
                     'route': 'GENERATE',
                     'intent': 'FIRST_SCAN',
                     'english_translation': 'Tell the number of articles detected,and tell the title of each article along with its article no.',
-                    'style_class': scan_style['style_class'],
-                    'prompt_modifier': scan_style['prompt_modifier'],
+                    'style_class': '',
+                    'prompt_modifier': '',
                     'personalization_flags': {},
                     'sinhala_input': 'හඳුනාගත් ලිපි සංඛ්‍යාව සහ එක් එක් ලිපියේ ශීර්ෂය එහි ලිපි අංකය සමඟ පවසන්න.',
                     'source': 'component4'
@@ -309,7 +345,11 @@ def build(pipeline, web_dir: Path):
                     tts_text = l6.get_tts_text(doc)
                     if tts_text:
                         reply['body'] = tts_text
-                    
+                # The phone speaks `title` before `body` (title-first design).
+                # Turn 1 already says every title, so the raw OCR headlines
+                # left here would be spoken first as a stale prefix.
+                reply['title'] = ''
+
                 if not hasattr(doc, 'generations') or doc.generations is None:
                     doc.generations = []
                     
@@ -318,8 +358,8 @@ def build(pipeline, web_dir: Path):
                     'query': first_scan_voice['sinhala_input'],
                     'user_id': scan_uid,
                     'user_meta': _user_meta(scan_uid),
-                    'style_source': scan_style['style_source'],
-                    'user_profile': scan_style['user_profile'],
+                    'style_source': 'fixed',
+                    'user_profile': None,
                     'learned': False,
                     'answer': res['speakable'] or res['answer_si'],
                     'answer_si': res['answer_si'],
@@ -337,7 +377,11 @@ def build(pipeline, web_dir: Path):
                     }
                 }
                 doc.generations.append(turn_info)
-                
+                # The title list is the first thing spoken: "repeat" right
+                # after a capture replays it (TURN_CONDITIONS.xlsx R1).
+                l6turns.seed_first_scan(sessions.state(job), res.get('speakable') or '',
+                                        style=first_scan_voice.get('style_class'))
+
                 ans_dict = Answer(
                     ok=res['ok'], job=job, route=res['route'], intent=res['intent'],
                     speakable=res['speakable'], answer_si=res['answer_si'],
@@ -365,6 +409,14 @@ def build(pipeline, web_dir: Path):
                     reply['body'] = SI_MOVE_CLOSER
                 sessions._items.pop(job, None)
             reply['audio_url'] = l6.speak(doc)      # None until Layer 6 lands
+            if reply['ok']:
+                # Show only: the MAT skeleton drawn on each binarized title,
+                # in an idle-priority process, AFTER this reply is built.
+                # Returns at once; the scan's time is unchanged.
+                try:
+                    l4a_mat.schedule(doc, sess)
+                except Exception as e:
+                    print(f'[title MAT] not scheduled: {e}')
             return reply
         except Exception as e:
             import traceback
@@ -393,25 +445,23 @@ def build(pipeline, web_dir: Path):
                 error='no article in session for this job',
             ).model_dump(), status_code=404)
 
+        state = sessions.state(q.job)
         try:
-            voice = l0.interpret(q.text, user_id=q.user_id or app.state.active_user)
+            # Component 4 needs to know whether something was just spoken (its
+            # REPEAT rule); only this session knows.
+            voice = l0.interpret(q.text, user_id=q.user_id or app.state.active_user,
+                                 last_spoken_ctx=l6turns.context(state))
             voice.setdefault('sinhala_input', q.text)
             voice.setdefault('session_id', q.job)
-            if hasattr(doc, 'generations') and doc.generations:
-                voice['chat_history'] = [
-                    {
-                        'question': g.get('query') or '',
-                        'standalone_question': g.get('standalone_query') or g.get('query') or '',
-                        'answer': g.get('answer') or g.get('answer_si') or ''
-                    }
-                    for g in doc.generations
-                ]
+            voice['chat_history'] = _rag_history(getattr(doc, 'generations', None))
             t_voice = round(time.time() - t0, 2)
 
             t1 = time.time()
-            # The cursor is how far "next" has walked through the article. It
-            # lives in the session beside the Document so it expires with it.
-            res = l6gen.answer(doc, voice, cursor=sessions.cursor(q.job))
+            # One decision per turn (layers/l6_generator/turns.py,
+            # TURN_CONDITIONS.xlsx): only a turn that needs new words reaches
+            # the generator. The cursor is how far "next" has walked through
+            # the current article; it lives in the session beside the Document.
+            res = l6turns.run(doc, voice, state, cursor=sessions.cursor(q.job))
             if res.get('cursor') is not None:
                 sessions.set_cursor(q.job, res['cursor'])
             t_gen = round(time.time() - t1, 2)
@@ -426,55 +476,58 @@ def build(pipeline, web_dir: Path):
         for w in res['warnings']:
             print(f'[ask {q.job}] {w}')
 
-        # Natural TTS pause formatting (Option A) so mobile TTS naturally pauses on punctuation
-        speakable_out = res['speakable']
-        if speakable_out:
-            try:
-                from layers.l7_personalization.delivery.planner import format_text_with_tts_pauses
-                speakable_out = format_text_with_tts_pauses(
-                    speakable_out,
-                    style=voice.get('style_class', 'Detailed')
-                )
-            except Exception:
-                pass
+        speakable_out, level = _format_turn(res)
+        delivery = res.get('delivery') or {}
+        rate = float(delivery.get('rate', voice.get('speed', 1.0)))
+        learned = bool(voice.get('learned', False)) and res.get('route') == 'GENERATE'
 
         ans_dict = Answer(
             ok=res['ok'], job=q.job, route=res['route'], intent=res['intent'],
             speakable=speakable_out, answer_si=res['answer_si'],
             sources=res['sources'],
             english_translation=voice.get('english_translation', ''),
-            style_class=voice.get('style_class', ''),
+            style_class=res.get('style_class') or voice.get('style_class', ''),
             correction_applied=voice.get('correction_applied'),
-            prompt_modifier=voice.get('prompt_modifier', ''),
+            prompt_modifier=res.get('prompt_modifier') or voice.get('prompt_modifier', ''),
             style_source=voice.get('style_source'),
             user_profile=voice.get('user_profile'),
-            learned=voice.get('learned', False),
-            speed=float(voice.get('speed', 1.0)),
-            speech_rate=float(voice.get('speech_rate', voice.get('speed', 1.0))),
+            learned=learned,
+            speed=rate, speech_rate=rate,
+            pause_scale=float(delivery.get('pause_scale', 1.0)),
+            pause_level=level,
+            chunk_size=int(delivery.get('chunk_size', 3)),
+            action=res.get('action', ''),
             warnings=res['warnings'],
             timings={'voice': t_voice, 'generate': t_gen,
                      'total': round(time.time() - t0, 2)},
         ).model_dump()
-        
+
         if not hasattr(doc, 'generations') or doc.generations is None:
             doc.generations = []
         uid = q.user_id or app.state.active_user
         turn_info = {
             'index': len(doc.generations) + 1,
             'query': q.text,
+            'effective_query': res.get('question'),
             'user_id': uid,
             'user_meta': _user_meta(uid),
             'answer': speakable_out or res['answer_si'],
             'answer_si': res['answer_si'],
             'route': res['route'],
             'intent': res['intent'],
-            'prompt_modifier': voice.get('prompt_modifier', ''),
-            'style_class': voice.get('style_class', ''),
+            'action': res.get('action', ''),
+            'kind': res.get('kind', ''),
+            'style_forced': bool(res.get('style_forced')),
+            'prompt_modifier': ans_dict['prompt_modifier'],
+            'style_class': ans_dict['style_class'],
             'style_source': voice.get('style_source'),
             'user_profile': voice.get('user_profile'),
-            'learned': voice.get('learned', False),
+            'learned': learned,
             'english_translation': voice.get('english_translation', ''),
             'correction_applied': voice.get('correction_applied'),
+            'speed': rate,
+            'pause_scale': ans_dict['pause_scale'],
+            'pause_level': level,
             'warnings': res['warnings'],
             'timings': {
                 'voice': t_voice,
@@ -483,7 +536,7 @@ def build(pipeline, web_dir: Path):
             }
         }
         doc.generations.append(turn_info)
-        
+
         sessions.set_answer(q.job, ans_dict)
         sessions.put(q.job, doc)
         return ans_dict
@@ -539,18 +592,32 @@ def build(pipeline, web_dir: Path):
         if not (1 <= r.index <= len(gens)):
             return JSONResponse({'ok': False, 'error': f'no turn {r.index}'}, status_code=404)
         turn = gens[r.index - 1]
+        if turn.get('route') != 'GENERATE':
+            # A local turn (speed change, repeat, reading, navigation) has no
+            # generated answer; re-running it as a question is exactly how
+            # "speak fast" reached RAG on 17 Oct 2026.
+            return JSONResponse({'ok': False, 'error': 'this turn was answered locally '
+                                 '(no generated answer to re-generate)'}, status_code=400)
 
         t0 = time.time()
         try:
             voice = l0.interpret(turn.get('query') or '', user_id=r.user_id, dry_run=True)
             voice.setdefault('sinhala_input', turn.get('query') or '')
+            # A restyled turn ("සරලව කියන්න") re-asks the question it was
+            # about, not the command; an explicit style stays explicit.
+            eq = turn.get('effective_query') or {}
+            if eq.get('si') or eq.get('en'):
+                voice['sinhala_input'] = eq.get('si') or voice['sinhala_input']
+                voice['english_translation'] = eq.get('en') or eq.get('si')
+                voice['intent'] = 'ASK_QUESTION'
+            if eq.get('article') is not None:
+                voice['article_no'] = eq['article'] + 1
+            voice['route'] = 'GENERATE'
+            if turn.get('style_forced') and turn.get('style_class'):
+                voice['style_class'] = turn['style_class']
+                voice['prompt_modifier'] = turn.get('prompt_modifier') or voice.get('prompt_modifier', '')
             voice['session_id'] = r.job
-            voice['chat_history'] = [
-                {'question': g.get('query') or '',
-                 'standalone_question': g.get('standalone_query') or g.get('query') or '',
-                 'answer': g.get('answer') or g.get('answer_si') or ''}
-                for g in gens[:r.index - 1]
-            ]
+            voice['chat_history'] = _rag_history(gens[:r.index - 1])
             voice['history_override'] = True
             voice['no_history_write'] = True
             t_voice = round(time.time() - t0, 2)

@@ -108,6 +108,19 @@ def article_title(article) -> str:
     return cand or (getattr(article, 'title_hybrid', '') or '').strip() or (article.title or '').strip() or (getattr(article, 'title_raw', '') or '').strip()
 
 
+def article_evidence(document: Document, article_no: int) -> str:
+    """One article as RAG evidence, under its REAL number ("Article 2: ..."),
+    or '' if there is no such article. Used when a request names an article,
+    so the answer cannot mix in another one."""
+    idx = int(article_no or 0) - 1
+    if not 0 <= idx < len(document.articles):
+        return ''
+    art = document.articles[idx]
+    body, t = article_text(art), article_title(art)
+    header = f"Article {idx + 1}{': ' + t if t else ''}"
+    return f"{header}\n{body or '(Empty)'}"
+
+
 def rag_payload(document: Document, with_tokens: bool = True) -> dict:
     """Flatten a Document into what Component 3 consumes."""
     bodies, raws, articles = [], [], []
