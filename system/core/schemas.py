@@ -49,6 +49,7 @@ class Region(BaseModel):
     """A labelled sub-area inside an article (from layout detection)."""
     box: Box
     label: Literal['title', 'text', 'image', 'other'] = 'text'
+    crop_path: Optional[str] = None
 
 
 class Article(BaseModel):
@@ -56,14 +57,26 @@ class Article(BaseModel):
     index: int                                  # reading order, 0-based
     box: Box
     regions: List[Region] = []
+    crop_path: Optional[str] = None
 
     # ---- Layer 4A writes these (OTHER MEMBER) ----
-    title_raw: str = ''
+    title_raw: str = ''                          # RAW OCR output (sin_raw)
+    title_mat: str = ''                          # MAT OCR output (sin_custom)
+    title_hybrid: str = ''                       # Approach 1: confidence-routed hybrid selection
     title: str = ''
+    title_images: dict = {}                      # Intermediate images: {'crop': '...', 'craft': '...', 'bin': '...', 'mat': '...'}
 
     # ---- Layer 4B writes these (Component 2 — correction) ----
     body_raw: str = ''                          # OCR output, uncorrected
     body: str = ''                              # after mT5 correction
+
+    # ---- Layer 4C writes this (optional LLM post-edit, default OFF) ----
+    # SEPARATE FIELD ON PURPOSE. `body` is the research artifact — the mT5
+    # output Chapter 4's CER is measured on — and nothing may overwrite it.
+    # What gets SPOKEN is decided by l5_assemble.payload.article_text().
+    body_polished: str = ''
+    title_polished: str = ''
+    polish_reason: str = ''
 
     # ---- diagnostics, any layer may set ----
     glyph_p75: Optional[float] = None       # capture metric, whole frame
@@ -72,13 +85,28 @@ class Article(BaseModel):
     verdict: Literal['ok', 'warn', 'reject', 'unknown'] = 'unknown'
     note: str = ''
 
+    # ---- live progress, set by app/pipeline.py, shown by the web UI ----
+    # waiting: L3 has not given this article its regions yet.
+    title_status: Literal['waiting', 'running', 'done', 'failed'] = 'waiting'
+    # ocr_done: body OCR finished, mT5 waits for the title to finish too.
+    body_status: Literal['waiting', 'running', 'ocr_done', 'correcting',
+                         'done', 'failed'] = 'waiting'
+    # waiting: title + body not both ready yet. skipped: POLISH_MODE is off.
+    polish_status: Literal['waiting', 'correcting', 'done', 'skipped',
+                           'failed'] = 'waiting'
+
 
 class Document(BaseModel):
     """Layer 5 output — the whole page, ready for RAG/TTS."""
     source_frames: List[str] = []
     articles: List[Article] = []
+
     timings: dict = {}
     warnings: List[str] = []
+    progress_log: List[str] = []
+    generations: List[dict] = []
+    tts_text: Optional[str] = None
+    all_articles: List[Article] = []
 
 
 class CaptureResponse(BaseModel):
@@ -88,7 +116,7 @@ class CaptureResponse(BaseModel):
     `title`/`body`/`warnings` fields were added because the phone speaks the
     TEXT with its own TTS rather than playing server-rendered audio:
 
-      * l6_speech.speak() returns None — that layer is Bumal's and is a stub,
+      * l8b_speech.speak() returns None — that layer is Bumal's and is a stub,
         so there is no audio to send. Waiting for it would block the demo.
       * The build record section 14 argues for this anyway: on-device TTS is
         lower latency, sends far less data, and speaks better Sinhala than an
@@ -107,3 +135,53 @@ class CaptureResponse(BaseModel):
     body: str = ''
     warnings: List[str] = []
     n_articles: int = 0
+
+
+# ==========================================================================
+# THE SECOND DOOR  —  `POST /ask`
+# ==========================================================================
+# ADDITIVE. Nothing above this line changes shape.
+#
+#     Question -> L0 voice   (Bumal)  -> route / intent / style
+#              -> L6 generator (Nadee) -> answer_si
+#              -> Answer -> phone speaks `speakable`
+#
+# THE RULE FOR THE PHONE: speak `speakable` whenever it is non-empty, whatever
+# `ok` says. `ok` records whether an answer was actually generated — it drives
+# logging, not speech. Silence is the one unacceptable outcome.
+
+
+class Question(BaseModel):
+    """What the phone posts to `/ask`.
+
+    `text` is Sinhala, already transcribed. Speech-to-text runs on the phone
+    (`android.speech.SpeechRecognizer`, si-LK): lower latency, no audio over
+    the network, one fewer server model. An `audio` field can be added later
+    without changing anything else here.
+    """
+    job: str                       # the id `/capture` returned
+    text: str = ''
+    user_id: Optional[str] = None  # defaults to config.VOICE_USER_ID
+
+
+class Answer(BaseModel):
+    """What `/ask` returns. The phone reads `speakable` and nothing else."""
+    ok: bool = True                       # was an answer actually generated
+    job: str = ''
+    route: str = ''                       # GENERATE | TTS_REPLAY | LOCAL
+    intent: str = ''
+    speakable: str = ''                   # <-- the phone speaks THIS
+    answer_si: str = ''                   # the generated answer alone
+    sources: List[dict] = []
+    english_translation: str = ''
+    style_class: str = ''
+    correction_applied: Optional[str] = None
+    prompt_modifier: str = ''
+    style_source: Optional[str] = None
+    user_profile: Optional[dict] = None
+    learned: bool = False
+    speed: float = 1.0                    # speech rate for mobile TTS (0.8 - 1.3)
+    speech_rate: float = 1.0              # alias for mobile TTS
+    warnings: List[str] = []
+    timings: dict = {}
+    error: Optional[str] = None

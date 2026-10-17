@@ -50,12 +50,23 @@ def main():
         config.set_root(a.root)
     print(f"root      {config.PROJECT_ROOT}")
 
+    # Accepts image files, globs, AND FOLDERS. The real server writes one
+    # folder per capture (work/<job>/f0.jpg ...), so `run_pipeline.py
+    # work\\<job>` is the natural thing to type and used to fail with
+    # "can't open/read file" - the multi-frame consensus needs all three
+    # frames anyway, so a folder is the right unit.
+    EXT = {".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff", ".webp"}
     paths = []
     for pat in a.images:
-        p = Path(pat)
-        paths.extend(sorted(p.parent.glob(p.name)) if any(c in pat for c in "*?")
-                     else [p])
-    paths = [p for p in paths if p.exists()]
+        q = Path(pat)
+        if any(c in pat for c in "*?"):
+            paths.extend(sorted(q.parent.glob(q.name)))
+        elif q.is_dir():
+            paths.extend(f for f in sorted(q.rglob("*"))
+                         if f.is_file() and f.suffix.lower() in EXT)
+        else:
+            paths.append(q)
+    paths = [p for p in paths if p.exists() and p.is_file()]
     if not paths:
         print("no input images matched")
         return 1

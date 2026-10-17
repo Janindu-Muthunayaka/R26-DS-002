@@ -1,0 +1,9 @@
+# svc-rag — Component 3. Its OWN venv; it shares nothing with the reader
+# except HTTP and two stdlib-only modules (core.llm, core.env).
+#
+# Three packages. No torch, no chromadb, no langchain, no
+# sentence-transformers: the store is a numpy array and the embeddings come
+# from the API. See store.py for the reasoning.
+fastapi
+uvicorn[standard]
+numpy

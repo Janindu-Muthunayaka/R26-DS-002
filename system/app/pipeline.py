@@ -6,16 +6,21 @@ Nothing here implements algorithm logic — that belongs in the layers.
 import time, cv2
 from pathlib import Path
 
-from core.config import (YOLO_WEIGHTS, MT5_PLAIN, MAX_ARTICLES, YOLO_CONF)
+from core.config import (YOLO_WEIGHTS, MT5_PLAIN, MAX_ARTICLES, YOLO_CONF,
+                         POLISH_MODE, LAYOUT_MIN_P75, SEGMENT_MODE)
 from core.imaging import imread_upright
 from layers.l3_segment.closeup import analyse as closeup_analyse
+from layers.l3_segment.closeup import headline_for_block as _headline_for_block
+from layers.l3_segment.closeup import text_lines as closeup_text_lines
+from layers.l3_segment import layout as _layout
 from core.schemas import Document, Article, Box, Region
 from layers.l2_select.select import select
 from layers.l3_segment.segment import Segmenter
 from layers.l4a_title import title as l4a
 from layers.l4b_body.body import BodyReader
+from layers.l4c_polish import polish as _polish
 from layers.l5_assemble.assemble import assemble
-from layers.l6_speech import speech as l6
+from layers.l8b_speech import speech as l6
 
 
 class Pipeline:
@@ -26,6 +31,12 @@ class Pipeline:
 
         self.dev = 'cuda' if torch.cuda.is_available() else 'cpu'
 
+        # Load the CRAFT title detector now, in the background, so the first
+        # scan does not pay for it. Its own lock makes an early request wait.
+        from threading import Thread
+        from layers.l4a_title.title_extractor import _get_text_detector
+        Thread(target=_get_text_detector, name='craft-preload', daemon=True).start()
+
         w = next((p for p in YOLO_WEIGHTS if p.exists()), None)
         if w is None:
             raise SystemExit('YOLO weights not found — check core/config.py')
@@ -35,8 +46,18 @@ class Pipeline:
         if use_layout:
             try:
                 from paddleocr import LayoutDetection
-                layout = LayoutDetection(model_name='PP-DocLayout-L',
-                                         device='cpu', enable_mkldnn=False)
+                import os, paddle
+                # Enforce CPU based on user request
+                dev_str = 'cpu'
+                model_dir = str(Path.home() / ".paddlex" / "official_models" / "PP-DocLayout_plus-L")
+                if os.path.exists(model_dir):
+                    layout = LayoutDetection(model_dir=model_dir,
+                                             threshold=0.20,
+                                             device=dev_str)
+                else:
+                    layout = LayoutDetection(model_name='PP-DocLayout-L',
+                                             threshold=0.20,
+                                             device=dev_str)
             except Exception as e:
                 if verbose:
                     print('PP-DocLayout unavailable, using fallback:', e)
@@ -53,72 +74,188 @@ class Pipeline:
                   f'(layout={"on" if layout else "fallback"})')
 
     def run(self, image_paths, conf=YOLO_CONF,
-            max_articles=MAX_ARTICLES, correct=True) -> Document:
-        t = {}
+            max_articles=MAX_ARTICLES, correct=True, doc=None) -> Document:
+        import concurrent.futures
+        from threading import Lock
 
+        if doc is None:
+            doc = Document()
+
+        t = {}
         t0 = time.time()
         frames = select(image_paths)
         t['select'] = round(time.time() - t0, 2)
+        doc.timings['select'] = t['select']
         if not frames:
-            return Document(warnings=['no usable frames'])
+            doc.warnings.append('no usable frames')
+            return doc
 
-        # imread_upright, not cv2.imread — EXIF orientation again
+        doc.source_frames = [f.path for f in frames]
         imgs = [imread_upright(f.path) for f in frames]
         imgs = [i for i in imgs if i is not None]
         ref = imgs[0]
 
-        # CLOSE-UP BRANCH. The article detector was trained on full and half
-        # pages; the capture app shoots far closer than that and the frame is
-        # one article. Running YOLO there does not fail safely — it returned a
-        # confident box over the NEIGHBOURING article. See l3_segment/closeup.
+        doc.progress_log.append("Started article detection...")
+        # 1. First Pass: Segmenter (Layout full image)
         t0 = time.time()
-        info = closeup_analyse(ref)
-        if info['is_closeup']:
-            x1, y1, x2, y2 = info['bbox']
-            box = Box(x1=x1, y1=y1, x2=x2, y2=y2)
-            regions = [Region(box=box, label='text')]
-            # The headline is LOCATED but not read: title OCR is Layer 4A and
-            # belongs to another team member. Emitting the region means their
-            # layer works the moment it is delivered, and means the headline is
-            # visibly pending rather than silently dropped.
-            if info.get('title_bbox'):
-                tx1, ty1, tx2, ty2 = info['title_bbox']
-                regions.insert(0, Region(
-                    box=Box(x1=tx1, y1=ty1, x2=tx2, y2=ty2), label='title'))
-            note = (f"close-up: {info['n_lines']} text lines, "
-                    f"crop {info['bbox_frac']:.0%} of frame")
-            if info.get('n_title_lines'):
-                note += (f"; {info['n_title_lines']} headline lines located "
-                         f"(title OCR is Layer 4A, not yet delivered)")
-            arts = [Article(index=0, box=box, regions=regions,
-                            glyph_p75=info['glyph_p75'], verdict='ok',
-                            note=note)]
-            t['segment'] = round(time.time() - t0, 2)
-            t['mode'] = 'closeup'
-        else:
-            arts = self.seg.run(ref, conf=conf, max_articles=max_articles)
-            t['segment'] = round(time.time() - t0, 2)
+        art_groups = self.seg.get_article_boxes(ref, max_articles=max_articles)
+        t['segment_pass1'] = round(time.time() - t0, 2)
+        doc.progress_log.append(f"Articles detected: {len(art_groups)}")
+        
+        # Populate initial empty articles into document
+        initial_arts = [ag[0] for ag in art_groups]
+        doc.articles = initial_arts
+        
+        single_article = (len(art_groups) <= 1)
+        doc.timings['mode'] = 'closeup' if single_article else 'layout'
 
+        job_dir = Path(image_paths[0]).parent
+        extra_warnings = []
+        extra_warnings_lock = Lock()
+
+        # Helper function to process a single article
+        def process_article(art, group):
+            nonlocal extra_warnings
+            try:
+                doc.progress_log.append(f"Cropping article {art.index + 1}...")
+                # 2. Second Pass: Extract Regions (PaddleOCR on crop)
+                t_sub0 = time.time()
+                art = self.seg.extract_regions(ref, art, group)
+
+                # Save crops for frontend
+                abox = art.box
+                ax1, ay1, ax2, ay2 = int(abox.x1), int(abox.y1), int(abox.x2), int(abox.y2)
+                art_crop = ref[max(0, ay1):ay2, max(0, ax1):ax2]
+                art_path = job_dir / f"art_{art.index}.png"
+                if art_crop.size > 0:
+                    cv2.imwrite(str(art_path), art_crop)
+                    art.crop_path = str(art_path.name)
+
+                for r_idx, r in enumerate(art.regions):
+                    rx1, ry1, rx2, ry2 = int(r.box.x1), int(r.box.y1), int(r.box.x2), int(r.box.y2)
+                    r_crop = ref[max(0, ry1):ry2, max(0, rx1):rx2]
+                    r_path = job_dir / f"art_{art.index}_{r.label}_{r_idx}.png"
+                    if r_crop.size > 0:
+                        cv2.imwrite(str(r_path), r_crop)
+                        r.crop_path = str(r_path.name)
+
+                # 3. Parallel Title OCR & Body OCR
+                # Title extraction (CRAFT + Tesseract) and Body extraction (Tesseract)
+                # operate on disjoint regions and are run concurrently.
+                # Each status flips the moment its own future finishes, so the
+                # UI shows a finished title while the body is still running.
+                art.title_status = 'running'
+                art.body_status = 'running'
+                with concurrent.futures.ThreadPoolExecutor(max_workers=2) as sub_exec:
+                    fut_title = sub_exec.submit(l4a.extract, ref, art, job_dir=job_dir)
+                    if single_article:
+                        fut_body = sub_exec.submit(self.body.read_page, imgs, art)
+                    else:
+                        fut_body = sub_exec.submit(self.body.read, imgs, art)
+                    fut_title.add_done_callback(lambda f: setattr(
+                        art, 'title_status', 'failed' if f.exception() else 'done'))
+                    fut_body.add_done_callback(lambda f: setattr(
+                        art, 'body_status', 'failed' if f.exception() else 'ocr_done'))
+
+                    art_title = fut_title.result()
+                    art_body = fut_body.result()
+
+                art.title = art_title.title
+                art.title_raw = art_title.title_raw
+                art.title_mat = art_title.title_mat
+                art.title_hybrid = art_title.title_hybrid
+                art.title_images = getattr(art_title, 'title_images', {})
+                if getattr(art_title, 'note', None):
+                    art.note = (art.note + '; ' if art.note else '') + art_title.note
+
+                art.body_raw = art_body.body_raw
+                art.glyph_p90 = art_body.glyph_p90 or art.glyph_p90
+                art.ocr_scale = art_body.ocr_scale
+
+                # 4. Correct OCR via mT5
+                if correct:
+                    art.body_status = 'correcting'
+                    art = self.body.correct(art)
+                else:
+                    art.body = art.body_raw
+                art.body_status = 'done'
+
+                doc.progress_log.append(f"Article {art.index + 1} scanned")
+                return art
+            except Exception as e:
+                import traceback
+                traceback.print_exc()
+                if art.title_status != 'done':
+                    art.title_status = 'failed'
+                if art.body_status != 'done':
+                    art.body_status = 'failed'
+                with extra_warnings_lock:
+                    extra_warnings.append(f"Article {art.index + 1} failed: {e}")
+                return art
+
+        # Process all articles in parallel
         t0 = time.time()
-        arts = [l4a.extract(ref, a) for a in arts]
-        t['title'] = round(time.time() - t0, 2)
+        final_arts = []
+        n_workers = min(4, max(1, len(art_groups)))
+        with concurrent.futures.ThreadPoolExecutor(max_workers=n_workers) as executor:
+            futures = []
+            for art, group in art_groups:
+                futures.append(executor.submit(process_article, art, group))
 
+            for future in concurrent.futures.as_completed(futures):
+                final_arts.append(future.result())
+
+        # Sort articles back to reading order (index)
+        final_arts.sort(key=lambda a: a.index)
+        t['processing_parallel'] = round(time.time() - t0, 2)
+
+        # Replace document articles with completed ones
+        doc.articles = final_arts
+
+        # 6. Polish (Batch). ONE LLM call for every article, sent once all of
+        # L4A + L4B are done (cheaper than a call per article). polish_status
+        # still moves waiting -> correcting -> done so the UI shows progress.
+        if POLISH_MODE.lower() != 'off':
+            t0_polish = time.time()
+            for art in final_arts:
+                art.polish_status = 'correcting'
+            doc.progress_log.append(f"Polishing {len(final_arts)} article(s) in one batch...")
+            try:
+                results = _polish.polish_articles(final_arts)
+            except Exception as e:
+                results = None
+                for art in final_arts:
+                    art.polish_status = 'failed'
+                    art.polish_reason = f'polish: failed ({e})'
+                extra_warnings.append(f'polish: batch failed ({e})')
+            if results is not None:
+                for art, res in zip(final_arts, results):
+                    art.polish_reason = res['reason']
+                    if res['applied']:
+                        art.body_polished = res['body']
+                        art.title_polished = res['title']
+                    if res['applied'] or 'REJECTED' in res['reason']:
+                        extra_warnings.append(f"Article {art.index + 1}: {res['reason']}")
+                    art.polish_status = 'done'
+                doc.progress_log.append("Polish batch done")
+            t['polish_batch'] = round(time.time() - t0_polish, 2)
+        else:
+            for art in final_arts:
+                art.polish_status = 'skipped'
+                art.polish_reason = art.polish_reason or 'polish: off'
+
+        # Final assembly
         t0 = time.time()
-        if info['is_closeup']:
-            arts = [self.body.read_page(imgs, a) for a in arts]
-        else:
-            arts = [self.body.read(imgs, a) for a in arts]
-        t['ocr'] = round(time.time() - t0, 2)
-
-        if correct:
-            t0 = time.time()
-            arts = [self.body.correct(a) for a in arts]
-            t['correct'] = round(time.time() - t0, 2)
-        else:
-            for a in arts:
-                a.body = a.body_raw
-
-        doc = assemble(arts, [f.path for f in frames], t)
-        doc.timings['total'] = round(sum(v for v in t.values()
-                                 if isinstance(v, (int, float))), 2)
-        return doc
+        new_doc = assemble(final_arts, [f.path for f in frames], t)
+        new_doc.warnings = list(extra_warnings) + list(new_doc.warnings)
+        new_doc.timings['total'] = round(sum(v for v in t.values() if isinstance(v, (int, float))), 2)
+        new_doc.progress_log = doc.progress_log
+        new_doc.generations = getattr(doc, 'generations', [])
+        
+        # 7. Layer 8B Speech / TTS data extraction for phone application
+        tts_text = l6.get_tts_text(new_doc)
+        if tts_text:
+            new_doc.tts_text = tts_text
+            new_doc.progress_log.append("TTS speech data prepared for phone app")
+        
+        return new_doc

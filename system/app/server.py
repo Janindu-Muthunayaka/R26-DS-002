@@ -12,7 +12,7 @@ have broken against this server. Nothing in either codebase said so.
 
 It now returns JSON carrying TEXT, and the phone speaks it with its own TTS:
 
-  * `l6_speech.speak()` returns None. That layer is Bumal's and is a stub, so
+  * `l8b_speech.speak()` returns None. That layer is Bumal's and is a stub, so
     there is no audio to send. Blocking the demo on it was not acceptable.
   * The Android build record section 14 argues for text anyway — on-device TTS
     is lower latency, sends far less data, and speaks better Sinhala than an
@@ -40,7 +40,9 @@ the error rather than failing silently, so the shape is the same either way.
 """
 import argparse
 import os
+import re
 import sys
+import time
 import uuid
 from pathlib import Path
 
@@ -57,10 +59,43 @@ from fastapi import FastAPI, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi.concurrency import run_in_threadpool
 
-from core.config import WORK_DIR, HOST, PORT
+from core.config import (WORK_DIR, HOST, PORT, SESSION_MAX, SESSION_TTL_S,
+                         VOICE_USER_ID)
+from core import quality
 from core.imaging import imdecode_upright
-from layers.l6_speech import speech as l6
+from core.schemas import Answer, Question, Document
+from pydantic import BaseModel
+
+
+class NewUser(BaseModel):
+    base_weights: dict                 # {Simple, Detailed, StepByStep}, % or fractions
+    description: str = ''
+    name: str = ''
+    tag: str = ''
+
+
+class ActiveUser(BaseModel):
+    user_id: str
+
+
+class Regenerate(BaseModel):
+    job: str
+    index: int                         # 1-based turn index
+    user_id: str
+from core.session import SessionStore
+from layers.l0_voice import voice as l0
+from layers.l5_assemble.payload import article_text
+from layers.l6_generator import generate as l6gen
+from layers.l8b_speech import speech as l6
+
+
+# Spoken to the user when `/ask` cannot proceed, or when no single article
+# could be identified. NOT written by a native speaker — have them checked.
+SI_NOTHING_READ = 'කිසිවක් තවම කියවා නොමැත. පුවත්පත දෙසට යොමු කරන්න.'
+SI_ASK_FAILED = 'පිළිතුර ලබාගැනීමට නොහැකි විය. කරුණාකර නැවත උත්සාහ කරන්න.'
+SI_MOVE_CLOSER = 'ලිපිය හඳුනාගත නොහැකි විය. ටිකක් ළං වී නැවත උත්සාහ කරන්න.'
 
 
 def _document_to_reply(doc, job):
@@ -75,19 +110,82 @@ def _document_to_reply(doc, job):
     for art in doc.articles:
         if art.title.strip():
             titles.append(art.title.strip())
-        text = (art.body or art.body_raw or '').strip()
+        text = article_text(art)          # one definition, see l5/payload.py
         if text:
             bodies.append(text)
+
+    body = '\n\n'.join(bodies)
+    warnings = list(doc.warnings)
+
+    # THE READABILITY GATE. A capture that goes wrong does not fail:
+    # Tesseract returns something, mT5 corrects that something, and the phone
+    # reads it aloud in the same confident voice it uses for real news. A
+    # sighted developer sees garbage on a screen; a blind user cannot.
+    #
+    # `fatal` separates SHATTERED from merely SHORT. A six-word news brief is
+    # a real thing a newspaper prints and is read as-is with a warning; text
+    # that is fragments, Latin, or undecodable bytes is replaced by a sentence
+    # asking for another photograph.
+    verdict, spoken, measures = quality.verdict_for_user(body)
+    if body and verdict == 'unreadable':
+        warnings.append('unreadable: ' + '; '.join(measures['reasons']))
+        body = spoken
+    elif body and verdict == 'poor':
+        warnings.append('poor quality: ' + '; '.join(measures['reasons']))
+        body = spoken + '\n\n' + body
+    elif body and verdict == 'short':
+        warnings.append('short: ' + '; '.join(measures['reasons']))
+
     return {
         'ok': bool(bodies),
         'job': job,
         'title': ' '.join(titles),
-        'body': '\n\n'.join(bodies),
-        'warnings': list(doc.warnings),
+        'body': body,
+        'warnings': warnings,
         'n_articles': len(doc.articles),
         'audio_url': None,
         'timings': doc.timings,
+        # Diagnostics. The phone ignores fields it does not read; the debug
+        # page shows them, and they are what a bug report needs.
+        'quality': measures,
     }
+
+
+def _user_meta(user_id):
+    """Snapshot of who answered: name, tag, description, base weights.
+    Stored on each answer so the compare view still shows the user as they
+    were, even if the registry changes later. Best effort, never raises."""
+    meta = {'user_id': user_id, 'name': user_id, 'tag': '', 'description': '',
+            'base_weights': None}
+    try:
+        reply, _ = l0.list_users()
+        for u in (reply or {}).get('users', []):
+            if u.get('user_id') == user_id:
+                meta.update({k: u.get(k) for k in ('name', 'tag', 'description', 'base_weights')})
+                break
+    except Exception:
+        pass
+    return meta
+
+
+def _speakable(res, voice):
+    """Natural TTS pause formatting, as /ask does."""
+    out = res['speakable']
+    if out:
+        try:
+            from layers.l7_personalization.delivery.planner import format_text_with_tts_pauses
+            out = format_text_with_tts_pauses(out, style=voice.get('style_class', 'Detailed'))
+        except Exception:
+            pass
+    return out
+
+
+# The fields of a turn that belong to ONE generated answer. A re-generation
+# replaces these; the question and its index stay.
+VERSION_FIELDS = ('user_id', 'user_meta', 'answer', 'answer_si', 'route', 'intent',
+                  'prompt_modifier', 'style_class', 'style_source', 'user_profile',
+                  'learned', 'english_translation', 'correction_applied',
+                  'warnings', 'timings')
 
 
 def build(pipeline, web_dir: Path):
@@ -97,6 +195,14 @@ def build(pipeline, web_dir: Path):
     WORK_DIR.mkdir(parents=True, exist_ok=True)
     app.mount('/work', StaticFiles(directory=str(WORK_DIR)), name='work')
 
+    # The system's only memory. See core/session.py for why it is in memory
+    # and why that is stated as a limitation rather than papered over.
+    sessions = SessionStore(ttl_s=SESSION_TTL_S, max_items=SESSION_MAX)
+    app.state.sessions = sessions
+    # The user picked in the web UI. Used whenever a request does not name
+    # one: the phone's /capture never does, and /ask may not.
+    app.state.active_user = VOICE_USER_ID
+
     def _page(name):
         p = web_dir / name
         return (p.read_text(encoding='utf-8') if p.exists()
@@ -104,6 +210,10 @@ def build(pipeline, web_dir: Path):
 
     @app.get('/', response_class=HTMLResponse)
     def index():
+        return _page('landing.html')
+
+    @app.get('/reader', response_class=HTMLResponse)
+    def reader():
         return _page('reader.html')
 
     @app.get('/debug', response_class=HTMLResponse)
@@ -114,6 +224,30 @@ def build(pipeline, web_dir: Path):
     def health():
         return {'ok': True, 'device': getattr(pipeline, 'dev', '?'),
                 'root': os.getenv('SINHALA_ROOT', '')}
+
+    # The phone stamps its own glyph estimate and the sharpness at the instant
+    # the shutter fired into every filename it uploads:
+    #
+    #     burst_20260826_142530_g27_s1603_1.jpg
+    #
+    # Until 26 Aug 2026 this server renamed every upload to f0/f1/f2.jpg and
+    # that pairing was destroyed on arrival - the only place the app's estimate
+    # could be compared against the metric it is supposed to predict was the
+    # phone's own storage, reachable only over USB.
+    #
+    # It matters because the estimate is NOT the same quantity as glyph_p75.
+    # Measured (Android_Capture_Guidance_Calibration.md sec 5): the app read
+    # 26-29 on captures that measured 29-34. Carrying the stamp through means
+    # every capture ever taken is a calibration point, for free.
+    #
+    # Kept as a SUFFIX so the f<i> prefix, and therefore frame order, is
+    # unchanged. Uploads without a stamp (the debug page, tests) are named
+    # exactly as before.
+    _STAMP = re.compile(r'_g(\d+)_s(\d+)_', re.I)
+
+    def _stamp_of(filename):
+        m = _STAMP.search(filename or '')
+        return f'_g{m.group(1)}_s{m.group(2)}' if m else ''
 
     @app.post('/capture')
     async def capture(frames: list[UploadFile] = File(...)):
@@ -130,7 +264,7 @@ def build(pipeline, web_dir: Path):
             im = imdecode_upright(data)
             if im is None:
                 continue
-            p = sess / f'f{i}.jpg'
+            p = sess / f'f{i}{_stamp_of(f.filename)}.jpg'
             cv2.imwrite(str(p), im)
             paths.append(str(p))
 
@@ -141,11 +275,96 @@ def build(pipeline, web_dir: Path):
                 status_code=400)
 
         try:
-            doc = pipeline.run(paths)
+            doc = Document()
+            sessions.put(job, doc)
+            doc = await run_in_threadpool(pipeline.run, paths, doc=doc)
             reply = _document_to_reply(doc, job)
+            
+            if reply['ok']:
+                # Styled for the active user, read-only: their dominant style
+                # and its prompt. Nothing is learned from a turn the user
+                # did not ask.
+                scan_uid = app.state.active_user
+                scan_style = l0.style_for_user(scan_uid)
+                first_scan_voice = {
+                    'route': 'GENERATE',
+                    'intent': 'FIRST_SCAN',
+                    'english_translation': 'Tell the number of articles detected,and tell the title of each article along with its article no.',
+                    'style_class': scan_style['style_class'],
+                    'prompt_modifier': scan_style['prompt_modifier'],
+                    'personalization_flags': {},
+                    'sinhala_input': 'හඳුනාගත් ලිපි සංඛ්‍යාව සහ එක් එක් ලිපියේ ශීර්ෂය එහි ලිපි අංකය සමඟ පවසන්න.',
+                    'source': 'component4'
+                }
+                
+                t0_l6 = time.time()
+                res = l6gen.answer(doc, first_scan_voice)
+                t_l6 = round(time.time() - t0_l6, 2)
+                
+                if res.get('speakable'):
+                    reply['body'] = res['speakable']
+                elif getattr(doc, 'tts_text', None):
+                    reply['body'] = doc.tts_text
+                else:
+                    tts_text = l6.get_tts_text(doc)
+                    if tts_text:
+                        reply['body'] = tts_text
+                    
+                if not hasattr(doc, 'generations') or doc.generations is None:
+                    doc.generations = []
+                    
+                turn_info = {
+                    'index': len(doc.generations) + 1,
+                    'query': first_scan_voice['sinhala_input'],
+                    'user_id': scan_uid,
+                    'user_meta': _user_meta(scan_uid),
+                    'style_source': scan_style['style_source'],
+                    'user_profile': scan_style['user_profile'],
+                    'learned': False,
+                    'answer': res['speakable'] or res['answer_si'],
+                    'answer_si': res['answer_si'],
+                    'route': res['route'],
+                    'intent': res['intent'],
+                    'prompt_modifier': first_scan_voice.get('prompt_modifier', ''),
+                    'style_class': first_scan_voice.get('style_class', ''),
+                    'english_translation': first_scan_voice.get('english_translation', ''),
+                    'correction_applied': None,
+                    'warnings': res['warnings'],
+                    'timings': {
+                        'voice': 0.0,
+                        'generate': t_l6,
+                        'total': t_l6
+                    }
+                }
+                doc.generations.append(turn_info)
+                
+                ans_dict = Answer(
+                    ok=res['ok'], job=job, route=res['route'], intent=res['intent'],
+                    speakable=res['speakable'], answer_si=res['answer_si'],
+                    sources=res['sources'],
+                    english_translation=first_scan_voice.get('english_translation', ''),
+                    style_class=first_scan_voice.get('style_class', ''),
+                    correction_applied=None,
+                    warnings=res['warnings'],
+                    timings={'voice': 0.0, 'generate': t_l6, 'total': t_l6},
+                ).model_dump()
+                
+                sessions.set_answer(job, ans_dict)
+                sessions.put(job, doc)
+            else:
+                # A frame where no single article could be identified is a
+                # DIFFERENT failure from one where nothing was legible, and
+                # the user's next action differs too. Speak the instruction
+                # rather than a generic "could not read", which sends them
+                # nowhere.
+                move = next((w for w in reply['warnings']
+                             if 'move a little closer' in w), None)
+                reply['error'] = move or \
+                    'nothing could be read from these frames'
+                if move:
+                    reply['body'] = SI_MOVE_CLOSER
+                sessions._items.pop(job, None)
             reply['audio_url'] = l6.speak(doc)      # None until Layer 6 lands
-            if not reply['ok']:
-                reply['error'] = 'nothing could be read from these frames'
             return reply
         except Exception as e:
             import traceback
@@ -154,6 +373,281 @@ def build(pipeline, web_dir: Path):
                 {'ok': False, 'job': job, 'error': f'{type(e).__name__}: {e}',
                  'title': '', 'body': '', 'warnings': [], 'n_articles': 0},
                 status_code=500)
+
+    @app.post('/ask')
+    def ask(q: Question):
+        """The follow-up question.
+
+        Never 500s because a component is down: an unreachable service becomes
+        `ok: false` plus a speakable sentence, because a stack trace cannot be
+        spoken and silence tells a blind user nothing.
+        """
+        t0 = time.time()
+        doc = sessions.get(q.job)
+        if doc is None:
+            # Miss and expiry are the same answer on purpose — the user's next
+            # action is identical either way: capture again.
+            return JSONResponse(Answer(
+                ok=False, job=q.job, route='LOCAL', intent='',
+                speakable=SI_NOTHING_READ,
+                error='no article in session for this job',
+            ).model_dump(), status_code=404)
+
+        try:
+            voice = l0.interpret(q.text, user_id=q.user_id or app.state.active_user)
+            voice.setdefault('sinhala_input', q.text)
+            voice.setdefault('session_id', q.job)
+            if hasattr(doc, 'generations') and doc.generations:
+                voice['chat_history'] = [
+                    {
+                        'question': g.get('query') or '',
+                        'standalone_question': g.get('standalone_query') or g.get('query') or '',
+                        'answer': g.get('answer') or g.get('answer_si') or ''
+                    }
+                    for g in doc.generations
+                ]
+            t_voice = round(time.time() - t0, 2)
+
+            t1 = time.time()
+            # The cursor is how far "next" has walked through the article. It
+            # lives in the session beside the Document so it expires with it.
+            res = l6gen.answer(doc, voice, cursor=sessions.cursor(q.job))
+            if res.get('cursor') is not None:
+                sessions.set_cursor(q.job, res['cursor'])
+            t_gen = round(time.time() - t1, 2)
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            return JSONResponse(Answer(
+                ok=False, job=q.job, speakable=SI_ASK_FAILED,
+                error=f'{type(e).__name__}: {e}',
+            ).model_dump(), status_code=500)
+
+        for w in res['warnings']:
+            print(f'[ask {q.job}] {w}')
+
+        # Natural TTS pause formatting (Option A) so mobile TTS naturally pauses on punctuation
+        speakable_out = res['speakable']
+        if speakable_out:
+            try:
+                from layers.l7_personalization.delivery.planner import format_text_with_tts_pauses
+                speakable_out = format_text_with_tts_pauses(
+                    speakable_out,
+                    style=voice.get('style_class', 'Detailed')
+                )
+            except Exception:
+                pass
+
+        ans_dict = Answer(
+            ok=res['ok'], job=q.job, route=res['route'], intent=res['intent'],
+            speakable=speakable_out, answer_si=res['answer_si'],
+            sources=res['sources'],
+            english_translation=voice.get('english_translation', ''),
+            style_class=voice.get('style_class', ''),
+            correction_applied=voice.get('correction_applied'),
+            prompt_modifier=voice.get('prompt_modifier', ''),
+            style_source=voice.get('style_source'),
+            user_profile=voice.get('user_profile'),
+            learned=voice.get('learned', False),
+            speed=float(voice.get('speed', 1.0)),
+            speech_rate=float(voice.get('speech_rate', voice.get('speed', 1.0))),
+            warnings=res['warnings'],
+            timings={'voice': t_voice, 'generate': t_gen,
+                     'total': round(time.time() - t0, 2)},
+        ).model_dump()
+        
+        if not hasattr(doc, 'generations') or doc.generations is None:
+            doc.generations = []
+        uid = q.user_id or app.state.active_user
+        turn_info = {
+            'index': len(doc.generations) + 1,
+            'query': q.text,
+            'user_id': uid,
+            'user_meta': _user_meta(uid),
+            'answer': speakable_out or res['answer_si'],
+            'answer_si': res['answer_si'],
+            'route': res['route'],
+            'intent': res['intent'],
+            'prompt_modifier': voice.get('prompt_modifier', ''),
+            'style_class': voice.get('style_class', ''),
+            'style_source': voice.get('style_source'),
+            'user_profile': voice.get('user_profile'),
+            'learned': voice.get('learned', False),
+            'english_translation': voice.get('english_translation', ''),
+            'correction_applied': voice.get('correction_applied'),
+            'warnings': res['warnings'],
+            'timings': {
+                'voice': t_voice,
+                'generate': t_gen,
+                'total': round(time.time() - t0, 2)
+            }
+        }
+        doc.generations.append(turn_info)
+        
+        sessions.set_answer(q.job, ans_dict)
+        sessions.put(q.job, doc)
+        return ans_dict
+
+    # -- Users (Component 4 registry, proxied) ------------------------------
+    def _proxy(reply_reason):
+        reply, reason = reply_reason
+        if reply is None:
+            code = (403 if 'HTTP 403' in reason else 404 if 'HTTP 404' in reason
+                    else 400 if 'HTTP 400' in reason else 503)
+            return JSONResponse({'ok': False, 'error': reason}, status_code=code)
+        return {'ok': True, **reply}
+
+    @app.get('/users')
+    def users_list():
+        return _proxy(l0.list_users())
+
+    @app.post('/users')
+    def users_add(u: NewUser):
+        return _proxy(l0.add_user(u.base_weights, u.description, u.name, u.tag))
+
+    @app.delete('/users/{user_id}')
+    def users_delete(user_id: str):
+        return _proxy(l0.delete_user(user_id))
+
+    @app.post('/users/{user_id}/reset')
+    def users_reset(user_id: str):
+        return _proxy(l0.reset_user(user_id))
+
+    @app.get('/active-user')
+    def active_user_get():
+        return {'ok': True, 'user_id': app.state.active_user}
+
+    @app.post('/active-user')
+    def active_user_set(a: ActiveUser):
+        app.state.active_user = a.user_id or VOICE_USER_ID
+        return {'ok': True, 'user_id': app.state.active_user}
+
+    @app.post('/regenerate')
+    def regenerate(r: Regenerate):
+        """Re-answer ONE earlier question as another user.
+
+        Only that turn changes. Its previous answer is kept in
+        `turn['versions']` (the compare view reads it); the new one becomes the
+        turn's visible answer. Personalisation runs as a dry run, so the chosen
+        user's profile learns nothing from a replay, and the RAG history is
+        neither read past this turn nor appended to.
+        """
+        doc = sessions.get(r.job)
+        if doc is None:
+            return JSONResponse({'ok': False, 'error': 'not in session'}, status_code=404)
+        gens = getattr(doc, 'generations', None) or []
+        if not (1 <= r.index <= len(gens)):
+            return JSONResponse({'ok': False, 'error': f'no turn {r.index}'}, status_code=404)
+        turn = gens[r.index - 1]
+
+        t0 = time.time()
+        try:
+            voice = l0.interpret(turn.get('query') or '', user_id=r.user_id, dry_run=True)
+            voice.setdefault('sinhala_input', turn.get('query') or '')
+            voice['session_id'] = r.job
+            voice['chat_history'] = [
+                {'question': g.get('query') or '',
+                 'standalone_question': g.get('standalone_query') or g.get('query') or '',
+                 'answer': g.get('answer') or g.get('answer_si') or ''}
+                for g in gens[:r.index - 1]
+            ]
+            voice['history_override'] = True
+            voice['no_history_write'] = True
+            t_voice = round(time.time() - t0, 2)
+            t1 = time.time()
+            res = l6gen.answer(doc, voice, cursor=sessions.cursor(r.job))
+            t_gen = round(time.time() - t1, 2)
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            return JSONResponse({'ok': False, 'error': f'{type(e).__name__}: {e}'},
+                                status_code=500)
+
+        speakable_out = _speakable(res, voice)
+        new_version = {
+            'user_id': r.user_id,
+            'user_meta': _user_meta(r.user_id),
+            'answer': speakable_out or res['answer_si'],
+            'answer_si': res['answer_si'],
+            'route': res['route'],
+            'intent': res['intent'],
+            'prompt_modifier': voice.get('prompt_modifier', ''),
+            'style_class': voice.get('style_class', ''),
+            'style_source': voice.get('style_source'),
+            'user_profile': voice.get('user_profile'),
+            'learned': False,
+            'english_translation': voice.get('english_translation', ''),
+            'correction_applied': None,
+            'warnings': res['warnings'],
+            'timings': {'voice': t_voice, 'generate': t_gen,
+                        'total': round(time.time() - t0, 2)},
+            'regenerated': True,
+        }
+        versions = turn.setdefault('versions', [])
+        if not versions:                         # keep the original answer
+            versions.append({k: turn.get(k) for k in VERSION_FIELDS})
+        versions.append(new_version)
+        turn['active_version'] = len(versions) - 1
+        turn.update({k: new_version.get(k) for k in VERSION_FIELDS})
+        sessions.put(r.job, doc)
+        return {'ok': True, 'job': r.job, 'turn': turn}
+
+    @app.get('/session/{job}')
+    def session(job: str):
+        """Diagnostics. Confirms an article is held without re-running OCR."""
+        doc = sessions.get(job)
+        if doc is None:
+            return JSONResponse({'ok': False, 'job': job,
+                                 'error': 'not in session'}, status_code=404)
+        return {'ok': True, 'job': job,
+                'age_s': round(sessions.age_of(job) or 0.0, 1),
+                'n_articles': len(doc.articles),
+                'chars': sum(len(article_text(a)) for a in doc.articles),
+                'warnings': doc.warnings,
+                'live_jobs': len(sessions)}
+
+    @app.get('/document/{job}')
+    def document(job: str):
+        """The FULL Document for a job — every article, `body_raw` included.
+
+        Diagnostics, and the reason the debug page works again. `/capture`
+        returns the flat reply the phone reads and has done since 21 Aug 2026;
+        web/debug.html was still reading a `document` key that no longer
+        existed, so it had been showing "no articles" for every upload since.
+
+        Fixed here rather than by putting the Document back into `/capture`:
+        the phone does not need it, and a few extra KB on every capture over
+        WiFi is a cost paid by the one client that has no use for it.
+        """
+        doc = sessions.get(job)
+        if doc is None:
+            return JSONResponse({'ok': False, 'job': job,
+                                 'error': 'not in session'}, status_code=404)
+        return {'ok': True, 'job': job, 'document': doc.model_dump()}
+
+    @app.get('/latest')
+    def latest():
+        jobs = sessions.jobs()
+        if not jobs:
+            return {'ok': False, 'error': 'no active jobs'}
+        job = jobs[0]
+        doc = sessions.get(job)
+        
+        reply = {
+            'ok': True,
+            'job': job,
+            'document': doc.model_dump()
+        }
+        
+        ans = sessions.get_answer(job)
+        if ans:
+            reply['document']['last_answer'] = ans
+            
+        return reply
+
+    @app.get('/profile/{user_id}')
+    def get_profile(user_id: str):
+        return l0.get_profile(user_id)
 
     @app.get('/audio/{job}')
     def audio(job: str):
@@ -199,7 +693,7 @@ def main():
 
     import uvicorn
     kw = {'ssl_certfile': a.cert, 'ssl_keyfile': a.key} if a.cert and a.key else {}
-    uvicorn.run(app, host=a.host, port=a.port, **kw)
+    uvicorn.run(app, host=a.host, port=a.port, access_log=False, **kw)
 
 
 if __name__ == '__main__':

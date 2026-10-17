@@ -31,18 +31,8 @@ client — this exists so the pipeline can be exercised without it.</p>
   <p>Pick one or more JPEGs — a burst from
      <code>backend/inbox/</code>, or a corpus page.</p>
   <input type="file" id="files" accept="image/*" multiple>
-  <p><button id="go" disabled>Read them</button>
+  <p><button id="go" disabled>Run</button>
      <span id="status" class="meta"></span></p>
-</fieldset>
-
-<fieldset>
-  <legend>Result</legend>
-  <div id="warnings"></div>
-  <h3 id="title-h" hidden>Title</h3>
-  <div id="title" class="sinhala"></div>
-  <h3 id="body-h" hidden>Body</h3>
-  <div id="out" class="sinhala"></div>
-  <p id="meta" class="meta"></p>
 </fieldset>
 
 <script>
@@ -54,54 +44,53 @@ $('go').onclick = async () => {
   if (!files.length) return;
   $('go').disabled = true;
   $('status').textContent = `uploading ${files.length} file(s)…`;
-  $('warnings').innerHTML = '';
-  $('title').textContent = '';
-  $('out').textContent = '';
-  $('meta').textContent = '';
-  $('title-h').hidden = $('body-h').hidden = true;
 
   const fd = new FormData();
   // field name must be "frames" — FastAPI receives a list under one name,
   // and the Android client posts under the same name.
   for (const f of files) fd.append('frames', f, f.name);
 
-  const t0 = performance.now();
-  let r, j;
   try {
-    r = await fetch('/capture', { method: 'POST', body: fd });
-    j = await r.json();
-  } catch (e) {
-    $('status').innerHTML = `<span class="err">request failed: ${e}</span>`;
-    $('go').disabled = false;
-    return;
-  }
-  const ms = Math.round(performance.now() - t0);
-  $('status').textContent = `${r.status} in ${ms} ms`;
+    // 1. Get current job to prevent landing page from reverting to it
+    const latestRes = await fetch('/latest');
+    let currentJobId = null;
+    if (latestRes.ok) {
+        const latestData = await latestRes.json();
+        if (latestData.ok) currentJobId = latestData.job;
+    }
 
-  for (const w of (j.warnings || [])) {
-    const d = document.createElement('div');
-    d.className = 'warn'; d.textContent = w;
-    $('warnings').appendChild(d);
+    // 2. Load landing page HTML
+    let landingRes = await fetch('/');
+    let landingHtml = await landingRes.text();
+    
+    // Inject the current job so it doesn't overwrite our loading state
+    if (currentJobId) {
+        landingHtml = landingHtml.replace('let lastJob = null;', `let lastJob = '${currentJobId}';`);
+    }
+
+    // 3. Transition to landing page
+    document.open();
+    document.write(landingHtml);
+    document.close();
+    history.pushState(null, '', '/');
+
+    // 4. Show loading state in L2 (segment)
+    setTimeout(() => {
+        if (typeof window.updateData === 'function') {
+            const fileUrl = URL.createObjectURL(files[0]);
+            window.updateData('select', `<div style="text-align:center; padding:10px;"><strong>Uploaded</strong><br>✓<br><img src="${fileUrl}" onclick="openLightbox('${fileUrl}')" style="max-height: 100px; max-width: 100%; margin-top: 5px; border-radius: 4px; cursor: pointer;"></div>`, true);
+            window.updateData('segment', '<div style="text-align:center; padding:10px;"><strong>Processing...</strong><br><span style="font-size:24px;">⏳</span></div>', true);
+        }
+    }, 100);
+
+    // 5. Actually perform the capture in the background
+    await fetch('/capture', { method: 'POST', body: fd });
+    // Once this fetch completes, the pipeline is done.
+    // The polling in the newly written landingHtml will pick up the new job automatically!
+
+  } catch (e) {
+    console.error(e);
+    alert('Upload failed: ' + e);
   }
-  if (j.error) {
-    const d = document.createElement('div');
-    d.className = 'warn err'; d.textContent = j.error;
-    $('warnings').appendChild(d);
-  }
-  if (j.title) { $('title-h').hidden = false; $('title').textContent = j.title; }
-  else {
-    const d = document.createElement('div');
-    d.className = 'warn';
-    d.textContent = 'No title — Layer 4A (title OCR) is another team ' +
-                    "member's layer and is still a stub. The headline is " +
-                    'located but not read.';
-    $('warnings').appendChild(d);
-  }
-  if (j.body) { $('body-h').hidden = false; $('out').textContent = j.body; }
-  $('meta').textContent = JSON.stringify(
-    { job: j.job, ok: j.ok, n_articles: j.n_articles,
-      body_chars: (j.body || '').length, audio_url: j.audio_url,
-      timings: j.timings }, null, 1);
-  $('go').disabled = false;
 };
 </script>

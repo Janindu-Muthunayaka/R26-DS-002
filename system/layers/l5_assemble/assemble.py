@@ -8,6 +8,7 @@ from core.schemas import Article, Document
 
 
 def assemble(articles, source_frames, timings=None) -> Document:
+    from layers.l5_assemble.payload import article_text, article_title
     warnings = []
     keep = []
     for a in sorted(articles, key=lambda x: x.index):
@@ -16,10 +17,19 @@ def assemble(articles, source_frames, timings=None) -> Document:
             continue
         if a.verdict == 'warn' and a.note:
             warnings.append(f'Article {a.index + 1}: {a.note}')
-        if not (a.title.strip() or a.body.strip()):
+        
+        body = article_text(a).strip()
+        title = article_title(a).strip()
+        
+        if not body or body == "[DISCARD]" or title == "[DISCARD]":
+            reason = getattr(a, 'polish_reason', '') or getattr(a, 'note', '') or 'discarded'
+            warnings.append(f'Article {a.index + 1} excluded: {reason}')
             continue
+            
         keep.append(a)
     for i, a in enumerate(keep):
         a.index = i
-    return Document(source_frames=source_frames, articles=keep,
-                    timings=timings or {}, warnings=warnings)
+    doc = Document(source_frames=source_frames, articles=keep,
+                   timings=timings or {}, warnings=warnings)
+    doc.all_articles = articles
+    return doc

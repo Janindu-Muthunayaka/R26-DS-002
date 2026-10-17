@@ -38,7 +38,9 @@ WHAT IS MEASURED AND WHAT IS NOT
 import cv2
 import numpy as np
 
-from core.config import CLOSEUP_MIN_P75, GLYPH_H_MIN, GLYPH_H_MAX
+from core.config import (CLOSEUP_MIN_P75, GLYPH_H_MIN, GLYPH_H_MAX,
+                         TITLE_MIN_LINE_RATIO, TITLE_MAX_GAP_LINES,
+                         TITLE_ROW_JOIN_LINES, TITLE_MIN_X_OVERLAP)
 from core.imaging import glyph_p75
 
 
@@ -89,7 +91,116 @@ def text_bbox(lines, W, H, pad=20):
             min(H, max(r[1] + r[3] for r in lines) + pad))
 
 
-def title_lines(img, lines, med_h, min_ratio=1.6):
+def _merge_rows(bands, join_gap):
+    """Merge headline bands that belong to the same LINE of a headline.
+
+    A headline line is not one contour: the words are far enough apart that
+    the morphological close does not join them, and a two-column headline
+    produces two side-by-side boxes at the same height. Sorting by y alone
+    gives a sequence with NEGATIVE gaps — measured -227, -260, -329 on real
+    captures — which no gap rule can read.
+    """
+    if not bands:
+        return []
+    bands = sorted(bands, key=lambda b: b[0])
+    rows = [list(bands[0])]
+    for y0, y1, x0, x1 in bands[1:]:
+        if y0 - rows[-1][1] <= join_gap:
+            rows[-1][1] = max(rows[-1][1], y1)
+            rows[-1][2] = min(rows[-1][2], x0)
+            rows[-1][3] = max(rows[-1][3], x1)
+        else:
+            rows.append([y0, y1, x0, x1])
+    return [tuple(r) for r in rows]
+
+
+def headline_bands(img, med_line_h, min_ratio=TITLE_MIN_LINE_RATIO):
+    """Every headline-sized band in the frame, at any height.
+
+    THE THRESHOLD IS MEASURED, 27 Aug 2026, on the nine captures in
+    F:/App/backend/inbox (tools/measure_headline.py reproduces it):
+
+        tallest BODY line      1.28x - 1.70x of the median line height
+        tallest HEADLINE band  5.91x - 8.71x
+
+    Nothing lands between 1.70 and 5.91. The old value here was **1.6**, which
+    sits INSIDE the body range — so the tallest body line of every capture was
+    being reported as a headline. 3.0 is the middle of the empty gap.
+
+    Unlike the previous version this does NOT restrict the search to above the
+    body: the next article's headline below the block is exactly what article
+    isolation has to see.
+    """
+    if med_line_h <= 0:
+        return []
+    g = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY) if img.ndim == 3 else img
+    H, W = g.shape
+    bw = cv2.threshold(g, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)[1]
+    ker = cv2.getStructuringElement(cv2.MORPH_RECT, (45, 5))
+    cs, _ = cv2.findContours(cv2.morphologyEx(bw, cv2.MORPH_CLOSE, ker),
+                             cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    out = []
+    for x, y, w, h in (cv2.boundingRect(c) for c in cs):
+        if (h >= med_line_h * min_ratio
+                and h < H * 0.25              # not a page-tall blob
+                and w > W * 0.15):            # a headline spans some width
+            out.append((y, y + h, x, x + w))
+    return sorted(out)
+
+
+def headline_for_block(img, block, block_x, med_line_h):
+    """The headline belonging to THIS article, or None.
+
+    Three tests, all of which must pass. Each rejects something seen on a real
+    capture:
+
+      gap       the headline sits directly on its body. Measured 36-97 px,
+                against 186-225 px separating the masthead and the section
+                strip from the headline below them.
+      x-overlap the headline sits above its OWN columns. A page number or a
+                masthead logo sits above a gutter or off to one side.
+      one group the rows immediately above the body must form ONE contiguous
+                group.
+
+    REFUSING IS THE POINT. burst_20260820_105901_g26_s3995_2.jpg has the
+    masthead, a page number and the section strip "ප්‍රාදේශීය පුවත්" stacked
+    above the real headline; reading those to a listener as the headline would
+    be worse than saying nothing.
+    """
+    if med_line_h <= 0 or not block:
+        return None
+    by0 = block[0]
+    bands = [b for b in headline_bands(img, med_line_h) if b[1] <= by0]
+    if not bands:
+        return None
+
+    rows = _merge_rows(bands, join_gap=med_line_h * TITLE_ROW_JOIN_LINES)
+    if not rows:
+        return None
+
+    max_gap = med_line_h * TITLE_MAX_GAP_LINES
+    if by0 - rows[-1][1] > max_gap:
+        return None                       # nothing sits on this body
+
+    group = [rows[-1]]
+    for r in reversed(rows[:-1]):
+        if group[-1][0] - r[1] <= max_gap:
+            group.append(r)
+        else:
+            break
+
+    y0 = min(r[0] for r in group); y1 = max(r[1] for r in group)
+    x0 = min(r[2] for r in group); x1 = max(r[3] for r in group)
+
+    bx0, bx1 = block_x
+    overlap = max(0, min(x1, bx1) - max(x0, bx0))
+    if overlap < (x1 - x0) * TITLE_MIN_X_OVERLAP:
+        return None                       # above the gutter, not the article
+
+    return (x0, y0, x1, y1)
+
+
+def title_lines(img, lines, med_h, min_ratio=TITLE_MIN_LINE_RATIO):
     """Lines much taller than the body — the headline.
 
     GEOMETRY ONLY. This finds WHERE the title is and stops there. Title OCR is

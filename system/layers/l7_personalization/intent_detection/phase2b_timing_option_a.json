@@ -1,0 +1,420 @@
+{
+  "backend": "llamacpp",
+  "summary": {
+    "n": 45,
+    "mean_translation_sec": 1.126,
+    "mean_llm_sec": 0.536,
+    "mean_total_sec": 1.662,
+    "median_translation_sec": 1.012,
+    "median_llm_sec": 0.507,
+    "max_total_sec": 4.67,
+    "intent_fusion": 39
+  },
+  "rows": [
+    {
+      "id": "sam_1",
+      "english": "Summarize this",
+      "intent": "SUMMARIZE",
+      "expected_intent": "SUMMARIZE",
+      "intent_ok_fusion": true,
+      "translation_time_sec": 0.729,
+      "llm_time_sec": 0.721
+    },
+    {
+      "id": "sam_2",
+      "english": "Can you explain this a little more?",
+      "intent": "EXPLAIN",
+      "expected_intent": "EXPLAIN",
+      "intent_ok_fusion": true,
+      "translation_time_sec": 1.09,
+      "llm_time_sec": 0.864
+    },
+    {
+      "id": "sam_3",
+      "english": "Please explain this very simply and briefly as I understand it.",
+      "intent": "EXPLAIN",
+      "expected_intent": "EXPLAIN",
+      "intent_ok_fusion": true,
+      "translation_time_sec": 1.928,
+      "llm_time_sec": 0.745
+    },
+    {
+      "id": "sam_4",
+      "english": "You can you tell me what I have here?",
+      "intent": "IDENTIFY_CONTENT",
+      "expected_intent": "IDENTIFY_CONTENT",
+      "intent_ok_fusion": true,
+      "translation_time_sec": 1.55,
+      "llm_time_sec": 0.625
+    },
+    {
+      "id": "sam_5",
+      "english": "I want to get this down without any details .",
+      "intent": "SIMPLIFY",
+      "expected_intent": "SIMPLIFY",
+      "intent_ok_fusion": true,
+      "translation_time_sec": 1.465,
+      "llm_time_sec": 0.58
+    },
+    {
+      "id": "sam_6",
+      "english": "It's just not clear.",
+      "intent": "EXPLAIN",
+      "expected_intent": "REPHRASE",
+      "intent_ok_fusion": false,
+      "translation_time_sec": 1.012,
+      "llm_time_sec": 0.485
+    },
+    {
+      "id": "sam_7",
+      "english": "Actually, I don't have time to listen to this whole document, so can I just pick out the most important points in it and read it clearly?",
+      "intent": "SUMMARIZE",
+      "expected_intent": "SUMMARIZE",
+      "intent_ok_fusion": true,
+      "translation_time_sec": 3.905,
+      "llm_time_sec": 0.765
+    },
+    {
+      "id": "sam_8",
+      "english": "Give a brief summary of what is on this page",
+      "intent": "SUMMARIZE",
+      "expected_intent": "SUMMARIZE",
+      "intent_ok_fusion": true,
+      "translation_time_sec": 1.496,
+      "llm_time_sec": 0.581
+    },
+    {
+      "id": "sam_9",
+      "english": "I just want the main ideas.",
+      "intent": "SUMMARIZE",
+      "expected_intent": "SUMMARIZE",
+      "intent_ok_fusion": true,
+      "translation_time_sec": 1.186,
+      "llm_time_sec": 0.531
+    },
+    {
+      "id": "sam_10",
+      "english": "All is not enough.",
+      "intent": "STOP",
+      "expected_intent": "SUMMARIZE",
+      "intent_ok_fusion": false,
+      "translation_time_sec": 1.012,
+      "llm_time_sec": 0.498
+    },
+    {
+      "id": "sam_12",
+      "english": "What does this word mean?",
+      "intent": "EXPLAIN",
+      "expected_intent": "EXPLAIN",
+      "intent_ok_fusion": true,
+      "translation_time_sec": 0.906,
+      "llm_time_sec": 0.673
+    },
+    {
+      "id": "sam_13",
+      "english": "I don't understand what you said. Let it out.",
+      "intent": "EXPLAIN",
+      "expected_intent": "EXPLAIN",
+      "intent_ok_fusion": true,
+      "translation_time_sec": 1.931,
+      "llm_time_sec": 0.656
+    },
+    {
+      "id": "sam_14",
+      "english": "Explain the idea of these economic words",
+      "intent": "EXPLAIN",
+      "expected_intent": "EXPLAIN",
+      "intent_ok_fusion": true,
+      "translation_time_sec": 1.113,
+      "llm_time_sec": 0.548
+    },
+    {
+      "id": "sam_15",
+      "english": "I've asked this twice but it still doesn't come to mind. Can you explain the idea to me?",
+      "intent": "EXPLAIN",
+      "expected_intent": "EXPLAIN",
+      "intent_ok_fusion": true,
+      "translation_time_sec": 2.253,
+      "llm_time_sec": 0.563
+    },
+    {
+      "id": "sam_16",
+      "english": "Easy to say .",
+      "intent": "SIMPLIFY",
+      "expected_intent": "SIMPLIFY",
+      "intent_ok_fusion": true,
+      "translation_time_sec": 0.542,
+      "llm_time_sec": 0.515
+    },
+    {
+      "id": "sam_17",
+      "english": "Hmm these are big big words without saying it normally",
+      "intent": "SIMPLIFY",
+      "expected_intent": "SIMPLIFY",
+      "intent_ok_fusion": true,
+      "translation_time_sec": 1.137,
+      "llm_time_sec": 0.51
+    },
+    {
+      "id": "sam_18",
+      "english": "I don't understand these technical words to say in simple language.",
+      "intent": "EXPLAIN",
+      "expected_intent": "SIMPLIFY",
+      "intent_ok_fusion": false,
+      "translation_time_sec": 1.407,
+      "llm_time_sec": 0.667
+    },
+    {
+      "id": "sam_21",
+      "english": "In a different way",
+      "intent": "REPHRASE",
+      "expected_intent": "REPHRASE",
+      "intent_ok_fusion": true,
+      "translation_time_sec": 0.633,
+      "llm_time_sec": 0.6
+    },
+    {
+      "id": "sam_23",
+      "english": "Don't tell me it's not like that.",
+      "intent": "REPHRASE",
+      "expected_intent": "REPHRASE",
+      "intent_ok_fusion": true,
+      "translation_time_sec": 1.173,
+      "llm_time_sec": 0.565
+    },
+    {
+      "id": "sam_24",
+      "english": "Change the sentence a little and say it again .",
+      "intent": "EXPLAIN",
+      "expected_intent": "REPHRASE",
+      "intent_ok_fusion": false,
+      "translation_time_sec": 0.948,
+      "llm_time_sec": 0.472
+    },
+    {
+      "id": "sam_26",
+      "english": "What is this?",
+      "intent": "IDENTIFY_CONTENT",
+      "expected_intent": "IDENTIFY_CONTENT",
+      "intent_ok_fusion": true,
+      "translation_time_sec": 0.51,
+      "llm_time_sec": 0.507
+    },
+    {
+      "id": "sam_27",
+      "english": "What's on this page about?",
+      "intent": "IDENTIFY_CONTENT",
+      "expected_intent": "IDENTIFY_CONTENT",
+      "intent_ok_fusion": true,
+      "translation_time_sec": 0.784,
+      "llm_time_sec": 0.461
+    },
+    {
+      "id": "sam_28",
+      "english": "What kind of document is this ?",
+      "intent": "IDENTIFY_CONTENT",
+      "expected_intent": "IDENTIFY_CONTENT",
+      "intent_ok_fusion": true,
+      "translation_time_sec": 0.707,
+      "llm_time_sec": 0.496
+    },
+    {
+      "id": "sam_29",
+      "english": "What is written in this paper in my hand",
+      "intent": "IDENTIFY_CONTENT",
+      "expected_intent": "IDENTIFY_CONTENT",
+      "intent_ok_fusion": true,
+      "translation_time_sec": 0.874,
+      "llm_time_sec": 0.504
+    },
+    {
+      "id": "sam_30",
+      "english": "I'm gonna hold the camera now and tell me what you're talking about in this section.",
+      "intent": "IDENTIFY_CONTENT",
+      "expected_intent": "IDENTIFY_CONTENT",
+      "intent_ok_fusion": true,
+      "translation_time_sec": 1.717,
+      "llm_time_sec": 0.546
+    },
+    {
+      "id": "sam_31",
+      "english": "I'm going back.",
+      "intent": "REPEAT",
+      "expected_intent": "REPEAT",
+      "intent_ok_fusion": true,
+      "translation_time_sec": 0.781,
+      "llm_time_sec": 0.41
+    },
+    {
+      "id": "sam_32",
+      "english": "I'll tell you again.",
+      "intent": "REPEAT",
+      "expected_intent": "REPEAT",
+      "intent_ok_fusion": true,
+      "translation_time_sec": 0.754,
+      "llm_time_sec": 0.462
+    },
+    {
+      "id": "sam_33",
+      "english": "Previously on \" Tell Me Another Way \"",
+      "intent": "REPEAT",
+      "expected_intent": "REPEAT",
+      "intent_ok_fusion": true,
+      "translation_time_sec": 0.923,
+      "llm_time_sec": 0.469
+    },
+    {
+      "id": "sam_34",
+      "english": "I didn't hear it because of the noise.",
+      "intent": "REPEAT",
+      "expected_intent": "REPEAT",
+      "intent_ok_fusion": true,
+      "translation_time_sec": 1.025,
+      "llm_time_sec": 0.503
+    },
+    {
+      "id": "sam_35",
+      "english": "Sorry my phone rang so I missed the last thing you said.",
+      "intent": "REPEAT",
+      "expected_intent": "REPEAT",
+      "intent_ok_fusion": true,
+      "translation_time_sec": 1.191,
+      "llm_time_sec": 0.489
+    },
+    {
+      "id": "sam_36",
+      "english": "That's enough.",
+      "intent": "STOP",
+      "expected_intent": "STOP",
+      "intent_ok_fusion": true,
+      "translation_time_sec": 0.625,
+      "llm_time_sec": 0.386
+    },
+    {
+      "id": "sam_37",
+      "english": "Okay, okay, stop it.",
+      "intent": "STOP",
+      "expected_intent": "STOP",
+      "intent_ok_fusion": true,
+      "translation_time_sec": 0.759,
+      "llm_time_sec": 0.399
+    },
+    {
+      "id": "sam_38",
+      "english": "Don't read it now.",
+      "intent": "STOP",
+      "expected_intent": "STOP",
+      "intent_ok_fusion": true,
+      "translation_time_sec": 0.707,
+      "llm_time_sec": 0.413
+    },
+    {
+      "id": "sam_39",
+      "english": "I got a call coming in. Stop for a while.",
+      "intent": "STOP",
+      "expected_intent": "STOP",
+      "intent_ok_fusion": true,
+      "translation_time_sec": 1.129,
+      "llm_time_sec": 0.45
+    },
+    {
+      "id": "sam_40",
+      "english": "I've had enough today. I've heard the rest tomorrow. I'll ask you.",
+      "intent": "STOP",
+      "expected_intent": "STOP",
+      "intent_ok_fusion": true,
+      "translation_time_sec": 1.762,
+      "llm_time_sec": 0.488
+    },
+    {
+      "id": "sam_41",
+      "english": "Next .",
+      "intent": "NEXT",
+      "expected_intent": "NEXT",
+      "intent_ok_fusion": true,
+      "translation_time_sec": 0.382,
+      "llm_time_sec": 0.415
+    },
+    {
+      "id": "sam_42",
+      "english": "A to the next news",
+      "intent": "NEXT",
+      "expected_intent": "NEXT",
+      "intent_ok_fusion": true,
+      "translation_time_sec": 0.584,
+      "llm_time_sec": 0.406
+    },
+    {
+      "id": "sam_43",
+      "english": "Go to the other page",
+      "intent": "NEXT",
+      "expected_intent": "NEXT",
+      "intent_ok_fusion": true,
+      "translation_time_sec": 0.556,
+      "llm_time_sec": 0.404
+    },
+    {
+      "id": "sam_44",
+      "english": "This is the news. Let's hear the next one.",
+      "intent": "READ_ALOUD",
+      "expected_intent": "NEXT",
+      "intent_ok_fusion": false,
+      "translation_time_sec": 1.196,
+      "llm_time_sec": 0.557
+    },
+    {
+      "id": "sam_45",
+      "english": "I've heard everything on this page so start the next page.",
+      "intent": "NEXT",
+      "expected_intent": "NEXT",
+      "intent_ok_fusion": true,
+      "translation_time_sec": 1.235,
+      "llm_time_sec": 0.435
+    },
+    {
+      "id": "sam_46",
+      "english": "Read it",
+      "intent": "READ_ALOUD",
+      "expected_intent": "READ_ALOUD",
+      "intent_ok_fusion": true,
+      "translation_time_sec": 0.365,
+      "llm_time_sec": 0.491
+    },
+    {
+      "id": "sam_47",
+      "english": "Let me read this article from the beginning .",
+      "intent": "READ_ALOUD",
+      "expected_intent": "READ_ALOUD",
+      "intent_ok_fusion": true,
+      "translation_time_sec": 0.999,
+      "llm_time_sec": 0.579
+    },
+    {
+      "id": "sam_48",
+      "english": "Read aloud what's on this page.",
+      "intent": "READ_ALOUD",
+      "expected_intent": "READ_ALOUD",
+      "intent_ok_fusion": true,
+      "translation_time_sec": 1.007,
+      "llm_time_sec": 0.607
+    },
+    {
+      "id": "sam_49",
+      "english": "Read me what's in my medicine book.",
+      "intent": "IDENTIFY_CONTENT",
+      "expected_intent": "READ_ALOUD",
+      "intent_ok_fusion": false,
+      "translation_time_sec": 0.967,
+      "llm_time_sec": 0.503
+    },
+    {
+      "id": "sam_50",
+      "english": "I can't read this letter because I can't see. Please read it first.",
+      "intent": "READ_ALOUD",
+      "expected_intent": "READ_ALOUD",
+      "intent_ok_fusion": true,
+      "translation_time_sec": 1.703,
+      "llm_time_sec": 0.578
+    }
+  ]
+}

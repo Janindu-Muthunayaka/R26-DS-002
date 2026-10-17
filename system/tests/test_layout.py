@@ -70,9 +70,9 @@ def test_the_gate_can_be_overridden_for_measurement():
     gate -- measured: the article fits at glyph_p75 25, the gate is 28. If
     the tool refuses to measure there, the experiment concludes 'impossible'
     from a threshold instead of from the page."""
-    img = page(cols=4, col_w=380, gutter=60, glyph=20, pitch=34, n_lines=60)
-    assert L.analyse(img)['applicable'] is False
-    assert L.analyse(img, min_p75=15)['applicable'] is True
+    img = page(cols=4, col_w=380, gutter=60, glyph=16, pitch=28, n_lines=70)
+    assert L.analyse(img)['applicable'] is False        # below CLOSEUP_MIN_P75
+    assert L.analyse(img, min_p75=12)['applicable'] is True
 
 
 def test_an_impossible_pitch_is_refused():
@@ -299,3 +299,37 @@ def test_unrelated_frames_are_not_joined_silently():
 
 def test_a_single_matching_line_is_not_enough():
     assert L.overlap(['ක', 'ඛ', 'ග'], ['ග', 'ඝ', 'ඞ']) == 0
+
+
+def test_the_no_gutter_limit_sits_between_the_two_measured_populations():
+    """The second gate, added when CLOSEUP_MIN_P75 dropped 28 -> 20.
+
+    Corpus full pages measure glyph_p75 18-24 and now overlap the close-up
+    gate, and their pitch is normal so the pitch check does not catch them.
+    What separates them is that no gutter is ever found, and the physical
+    signature of that is a text band far wider than a column can be: a
+    newspaper column is a roughly fixed number of characters across, so its
+    pixel width scales with glyph height.
+
+    Measured, widest band / median glyph height:
+        phone close-ups        27 - 59
+        corpus dinamina p14        131
+        corpus lankadeepa p20      272
+
+    Pinning the limit between the two populations, rather than pinning the
+    number, means tightening it onto real captures fails here.
+    """
+    assert L.COL_MAX_GLYPHS > 59 * 1.2, (
+        'the limit has come down onto real close-up captures (widest measured '
+        '59 glyph-heights) - they will start being refused')
+    assert L.COL_MAX_GLYPHS < 131 * 0.9, (
+        'the limit has risen past the corpus full pages it exists to catch')
+
+
+def test_a_real_closeup_is_not_caught_by_the_gutter_gate():
+    """Measured: phone captures put the widest band at 0.33-0.46 of the
+    frame, well under the 0.75 limit."""
+    a = L.analyse(page(cols=3))
+    assert a['applicable'] is True
+    assert (max(b[1] - b[0] for b in a['columns'])
+            / a['median_glyph_h']) < L.COL_MAX_GLYPHS

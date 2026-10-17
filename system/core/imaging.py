@@ -20,7 +20,9 @@ import io
 import cv2, numpy as np
 from PIL import Image, ImageOps
 
-from .config import (CAPTURE_MIN_GLYPH_P75, CAPTURE_REJECT_BELOW_P75,
+from .config import (CLOSEUP_TARGET_GLYPH, CLOSEUP_MIN_GLYPH_PX,
+                     CAPTURE_MIN_GLYPH_P75, CAPTURE_WARN_BELOW_P75,
+                     CAPTURE_REJECT_BELOW_P75,
                      GLYPH_H_MIN, GLYPH_H_MAX,
                      OCR_TARGET_GLYPH_P90, OCR_SCALE_MIN, OCR_SCALE_MAX)
 
@@ -130,17 +132,61 @@ def scale_for_target(p90, target=OCR_TARGET_GLYPH_P90):
     return float(min(OCR_SCALE_MAX, max(OCR_SCALE_MIN, target / p90)))
 
 
-def capture_verdict(p75):
-    """Accept/reject a captured frame. Argument is glyph_p75, NOT p90."""
+def closeup_scale(p75, target=CLOSEUP_TARGET_GLYPH,
+                  floor=CLOSEUP_MIN_GLYPH_PX):
+    """Downscale factor for a CLOSE-UP crop, from a target glyph height.
+
+    The close-up equivalent of scale_for_target(), and it exists for the same
+    reason: a fixed factor means the glyph height Tesseract sees depends on how
+    far away the user happened to stand. Measured: the shipped fixed 0.40 gives
+    15 px at glyph_p75 38 and 8.8 px at glyph_p75 22 - and 8.8 px measured CER
+    0.2193 against 0.0760 for the same frame at 13.2 px.
+
+    Never upscales (the 2x/3x penalty is measured and severe) and never scales
+    below `floor` effective pixels, whichever binds first.
+    """
+    if not p75 or p75 <= 0:
+        return 1.0
+    s = min(OCR_SCALE_MAX, target / p75)
+    if p75 * s < floor:                 # floor wins over the target
+        s = min(OCR_SCALE_MAX, floor / p75)
+    return float(max(OCR_SCALE_MIN, s))
+
+
+def capture_verdict(p75, warn_below=CAPTURE_MIN_GLYPH_P75):
+    """Is this page good enough to OCR at all? Argument is glyph_p75, NOT p90.
+
+    DEFAULT THRESHOLD IS 25 AND MUST STAY 25. With the default this function
+    reproduces the corpus diagnostics verdict on 168 pages (165/168, 98.2%)
+    and Chapter 4 cites that number. Changing the default silently changes a
+    thesis result - it did, on 24 Aug 2026, and two tests caught it.
+
+    The phone path asks a DIFFERENT question and must not call this one with
+    the default. Use guidance_verdict() below.
+    """
     if not p75:
         return 'unknown', 'no text found'
     if p75 < CAPTURE_REJECT_BELOW_P75:
-        return 'reject', (f'glyph {p75:.0f}px (need >={CAPTURE_MIN_GLYPH_P75:.0f}) '
-                          f'— much closer')
-    if p75 < CAPTURE_MIN_GLYPH_P75:
-        return 'warn', (f'glyph {p75:.0f}px (want >={CAPTURE_MIN_GLYPH_P75:.0f}) '
-                        f'— closer')
+        return 'reject', (f'glyph {p75:.0f}px (need >='
+                          f'{warn_below:.0f}) — much closer')
+    if p75 < warn_below:
+        return 'warn', (f'glyph {p75:.0f}px (want >='
+                        f'{warn_below:.0f}) — closer')
     return 'ok', ''
+
+
+def guidance_verdict(p75):
+    """Should the USER move? The phone path's question, not the page gate's.
+
+    Warns below CAPTURE_WARN_BELOW_P75 (20), not below CAPTURE_MIN_GLYPH_P75
+    (25). Measured 24 Aug 2026: the framing that holds a whole article sits at
+    glyph_p75 22 and reads BETTER than the close one (mT5 CER 0.0497 against
+    0.0570), so "closer" at 22 is advice in the wrong direction - and the
+    listener cannot see that it is wrong.
+
+    Same lesson as p75/p90: two questions, two thresholds, two names.
+    """
+    return capture_verdict(p75, warn_below=CAPTURE_WARN_BELOW_P75)
 
 
 def rescale_to_optimum(img):

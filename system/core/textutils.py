@@ -87,20 +87,75 @@ def sentences(text, max_chars=280):
     return out
 
 
-def vote_lines(texts):
-    """Medoid per line across frames — multi-frame consensus."""
-    seqs = [t.split('\n') for t in texts if t.strip()]
+def _key(s):
+    return ''.join(s.split())
+
+
+def vote_lines(texts, ratio=0.60, window=4):
+    """Medoid per line across frames — multi-frame consensus.
+
+    ALIGNS THE FRAMES BY CONTENT FIRST. The previous version voted by line
+    INDEX: candidates for output line k were `seq[k]` from every frame. That
+    is only correct while every frame produces the same number of lines in the
+    same order, and OCR does not.
+
+    Measured on work/80654199, three frames of one static scene, same crop:
+    the frames produced 105, 106 and 101 lines. From the first divergence
+    onward, index k in one frame was a different physical line in another, and
+    the medoid picked between unrelated candidates. Result: **15 of 100 output
+    lines were near-duplicates of an earlier line** — whole passages spoken
+    twice ("prices...", "the main commercial complex...") — and 235 characters
+    lost. With content alignment: 0 repeats, 3729 characters against 3494.
+
+    That is the "repeated passage strong_dedup cannot span" open item. It was
+    never a dedup problem; it was the voter.
+
+    HOW: the frame of MEDIAN length is the reference — not the longest, since
+    a frame that split lines produces more lines, not better ones. For each of
+    its lines, each other frame contributes its best match within +/- `window`
+    lines, and only if the similarity clears `ratio`. The reference's order and
+    line count are therefore preserved exactly, and the other frames can only
+    correct a line, never insert or reorder one.
+
+    A line no other frame matches is kept as-is: two frames disagreeing about
+    whether a line exists is not evidence for dropping it.
+    """
+    seqs = [[l for l in t.split('\n') if l.strip()] for t in texts if t.strip()]
     if not seqs:
         return ''
+    if len(seqs) == 1:
+        return '\n'.join(seqs[0])
+
+    # REFERENCE = the frame most like the others, not simply the median
+    # length. Length alone picks a corrupted frame as often as a good one,
+    # and a corrupted reference cannot be out-voted: nothing matches its bad
+    # line, so it has no competition and survives. The medoid frame is the
+    # one the others agree with, which is exactly the property wanted.
+    keys = [_key('\n'.join(s))[:4000] for s in seqs]
+    scores = [sum(difflib.SequenceMatcher(None, k, j).ratio() for j in keys)
+              for k in keys]
+    best = max(range(len(seqs)), key=lambda i: (scores[i], -abs(
+        len(seqs[i]) - sorted(len(x) for x in seqs)[len(seqs) // 2])))
+    ref = seqs[best]
+    others = [s for i, s in enumerate(seqs) if i != best]
+
     out = []
-    for k in range(max(len(s) for s in seqs)):
-        cands = [s[k] for s in seqs if k < len(s) and s[k].strip()]
-        if not cands:
-            continue
-        best, bs = cands[0], -1.0
+    for i, r in enumerate(ref):
+        cands = [r]
+        rk = _key(r)
+        for o in others:
+            best, best_score = None, ratio
+            for j in range(max(0, i - window), min(len(o), i + window + 1)):
+                sc = difflib.SequenceMatcher(None, rk, _key(o[j])).ratio()
+                if sc > best_score:
+                    best_score, best = sc, o[j]
+            if best is not None:
+                cands.append(best)
+        # medoid: the candidate closest to all the others
+        pick, pick_score = cands[0], -1.0
         for c in cands:
             sc = sum(difflib.SequenceMatcher(None, c, d).ratio() for d in cands)
-            if sc > bs:
-                bs, best = sc, c
-        out.append(best)
+            if sc > pick_score:
+                pick_score, pick = sc, c
+        out.append(pick)
     return '\n'.join(out)

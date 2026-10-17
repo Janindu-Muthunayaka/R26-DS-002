@@ -15,7 +15,7 @@ Two measured behaviours are enforced here and must not be silently changed:
 """
 import cv2, torch
 from core.schemas import Article
-from core.imaging import rescale_to_optimum
+from core.imaging import rescale_to_optimum, closeup_scale, glyph_p75
 from core.textutils import norm, strong_dedup, vote_lines, sentences
 from core.config import (TESS_CONFIG, TESS_CONFIG_PAGE, TESS_LANG,
                          CLOSEUP_OCR_SCALE, MT5_NUM_BEAMS,
@@ -38,7 +38,7 @@ class BodyReader:
         return norm(txt), p90, scale
 
     def read_page(self, frames_imgs, article: Article,
-                  scale=CLOSEUP_OCR_SCALE) -> Article:
+                  scale=None) -> Article:
         """CLOSE-UP PATH — OCR one multi-column crop as a page.
 
         Differs from read() in two ways that are both measured, not stylistic:
@@ -55,12 +55,18 @@ class BodyReader:
         """
         b = article.box
         per_frame = []
+        used_scale = scale          # what actually reached Tesseract
         for img in frames_imgs:
             crop = img[max(0, int(b.y1)):int(b.y2), max(0, int(b.x1)):int(b.x2)]
             if crop.size == 0:
                 continue
-            if scale and abs(scale - 1.0) > 1e-3:
-                crop = cv2.resize(crop, None, fx=scale, fy=scale,
+            # ADAPTIVE, not a fixed factor. See core/config.py,
+            # CLOSEUP_TARGET_GLYPH: the same 0.40 that gives 15 px at
+            # glyph_p75 38 gives 8.8 px at 22, and 8.8 px measured CER 0.2193.
+            s = scale if scale else closeup_scale(glyph_p75(crop))
+            used_scale = s
+            if s and abs(s - 1.0) > 1e-3:
+                crop = cv2.resize(crop, None, fx=s, fy=s,
                                   interpolation=cv2.INTER_AREA)
             txt = self.pt.image_to_string(
                 cv2.cvtColor(crop, cv2.COLOR_BGR2RGB),
@@ -72,21 +78,32 @@ class BodyReader:
         raw = vote_lines(per_frame) if len(per_frame) > 1 else \
               (per_frame[0] if per_frame else '')
         article.body_raw = strong_dedup(raw)
-        article.ocr_scale = scale
+        article.ocr_scale = used_scale
         return article
 
     def read(self, frames_imgs, article: Article) -> Article:
         """frames_imgs: list of images (the selected frames). Multi-frame
         consensus is applied when more than one is supplied."""
+        import concurrent.futures
+
+        text_regions = [r for r in article.regions if r.label == 'text']
+        if not text_regions:
+            article.body_raw = ''
+            return article
+
         per_frame = []
         p90 = scale = None
         for img in frames_imgs:
+            if len(text_regions) == 1:
+                results = [self.ocr_region(img, text_regions[0].box)]
+            else:
+                max_w = min(4, len(text_regions))
+                with concurrent.futures.ThreadPoolExecutor(max_workers=max_w) as executor:
+                    results = list(executor.map(lambda r: self.ocr_region(img, r.box), text_regions))
+
             parts = []
-            for r in article.regions:
-                if r.label != 'text':
-                    continue
-                t, p, s = self.ocr_region(img, r.box)
-                if p90 is None:
+            for t, p, s in results:
+                if p90 is None and p is not None:
                     p90, scale = p, s
                 if t:
                     parts.append(t)
