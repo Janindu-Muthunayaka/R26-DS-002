@@ -1,0 +1,121 @@
+======================================================================================
+ DAKMA - WHAT HAPPENS TO ONE SPOKEN REQUEST                       (updated 17 Oct 2026)
+======================================================================================
+
+ Files:  L7 service ........ layers/l7_personalization/personalization/main_flow.py
+         speed / pause ..... layers/l7_personalization/delivery/feedback.py, planner.py
+         main decision ..... layers/l6_generator/turns.py
+         RAG (Component 3).. services/rag/answer.py  (or layers/l6_generator in-process)
+         server ............ app/server.py   (POST /ask)
+
+
+ ┌────────────────────────────────────────────────────────────────────────────────────┐
+ │ PHONE                                                                              │
+ │   user speaks Sinhala ──► speech-to-text on the phone (si-LK) ──► Sinhala text      │
+ │   POST /ask { job, text (Sinhala), user_id }                                        │
+ └───────────────────────────────────────────┬────────────────────────────────────────┘
+                                             │
+                                             ▼
+ ┌────────────────────────────────────────────────────────────────────────────────────┐
+ │ L7 PERSONALIZATION SERVICE  (/interpret)                                           │
+ │                                                                                    │
+ │  1. TRANSLATE      Sinhala ──► English            (NLLB, local model)               │
+ │                                                                                    │
+ │  2. DETECT INTENT  English ──► one label           (LLM: OPENAI_INTENT_MODEL,       │
+ │                    ASK_QUESTION, READ_ALOUD,         default gpt-4o-mini)           │
+ │                    REPEAT, NEXT, CHANGE_SPEED,                                     │
+ │                    SIMPLIFY, GO_TO_PAGE, ...                                       │
+ │                                                                                    │
+ │  3. FIND MODIFIERS (Sinhala words first, then English)                              │
+ │                    repeat? speed? style? pause? part size? volume? summary?         │
+ │                                                                                    │
+ │  4. SPEED / PAUSE  ┌──────────────────────────────────────────────────────────┐    │
+ │     (BOTH paths)   │ if a speed / pause / repeat / part-size word was found,  │    │
+ │                    │ the user's saved profile is updated NOW:                 │    │
+ │                    │   faster  ► rate x1.10, pause -0.1                       │    │
+ │                    │   slower  ► rate x0.90, pause +0.1                       │    │
+ │                    │   repeat right after an answer ► rate x0.95, pause +0.1  │    │
+ │                    │   "more / fewer pauses"        ► pause +/-0.2            │    │
+ │                    │   rate kept in 0.8-1.3, pause_scale in 0.5-2.0           │    │
+ │                    └──────────────────────────────────────────────────────────┘    │
+ │                                                                                    │
+ │  5. ROUTE  (L7's first opinion)                                                    │
+ │       delivery only ("speak faster") ...... LOCAL           no style, no learning  │
+ │       navigation / control (next, stop) ... SYSTEM_COMMAND  no style, no learning  │
+ │       everything else ..................... GENERATE        style decided:         │
+ │                                               explicit request > style words >    │
+ │                                               user's learned model; learns only   │
+ │                                               from explicit evidence              │
+ │                                                                                    │
+ │  RETURNS: intent, English, route, style + prompt, speed, pause_scale               │
+ │                                                                                    │
+ │  (L7 down or failing ──► the main server uses its keyword backup instead,          │
+ │   same kind of result, marked "stub-fallback")                                     │
+ └───────────────────────────────────────────┬────────────────────────────────────────┘
+                                             │
+                                             ▼
+ ┌────────────────────────────────────────────────────────────────────────────────────┐
+ │ MAIN SERVER - TURN POLICY (turns.py)        L7's route is advice; this decides.    │
+ │ Re-checks the WORDS so a wrong label can never send a command to the RAG.          │
+ │                                                                                    │
+ │   speed / pause / repeat word ............................ always ACTION           │
+ │   article + read word ("දෙවනි ලිපිය කියවන්න") ................ always ACTION           │
+ │   style word / summary / rephrase / real question ......... GENERATE               │
+ └───────────────┬──────────────────────────────────────────────────┬─────────────────┘
+                 │                                                  │
+                 ▼                                                  ▼
+ ┌───────────────────────────────────────┐      ┌───────────────────────────────────────┐
+ │ A. ACTION  (no RAG, instant)          │      │ B. GENERATE  (RAG / Component 3)      │
+ │   text that already exists:           │      │   NEW words written by the LLM:       │
+ │                                       │      │                                       │
+ │   speed / pause change                │      │   a question about the page           │
+ │     ► "හරි, ඉක්මනින් කියන්නම්."          │      │     ► answer from the page            │
+ │       + replay last answer            │      │   a question naming an article        │
+ │   repeat ► replay last answer         │      │     ► answer from THAT article only   │
+ │   read article n ► article n's text   │      │       (article_no sent to the RAG)    │
+ │   next / previous part                │      │   simpler / more detail / step by     │
+ │   next / previous / last article      │      │   step ► re-ask the PREVIOUS real     │
+ │   titles, word count, warnings        │      │       question in that style          │
+ │   stop                                │      │   summarise article n                 │
+ │   unclear ► "කරුණාකර නැවත කියන්න"      │      │   say it another way                  │
+ └───────────────────┬───────────────────┘      └───────────────────┬───────────────────┘
+                     │                                              │
+                     └───────────────────────┬──────────────────────┘
+                                             ▼
+ ┌────────────────────────────────────────────────────────────────────────────────────┐
+ │ SAME FINISHING STEP FOR BOTH  (app/server.py + delivery/planner.py)                │
+ │                                                                                    │
+ │  PAUSE   level = style base, moved by the user's pause_scale                        │
+ │            base:  Detailed low | Simple mid | Step by step mid                      │
+ │                   local reads low | short system lines none                         │
+ │            pause_scale <=0.8 one down | >=1.2 one up | >=1.6 two up                 │
+ │          put BETWEEN sentences and after headlines (blank lines), never mid-sentence│
+ │            none ". "   low ".⏎"   mid ".⏎⏎"   high ". …⏎"                            │
+ │                                                                                    │
+ │  SPEED   the user's rate (0.8-1.3) is attached to the answer                        │
+ │                                                                                    │
+ │  ANSWER  { speakable (text with pauses), speed, pause_level, action, ... }          │
+ │          turn saved: dashboard, "repeat", RAG chat history (generated turns only)   │
+ └───────────────────────────────────────────┬────────────────────────────────────────┘
+                                             │
+                                             ▼
+ ┌────────────────────────────────────────────────────────────────────────────────────┐
+ │ PHONE speaks `speakable`                                                           │
+ │   ! pauses are inside the text, so the phone gets them (only "high" / "…" is       │
+ │     clearly audible on most TTS engines)                                           │
+ │   ! speed only takes effect if the app calls tts.setSpeechRate(answer.speed) -     │
+ │     the app currently reads `speakable` only (see the phone app code)              │
+ └────────────────────────────────────────────────────────────────────────────────────┘
+
+
+ EXAMPLES
+ --------
+  "වේගයෙන් කතා කරන්න"      speed ↑ pause ↓ (step 4) ► ACTION: "හරි…" + replay
+  "හෙමින් සරලව කියන්න"     speed ↓ pause ↑ (step 4) ► GENERATE: previous question, Simple
+  "දෙවනි ලිපිය කියවන්න"    (any L7 label)          ► ACTION: article 2 text
+  "ලිපිය 2 ගැන කවුද කිව්වේ" question + article        ► GENERATE: from article 2 only
+  "නැවත කියන්න"           repeat (step 4: slower)   ► ACTION: replay last answer
+
+ TURN 1 (right after a scan) is generic and the same for everyone: number of articles
+ + each article's number and title. It reads no profile and changes no weights.
+======================================================================================

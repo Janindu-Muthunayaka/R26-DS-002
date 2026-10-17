@@ -211,6 +211,27 @@ def generate(query_text, intent, style_class, prompt_modifier, max_words,
     return answer.strip(), ''
 
 
+def _article_evidence(ocr: dict, article_no):
+    """The one article a request names, as an evidence doc, or None.
+    `ocr['articles']` is in page order (system/layers/l5_assemble/payload.py)."""
+    try:
+        idx = int(article_no) - 1
+    except (TypeError, ValueError):
+        return None
+    arts = (ocr or {}).get('articles') or []
+    if not 0 <= idx < len(arts):
+        return None
+    a = arts[idx] or {}
+    body = clean_ocr_sinhala((a.get('body') or '').strip())
+    if not body:
+        return None
+    title = (a.get('title') or '').strip()
+    return {'text': f"Article {idx + 1}{': ' + title if title else ''}\n{body}",
+            'metadata': {'source_type': 'ocr_current', 'chunk_id': f'article_{idx + 1}',
+                         'article_no': idx + 1, 'title': title},
+            'score': 1.0}
+
+
 def run(store: VectorStore, ocr: dict, voice: dict, remember: bool = True
         ) -> dict:
     """The `/answer` contract. Returns Component 3's four fields plus notes."""
@@ -262,18 +283,32 @@ def run(store: VectorStore, ocr: dict, voice: dict, remember: bool = True
     if standalone_query and standalone_query != retrieval_query:
         notes.append(f"query rewritten: '{standalone_query}'")
 
-    docs, reason = retrieve(store, standalone_query or retrieval_query, voice.get('retrieved_chunk_id'))
-    if reason:
-        return {'ok': False, 'intent': intent, 'answer_si': FAILED,
-                'retrieved_sources': [], 'speakable_text': FAILED,
-                'notes': notes + [f'retrieval failed: {reason}']}
+    # A request about ONE article ("ලිපිය 2 සරලව කියන්න") carries its number.
+    # The page is chunked without article boundaries, so evidence for it is
+    # that article's own text, under its real number — never the whole page,
+    # or the answer mixes in the other articles.
+    article_doc = _article_evidence(ocr, voice.get('article_no'))
+    prompt_modifier = voice.get('prompt_modifier')
+    if article_doc:
+        docs = [article_doc]
+        n = article_doc['metadata']['article_no']
+        prompt_modifier = (prompt_modifier or '') + f' Use only Article {n}; ignore every other article.'
+        notes.append(f'evidence limited to article {n}')
+    else:
+        if voice.get('article_no'):
+            notes.append(f"article {voice.get('article_no')} not on this page: using the whole page")
+        docs, reason = retrieve(store, standalone_query or retrieval_query, voice.get('retrieved_chunk_id'))
+        if reason:
+            return {'ok': False, 'intent': intent, 'answer_si': FAILED,
+                    'retrieved_sources': [], 'speakable_text': FAILED,
+                    'notes': notes + [f'retrieval failed: {reason}']}
 
     chat_history_text = format_history_for_prompt(history)
 
     answer, reason = generate(
         query_text=query, intent=intent,
         style_class=voice.get('style_class'),
-        prompt_modifier=voice.get('prompt_modifier'),
+        prompt_modifier=prompt_modifier,
         max_words=resolve_max_words(voice.get('style_class'),
                                     voice.get('personalization_flags')),
         evidence_docs=docs,

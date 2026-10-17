@@ -7,7 +7,8 @@ import time, cv2
 from pathlib import Path
 
 from core.config import (YOLO_WEIGHTS, MT5_PLAIN, MAX_ARTICLES, YOLO_CONF,
-                         POLISH_MODE, LAYOUT_MIN_P75, SEGMENT_MODE)
+                         POLISH_MODE, LAYOUT_MIN_P75, SEGMENT_MODE,
+                         ARTICLE_FIX_MODE)
 from core.imaging import imread_upright
 from layers.l3_segment.closeup import analyse as closeup_analyse
 from layers.l3_segment.closeup import headline_for_block as _headline_for_block
@@ -20,6 +21,7 @@ from layers.l4a_title import title as l4a
 from layers.l4b_body.body import BodyReader
 from layers.l4c_polish import polish as _polish
 from layers.l5_assemble.assemble import assemble
+from layers.l5_assemble import segfix as _segfix
 from layers.l8b_speech import speech as l6
 
 
@@ -112,6 +114,9 @@ class Pipeline:
         job_dir = Path(image_paths[0]).parent
         extra_warnings = []
         extra_warnings_lock = Lock()
+        # L4B stage times, summed over articles (CPU-seconds, articles overlap).
+        # Kept out of `t` so they do not change timings['total'].
+        body_t = {'body_ocr': 0.0, 'body_mt5': 0.0}
 
         # Helper function to process a single article
         def process_article(art, group):
@@ -148,6 +153,7 @@ class Pipeline:
                 art.body_status = 'running'
                 with concurrent.futures.ThreadPoolExecutor(max_workers=2) as sub_exec:
                     fut_title = sub_exec.submit(l4a.extract, ref, art, job_dir=job_dir)
+                    t_ocr0 = time.time()
                     if single_article:
                         fut_body = sub_exec.submit(self.body.read_page, imgs, art)
                     else:
@@ -157,8 +163,9 @@ class Pipeline:
                     fut_body.add_done_callback(lambda f: setattr(
                         art, 'body_status', 'failed' if f.exception() else 'ocr_done'))
 
-                    art_title = fut_title.result()
                     art_body = fut_body.result()
+                    t_ocr = time.time() - t_ocr0
+                    art_title = fut_title.result()
 
                 art.title = art_title.title
                 art.title_raw = art_title.title_raw
@@ -173,12 +180,16 @@ class Pipeline:
                 art.ocr_scale = art_body.ocr_scale
 
                 # 4. Correct OCR via mT5
+                t_mt5_0 = time.time()
                 if correct:
                     art.body_status = 'correcting'
                     art = self.body.correct(art)
                 else:
                     art.body = art.body_raw
                 art.body_status = 'done'
+                with extra_warnings_lock:
+                    body_t['body_ocr'] += t_ocr
+                    body_t['body_mt5'] += time.time() - t_mt5_0
 
                 doc.progress_log.append(f"Article {art.index + 1} scanned")
                 return art
@@ -215,6 +226,7 @@ class Pipeline:
         # 6. Polish (Batch). ONE LLM call for every article, sent once all of
         # L4A + L4B are done (cheaper than a call per article). polish_status
         # still moves waiting -> correcting -> done so the UI shows progress.
+        seg_before = None              # the segments as L3 cut them, if segfix changed them
         if POLISH_MODE.lower() != 'off':
             t0_polish = time.time()
             for art in final_arts:
@@ -238,6 +250,16 @@ class Pipeline:
                         extra_warnings.append(f"Article {art.index + 1}: {res['reason']}")
                     art.polish_status = 'done'
                 doc.progress_log.append("Polish batch done")
+                # One story cut in two / two stories in one segment: L4C only
+                # REPORTS it when obvious; segfix checks every report against
+                # the text and applies only those that pass. The original
+                # segments stay untouched in all_articles.
+                if ARTICLE_FIX_MODE != 'off':
+                    seg_before = list(final_arts)
+                    final_arts, seg_notes = _segfix.apply(final_arts, results)
+                    extra_warnings.extend(seg_notes)
+                    if seg_notes:
+                        doc.progress_log.append(f"Segmentation check: {len(seg_notes)} note(s)")
             t['polish_batch'] = round(time.time() - t0_polish, 2)
         else:
             for art in final_arts:
@@ -247,8 +269,11 @@ class Pipeline:
         # Final assembly
         t0 = time.time()
         new_doc = assemble(final_arts, [f.path for f in frames], t)
+        if seg_before is not None and len(seg_before) != len(final_arts):
+            new_doc.all_articles = seg_before     # the segments as L3 cut them
         new_doc.warnings = list(extra_warnings) + list(new_doc.warnings)
         new_doc.timings['total'] = round(sum(v for v in t.values() if isinstance(v, (int, float))), 2)
+        new_doc.timings.update({k: round(v, 2) for k, v in body_t.items()})
         new_doc.progress_log = doc.progress_log
         new_doc.generations = getattr(doc, 'generations', [])
         

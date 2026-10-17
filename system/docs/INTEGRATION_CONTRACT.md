@@ -171,7 +171,7 @@ the fix and is out of scope for the deadline.
 
 ## 6. Secrets
 
-`.env` at the repository root, ignored by git. `services/.env.example`
+`system/.env`, ignored by git. `system/.env.example`
 documents the shape with empty values and is tracked.
 
 `origin` is shared with three teammates and **git does not forget**. A key
@@ -179,7 +179,7 @@ committed once stays in the history of every clone and every fork; deleting
 the file in a later commit removes it from the working tree and from nothing
 else. Rotating the key is then the only remedy.
 
-Check with `git check-ignore -v .env` — silence means it is **not** ignored.
+Check with `git check-ignore -v system/.env` — silence means it is **not** ignored.
 
 ---
 

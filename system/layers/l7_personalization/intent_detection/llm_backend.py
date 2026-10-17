@@ -22,6 +22,15 @@ TEMPERATURE = 0.0
 MAX_TOKENS = 100
 
 
+INTENT_MODEL_DEFAULT = "gpt-4o-mini"
+
+
+def intent_model():
+    """The model used for L7 intent detection: OPENAI_INTENT_MODEL, else gpt-4o-mini.
+    Deliberately NOT OPENAI_CHAT_MODEL (see chat())."""
+    return (os.getenv("OPENAI_INTENT_MODEL") or INTENT_MODEL_DEFAULT).strip()
+
+
 def get_active_backend():
     """Returns the active backend name."""
     return "openai"
@@ -35,7 +44,11 @@ def chat(system_prompt, user_prompt):
     if not api_key:
         raise RuntimeError("OPENAI_API_KEY is missing from environment and .env")
 
-    model = os.getenv("OPENAI_CHAT_MODEL", "gpt-4o-mini")
+    # Intent detection has its OWN model setting. OPENAI_CHAT_MODEL is shared
+    # with the RAG generator and is now a GPT-5 model, which rejects the
+    # temperature / max_tokens this request sends (HTTP 400 -> L7 fell back to
+    # the stub on 17 Oct 2026). gpt-4o-mini accepts them.
+    model = intent_model()
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json"
@@ -114,7 +127,7 @@ if __name__ == "__main__":
     print("OPENAI INTENT BACKEND TEST")
     print("=" * 60)
     print(f"Backend  : {get_active_backend()}")
-    print(f"Model    : {os.getenv('OPENAI_CHAT_MODEL', 'gpt-4o-mini')}")
+    print(f"Model    : {intent_model()}")
     print(f"API Key  : {'Set (' + os.getenv('OPENAI_API_KEY')[:7] + '...)' if os.getenv('OPENAI_API_KEY') else 'NOT SET'}")
     print("-" * 60)
 

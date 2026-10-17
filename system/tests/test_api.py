@@ -127,9 +127,11 @@ def test_title_is_empty_until_layer_4a_lands(tmp_path):
     assert j['title'] == ''
 
 
-def test_title_passes_through_when_it_exists(tmp_path):
+def test_title_is_not_spoken_before_turn_1(tmp_path):
+    """The phone speaks `title` before `body`. Turn 1 (in `body`) already
+    lists every title, so a raw headline here would be spoken twice."""
     j = _post(_client(FakePipeline(_doc(title='ශීර්ෂය')), tmp_path)).json()
-    assert j['title'] == 'ශීර්ෂය'
+    assert j['title'] == ''
 
 
 def test_audio_url_is_present_but_null(tmp_path):

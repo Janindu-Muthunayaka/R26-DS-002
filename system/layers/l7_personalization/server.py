@@ -51,6 +51,9 @@ class InterpretRequest(BaseModel):
     user_id: Optional[str] = "user_001"
     retrieved_chunk_id: Optional[str] = None
     dry_run: Optional[bool] = False   # decide style only: no logging / learning
+    # From the main server, which holds what was last spoken this session:
+    # {"has_last": bool, "next_turn": bool, "age_s": float}
+    last_spoken_ctx: Optional[Dict[str, Any]] = None
 
 class NewUserRequest(BaseModel):
     base_weights: Dict[str, float]    # Simple / Detailed / StepByStep (fractions or %)
@@ -75,7 +78,8 @@ def interpret(req: InterpretRequest):
             raise HTTPException(status_code=400, detail="Text cannot be empty.")
             
         result = handle_voice_command(req.text, req.user_id, retrieved_chunk_id=req.retrieved_chunk_id,
-                                      dry_run=bool(req.dry_run))
+                                      dry_run=bool(req.dry_run),
+                                      last_spoken_ctx=req.last_spoken_ctx)
         
         # The main pipeline (l0_voice) only needs the final prompt dictionary
         final_prompt = result.get("final_prompt", {})

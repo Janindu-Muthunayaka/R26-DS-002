@@ -160,3 +160,33 @@
 159,user_001,2026-10-16T07:25:47.126706,දෙවන ලිපිය පියවරෙන් පියවර විස්තර කරන්න.,Article 2 - Describe step by step.,STEP_BY_STEP,{},,StepByStep,False
 160,user_001,2026-10-16T07:42:15.325929,දෙවන ලිපිය පියවරෙන් පියවර විස්තර කරන්න.,Article 2 - Describe step by step.,STEP_BY_STEP,{},,StepByStep,False
 161,user_001,2026-10-16T08:55:15.735311,මේ කුමන මාර්ගයද?,Which way is this?,ASK_QUESTION,{},,Simple,False
+162,user_001,2026-10-17T16:03:35.676236,වේගයෙන් කතා කරන්න,Speak fast,CHANGE_SPEED,{},,Simple,False
+163,user_001,2026-10-17T17:07:09.141292,දෙක කියවන්න,Read it .,READ_ALOUD,{},,Simple,False
+164,user_001,2026-10-17T17:08:20.023560,ලිපිය දෙක වේගයෙන් කියවන්න,Read the article quickly,READ_ALOUD,{},,StepByStep,True
+165,user_001,2026-10-17T17:09:09.881640,පියවරෙන් පියවර හෙමින් කියන්න,"Step by step, step by step, slowly say",STEP_BY_STEP,{},,StepByStep,False
+166,user_001,2026-10-17T17:09:47.446148,පියවරෙන් පියවර හෙමින් කියන්න,"Step by step, step by step, slowly say",STEP_BY_STEP,{},,StepByStep,False
+167,user_001,2026-10-17T17:10:31.894977,සම්බන්ධව කීදෙනෙක් අත්අඩංගුවට ගෙන ඇද්ද,How many people have been arrested in connection with this?,ASK_QUESTION,{},,StepByStep,False
+168,user_001,2026-10-17T17:11:55.756704,හැටන් පොලිසිය අත්අඩංගුවට ගත් අය කීයද,How many people have been arrested by the Hutton Police ?,ASK_QUESTION,{},,StepByStep,False
+169,user_001,2026-10-17T17:12:26.290164,අත්අඩංගුවට කීදෙනෙක් අරගෙනද,How many people have you arrested?,ASK_QUESTION,{},,StepByStep,False
+170,user_001,2026-10-17T17:13:24.660905,මේක මොඩ් එකට දාපන් ප්‍රශ්න මේ,Put this in the mode .,CHANGE_MODE,{},,StepByStep,False
+171,user_001,2026-10-17T17:16:36.645914,ලිපිය එක කියවන්න පුලුවන්ද,Can you read the article ?,READ_ALOUD,{},,Simple,True
+172,user_001,2026-10-17T17:18:26.563542,ඉතා වේගයෙන් කියන්න,Very quickly tell,SUMMARIZE,{},,Simple,False
+173,user_001,2026-10-17T17:20:16.106625,වේගයෙන් කියන්න,Tell me fast,SUMMARIZE,{},,Simple,False
+174,user_001,2026-10-17T17:21:19.163530,පළමුවන ලිපිය කියවන්න,Read the first article,READ_ALOUD,{},,Simple,False
+175,user_001,2026-10-17T17:22:31.004274,හෙමින් කියන්,Slowly say,CHANGE_SPEED,{},,Simple,False
+176,user_001,2026-10-17T17:22:58.316902,තවත් හෙමින් කියන්න,Say it more slowly,CHANGE_SPEED,{},,Simple,True
+177,user_001,2026-10-17T17:23:29.335246,ඉතා වේගයෙන් කියන්න,Very quickly tell,SUMMARIZE,{},,Detailed,True
+178,user_001,2026-10-17T17:37:11.223822,මෙය ඉතාම විස්තරාත්මකව පැහැදිලි කරන්න.,Explain this in great detail.,ELABORATE,{},,Detailed,False
+179,user_004,2026-10-17T17:38:51.353438,මෙය ඉතාම විස්තරාත්මකව පැහැදිලි කරන්න.,Explain this in great detail.,ELABORATE,{},,Detailed,False
+180,user_004,2026-10-17T17:39:39.783377,මෙය ඉතාම විස්තරාත්මකව පැහැදිලි කරන්න.,Explain this in great detail.,ELABORATE,{},,Detailed,False
+181,user_004,2026-10-17T19:16:21.470898,මෙය ඉතාම විස්තරාත්මකව පැහැදිලි කරන්න.,Explain this in great detail.,ELABORATE,{},,StepByStep,True
+182,user_004,2026-10-17T19:30:10.848143,මෙය පියවරෙන් පියවර පැහැදිලි කරන්න.,Explain this step by step.,STEP_BY_STEP,{},,StepByStep,False
+183,user_001,2026-10-17T20:25:31.591720,ලිපියේ එක කියවන්න,Read the article,READ_ALOUD,{},,Simple,False
+184,user_001,2026-10-17T20:26:28.587700,පළාත් අධ්‍යාපන අධ්‍යක්ෂකගේ නම කියවන්න,Read the name of the Director of Education of the Province,IDENTIFY_CONTENT,{},,Simple,False
+185,user_001,2026-10-17T20:27:02.434533,පාසලේ නම කියන්න,Tell me the name of the school,ASK_QUESTION,{},,Simple,False
+186,user_001,2026-10-17T20:27:31.821327,සාකච්ඡාවට සම්බන්ධ වූවන් කවුද,Who participated in the discussion,ASK_QUESTION,{},,StepByStep,True
+187,user_001,2026-10-17T20:28:28.189091,ලිපිය එක පියවරෙන් පියවර කියවන්න,Read the article step by step,STEP_BY_STEP,{},,StepByStep,False
+188,user_001,2026-10-17T20:29:55.274551,කෙමෙන් පියවරෙන් පියවර කියවන්න,How to read step by step,STEP_BY_STEP,{},,Detailed,True
+189,user_001,2026-10-17T20:32:03.961600,ලිපියක විස්තරාත්මකව කියවන්න,Read the article in detail,ELABORATE,{},,Detailed,False
+190,user_001,2026-10-17T21:20:50.660091,ලිපි දෙක කියවන්න,Read the two articles,READ_ALOUD,{},,Simple,False
+191,user_001,2026-10-17T21:21:08.188036,දෙවනි ලිපිය කියවන්න,Read the second article,GO_TO_PAGE,{},,,False

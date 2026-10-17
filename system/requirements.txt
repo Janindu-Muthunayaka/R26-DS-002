@@ -20,3 +20,5 @@ tinydb
 river
 SpeechRecognition
 PyAudio
+python-dotenv
+requests

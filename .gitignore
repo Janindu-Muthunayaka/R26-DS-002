@@ -101,7 +101,7 @@ Work/Janindu/0_Data/Model/checkpoint.pth
 # from nothing else. Rotating the key is then the ONLY remedy.
 #
 # So: no key, token or password is ever written into a tracked file. Real
-# values live in .env, which is ignored here. services/.env.example documents
+# values live in system/.env, which is ignored here. system/.env.example documents
 # the SHAPE with empty values and IS tracked, so a teammate knows which
 # variables to set without ever seeing one.
 #

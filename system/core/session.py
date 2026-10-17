@@ -46,8 +46,10 @@ class SessionStore:
         self.purge()
         existing_answer = self.get_answer(job)
         existing_cursor = self.cursor(job)
+        existing_state = self._items[job][4] if job in self._items and len(self._items[job]) > 4 else {}
         self._items.pop(job, None)          # re-inserting moves it to newest
-        self._items[job] = [self._clock(), document, existing_cursor, existing_answer]
+        self._items[job] = [self._clock(), document, existing_cursor, existing_answer,
+                            existing_state]
         while len(self._items) > self.max_items:
             self._items.popitem(last=False)
 
@@ -82,6 +84,20 @@ class SessionStore:
             while len(hit) <= 3:
                 hit.append(None)
             hit[3] = answer_dict
+
+    def state(self, job: str) -> dict:
+        """Conversation state for this job (layers/l6_generator/turns.py):
+        what was last spoken, the last real question, the current article,
+        a pending question. Mutable; lives and expires with the Document.
+        A job that is not held gets a throwaway dict."""
+        hit = self._items.get(job or '')
+        if not hit:
+            return {}
+        while len(hit) <= 4:
+            hit.append(None)
+        if hit[4] is None:
+            hit[4] = {}
+        return hit[4]
 
     def age_of(self, job: str) -> Optional[float]:
         hit = self._items.get(job or '')

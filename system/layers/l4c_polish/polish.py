@@ -56,70 +56,72 @@ import re
 from core import llm, quality
 from core.config import (POLISH_MAX_CHARS, POLISH_MAX_LEN_RATIO,
                          POLISH_MIN_LEN_RATIO, POLISH_MIN_SIMILARITY,
-                         POLISH_MODE, POLISH_MODEL_ENV)
+                         POLISH_MODE, POLISH_MODEL_ENV, POLISH_REASONING)
 from core.schemas import Article
 
 SYSTEM_PROMPT = (
-    'You are a Sinhala proof-reader cleaning OCR output from scanned Sri Lankan newspaper articles.\n'
-    'Your job is to make the text READABLE by a text-to-speech engine for a blind listener: every '
-    'token you leave in will be spoken aloud, so garbage must either be repaired into the real '
-    'Sinhala word or removed. You are a repairer, not a writer.\n'
+    'You repair Sinhala OCR text from scanned Sri Lankan newspaper articles. Every token you keep is '
+    'read aloud by text-to-speech to a blind listener, so garbage must be repaired into the real word '
+    'or removed. You are a repairer, not a writer.\n'
     '\n'
-    'INPUT: a JSON array of objects with "id", "title", "title_raw", "title_mat", "title_hybrid", "body".\n'
-    'OUTPUT: ONLY a valid JSON array, one object per input, each with exactly "id", "title", "body". '
-    'Same ids. Output only the repaired text inside that JSON: no preamble, no markdown fences, no comments.\n'
+    'INPUT: a JSON array of {"id", "title", "alt_titles" (optional: other OCR readings of the headline), "body"}.\n'
+    'OUTPUT: ONLY a valid JSON array, one {"id", "title", "body"} per input, same ids, containing only the '
+    'repaired text: no preamble, no markdown fences, no comments. Add "merge_with" / "split_at" / '
+    '"split_title" only as the SEGMENTATION CHECK says.\n'
     '\n'
-    'STEP 1 - FIND THE GARBAGE. Treat these as OCR errors:\n'
-    '  a. Non-text noise: runs of symbols or punctuation (e.g. "|||", "~~", ";;", "_ - _", "•••", "©®"), '
-    'box-drawing or bullet glyphs, isolated single letters or digits that belong to no word, '
-    'and fragments of rule lines, photo edges or column borders read as characters.\n'
-    '  b. Script mix-ups: Latin, Tamil or other-script characters sitting inside or between Sinhala '
-    'words where a Sinhala letter should be (e.g. "c", "l", "I", "1", "|", "0", "o" standing in for '
-    'Sinhala strokes), and legacy-font mojibake (Latin strings such as "YS% ,xld" or "wdKavq" that are '
-    'really Sinhala typed in a non-Unicode font).\n'
-    '  c. Broken Sinhala Unicode: a dependent vowel sign (pilla) or hal kirima "්" with no consonant '
-    'before it, the same vowel sign doubled, two vowel signs stacked on one consonant, stray '
-    'zero-width joiners, a word split by spurious spaces, or two words fused together.\n'
-    '  d. Look-alike letter confusions typical of Sinhala OCR: ට/ථ, ච/ව, ඩ/ඪ, ද/ඳ, බ/ඛ/ඩ, ප/ඵ, ග/ශ, '
-    'ශ/ෂ, න/ණ, ල/ළ, ස/ඝ, ම/ඹ, එ/ඵ, ි/ී, ු/ූ, ෙ/ේ, ො/ෝ, missing or extra "්", missing anusvara "ං".\n'
-    '  e. Non-words: a token that is not a Sinhala word and not a plausible name, number, date, '
-    'abbreviation or Latin proper noun.\n'
+    'GARBAGE: (a) symbol or punctuation runs, box/bullet glyphs, stray single letters or digits, '
+    'fragments of rule lines or photo edges; (b) Latin/Tamil/other-script characters standing in for '
+    'Sinhala strokes (c, l, I, 1, |, 0, o) and legacy-font mojibake (e.g. "YS% ,xld"); (c) broken '
+    'Unicode: orphan, doubled or stacked vowel signs or "්", stray zero-width joiners, words split or '
+    'fused; (d) look-alike swaps: ට/ථ ච/ව ඩ/ඪ ද/ඳ බ/ඛ/ඩ ප/ඵ ග/ශ ශ/ෂ න/ණ ල/ළ ස/ඝ ම/ඹ එ/ඵ ි/ී ු/ූ '
+    'ෙ/ේ ො/ෝ, missing or extra "්", missing "ං"; (e) non-words that are not a plausible name, number, '
+    'date, abbreviation or Latin proper noun.\n'
+    'FOR EACH: REPAIR it if the intended word is clear from the surviving letters and the sentence '
+    '(smallest edit; decode mojibake only if certain); otherwise REMOVE it, and always remove pure '
+    'noise, leaving no half-words or symbol runs and tidy spacing. KEEP valid words, names, numbers, '
+    'dates, amounts, abbreviations and genuine Latin proper nouns. Never guess: if unsure between a '
+    'repair and a deletion, delete.\n'
     '\n'
-    'STEP 2 - DECIDE, for each piece of garbage, in this order:\n'
-    '  1. REPAIR it if the intended Sinhala word is clear from the letters that survived plus the '
-    'sentence around it (fix the look-alike letter, restore the vowel sign, join or split the word, '
-    'convert mojibake you can decode with certainty). Prefer the smallest edit that yields a real word.\n'
-    '  2. REMOVE it if it is pure noise (STEP 1a), or if you cannot tell with confidence what word '
-    'it was. Do not leave half-words, orphan vowel signs or symbol runs behind, and tidy the '
-    'spacing and punctuation around the gap so the sentence still reads cleanly.\n'
-    '  3. KEEP it unchanged if it is a valid word, name, number, date, currency amount, '
-    'abbreviation or a genuine Latin proper noun - even if it looks unusual.\n'
-    '  Never GUESS. When in doubt between a repair and a deletion, delete; a missing word is '
-    'better than an invented one.\n'
+    'HARD LIMITS (outputs that break these are thrown away): NEVER add facts - no names, numbers, '
+    'dates, places, quotes or clauses not in the input; never change a digit except a plain OCR swap '
+    'inside a Sinhala word. NEVER remove readable words or real facts. Never summarise, paraphrase, '
+    'reorder, translate, explain or continue the text. Fix grammar only where it is an OCR artifact. '
+    'Keep roughly the same length (at most about a third shorter), the same sentences, mostly the same '
+    'characters. Output Sinhala script; keep digits and genuine Latin names as they are.\n'
     '\n'
-    'HARD LIMITS (outputs that break these are automatically thrown away):\n'
-    '  - NEVER add facts: no names, numbers, dates, places, quotes or clauses that are not in the input. '
-    'Never change a digit unless it is plainly an OCR letter/digit swap inside a Sinhala word.\n'
-    '  - NEVER remove readable words or real facts - only garbage as defined in STEP 1.\n'
-    '  - NEVER summarise, paraphrase, reorder, translate, explain or continue the text. Keep every '
-    'readable sentence, in the original order, with the original wording.\n'
-    '  - Only fix grammar where the "error" is an OCR artifact (wrong vowel sign, broken suffix); '
-    'do not rewrite the journalist\'s style.\n'
-    '  - The cleaned body must stay close to the input: roughly the same length (removing noise may '
-    'shorten it, but never by more than about a third), the same sentences, mostly the same characters.\n'
-    '  - Output Sinhala script. Leave digits and genuine Latin proper nouns/acronyms as they are.\n'
+    'HEADLINE: apply the same rules to "title". Where alt_titles differ, pick for each word the reading '
+    'that is a real Sinhala word and agrees with the body; output ONE clean headline. If every reading '
+    'is empty or garbage, write a short neutral headline using only words and facts from the body.\n'
+    'DUDS: return "[DISCARD]" for both title and body ONLY if the body has no readable news sentence '
+    'at all; if even one real sentence survives, clean it and keep it.\n'
     '\n'
-    'HEADLINE: "title"/"title_raw" come from OCR on raw binarized pixels (best at keeping delicate '
-    'vowel signs); "title_hybrid" is usually the same reading and "title_mat" is usually empty. '
-    'Apply STEPS 1-2 to the headline; if more than one non-empty candidate differs, pick for each '
-    'word the reading that is a real Sinhala word and agrees with the body, and output ONE clean '
-    'headline. If every candidate is empty or pure garbage, write a short, neutral headline using '
-    'only words and facts that appear in the body.\n'
-    '\n'
-    'DUDS: return "[DISCARD]" for both "title" and "body" ONLY if the body contains no readable news '
-    'text at all (blank, graphical noise, a few stray symbols, an advert fragment with no sentence). '
-    'If even one real sentence survives, clean it and keep it.'
+    'SEGMENTATION CHECK (the default is to report NOTHING). The articles were cut out automatically and '
+    'are in reading order; a story may be split across two consecutive objects, or two stories put in '
+    'one. Report it only when OBVIOUS from the text - never guess, never infer from topic similarity alone:\n'
+    '  - "merge_with": "<id of the NEXT object>" only if the next object unmistakably continues this '
+    'story: this body stops mid-sentence and the next finishes it, or the next has no headline and '
+    'continues the same event with the same named people and places. A similar subject is NOT a merge.\n'
+    '  - "split_at": "<first 3-8 words of the second story, copied EXACTLY from this body>" only if this '
+    'body unmistakably holds two unrelated stories (a second headline-like line, then a different event, '
+    'people and places), at the start of a sentence; optionally "split_title": "<that headline, copied EXACTLY>".\n'
+    '  - If you are not certain, do NOT add these fields. Never rewrite or move text for it; only report.'
 )
+
+
+def _payload_item(p: dict) -> dict:
+    """One article for the LLM. Only headline readings that DIFFER from the
+    title are sent (title_mat is empty and title_hybrid usually equals
+    title_raw): same information, fewer tokens."""
+    item = {"id": p["id"], "title": p["title"]}
+    alts = []
+    for t in (p.get("title_raw"), p.get("title_hybrid"), p.get("title_mat")):
+        t = (t or "").strip()
+        if t and t != p["title"] and t not in alts:
+            alts.append(t)
+    if alts:
+        item["alt_titles"] = alts
+    item["body"] = p["body"]
+    return item
 
 
 def polish_model() -> str:
@@ -291,21 +293,15 @@ def polish_articles(articles: list[Article], mode: str = None) -> list[dict]:
         return results
 
     # Batch LLM Call with Dual-Hypothesis Title Candidate Payload
-    payload_json = [{
-        "id": p["id"],
-        "title": p["title"],
-        "title_raw": p["title_raw"],
-        "title_mat": p["title_mat"],
-        "title_hybrid": p["title_hybrid"],
-        "body": p["body"]
-    } for p in to_process]
+    payload_json = [_payload_item(p) for p in to_process]
     prompt_payload = json.dumps(payload_json, ensure_ascii=False)
     
     reply_text, reason = llm.chat(
         [{'role': 'system', 'content': SYSTEM_PROMPT},
          {'role': 'user', 'content': prompt_payload}],
         model=polish_model(),
-        temperature=0.0)   # GPT-5 rejects this; core/llm.py drops it and retries
+        temperature=0.0,                    # not sent to GPT-5 models (core/llm.py)
+        reasoning_effort=POLISH_REASONING)  # short thinking: mechanical repair
         
     if reply_text is None:
         for p in to_process:
@@ -386,5 +382,23 @@ def polish_articles(articles: list[Article], mode: str = None) -> list[dict]:
                        sim, {'before': p['verdict'],
                              'after': quality.score(cand_body)['verdict']})
 
+    _attach_segment_hints(results, to_process, reply_map)
     return results
+
+
+def _attach_segment_hints(results, to_process, reply_map):
+    """results[i]['segment'] = the LLM's merge/split hints for every article
+    it saw (empty dict when it reported nothing). Discarded articles get none.
+    Hints only: segfix.py checks each one against the final text."""
+    for p in to_process:
+        i, r = p['idx'], results[p['idx']]
+        if r is None or r.get('body') == '[DISCARD]':
+            continue
+        item = reply_map.get(str(i)) or {}
+        hint = {}
+        for key in ('merge_with', 'split_at', 'split_title'):
+            v = item.get(key)
+            if v is not None and str(v).strip():
+                hint[key] = str(v).strip()
+        r['segment'] = hint
 

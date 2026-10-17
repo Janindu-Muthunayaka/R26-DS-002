@@ -346,3 +346,23 @@ def test_embeddings_are_batched_without_losing_order(store, fake):
     assert len(recs) > 1
     A.index_records(store, recs)
     assert [c['text'] for c in store.chunks] == [r['text'] for r in recs]
+
+
+# ---- a request about ONE article uses only that article (17 Oct 2026) ----
+def test_a_named_article_is_the_only_evidence(store, fake):
+    """"පළමුවන ලිපිය කියවන්න" came back with details from article 2: the
+    whole page was evidence. With article_no, only that article is."""
+    one, two = 'පළමු ලිපිය බෝක්කුව ගැනයි.', 'දෙවන ලිපිය විකිරණ යන්ත්‍රය ගැනයි.'
+    ocr = {'corrected_text': f'Article 1: A\n{one}\n\nArticle 2: B\n{two}',
+           'articles': [{'title': 'A', 'body': one}, {'title': 'B', 'body': two}]}
+    out = A.run(store, ocr, {**VOICE, 'article_no': 2}, remember=False)
+    prompt = fake.chat_calls[-1][0]['content']
+    assert two in prompt and one not in prompt
+    assert 'Use only Article 2' in prompt
+    assert [s['article_no'] for s in out['retrieved_sources']] == [2]
+
+
+def test_an_article_that_is_not_on_the_page_falls_back_to_the_page(store, fake):
+    ocr = {'corrected_text': SI, 'articles': [{'title': 'A', 'body': SI}]}
+    out = A.run(store, ocr, {**VOICE, 'article_no': 5}, remember=False)
+    assert out['ok'] is True and any('not on this page' in n for n in out['notes'])
