@@ -111,7 +111,11 @@ def interpret(req: InterpretRequest):
             final_prompt["frame"] = result["frame"]
 
         return final_prompt
-        
+
+    except HTTPException:
+        # "Text cannot be empty" is the caller's mistake (400), not a crash.
+        # The catch-all below turned it into a 500 with a stack trace.
+        raise
     except Exception as e:
         import traceback
         traceback.print_exc()

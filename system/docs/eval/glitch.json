@@ -1,0 +1,271 @@
+{
+  "run_at": "2026-10-18 19:27",
+  "captures": [
+    {
+      "source_job": "e2c68b40",
+      "job": "c9d2051f",
+      "ok": true,
+      "n_articles": 5,
+      "secs": 5606.5,
+      "verdict": "good"
+    },
+    {
+      "source_job": "530144c3",
+      "job": "34111b39",
+      "ok": true,
+      "n_articles": 5,
+      "secs": 105.7,
+      "verdict": "good"
+    },
+    {
+      "source_job": "811015ff",
+      "job": "f555aabb",
+      "ok": true,
+      "n_articles": 4,
+      "secs": 136.3,
+      "verdict": "good"
+    }
+  ],
+  "endpoints": {
+    "n": 21,
+    "bad": []
+  },
+  "turns": {
+    "n": 60,
+    "glitches": 1,
+    "by_turn": {
+      "read_article_2": {
+        "n": 3,
+        "glitches": 0
+      },
+      "next_one": {
+        "n": 3,
+        "glitches": 0
+      },
+      "go_back": {
+        "n": 3,
+        "glitches": 0
+      },
+      "repeat": {
+        "n": 3,
+        "glitches": 0
+      },
+      "faster": {
+        "n": 3,
+        "glitches": 0
+      },
+      "slower": {
+        "n": 3,
+        "glitches": 0
+      },
+      "more_pauses": {
+        "n": 3,
+        "glitches": 0
+      },
+      "noise_repeat": {
+        "n": 3,
+        "glitches": 0
+      },
+      "volume": {
+        "n": 3,
+        "glitches": 0
+      },
+      "read_article_1": {
+        "n": 3,
+        "glitches": 1
+      },
+      "summary_art1": {
+        "n": 3,
+        "glitches": 0
+      },
+      "question_art1": {
+        "n": 3,
+        "glitches": 0
+      },
+      "question_inflected": {
+        "n": 3,
+        "glitches": 0
+      },
+      "simpler": {
+        "n": 3,
+        "glitches": 0
+      },
+      "step_by_step": {
+        "n": 3,
+        "glitches": 0
+      },
+      "rephrase": {
+        "n": 3,
+        "glitches": 0
+      },
+      "off_topic": {
+        "n": 3,
+        "glitches": 0
+      },
+      "junk": {
+        "n": 3,
+        "glitches": 0
+      },
+      "previous_page": {
+        "n": 3,
+        "glitches": 0
+      },
+      "stop": {
+        "n": 3,
+        "glitches": 0
+      }
+    },
+    "by_problem": {
+      "code / English in speech": 1
+    }
+  },
+  "endpoint_rows": [
+    {
+      "check": "GET /",
+      "http": 200,
+      "secs": 0.01,
+      "ok": true,
+      "problems": ""
+    },
+    {
+      "check": "GET /reader",
+      "http": 200,
+      "secs": 0.0,
+      "ok": true,
+      "problems": ""
+    },
+    {
+      "check": "GET /debug",
+      "http": 200,
+      "secs": 0.0,
+      "ok": true,
+      "problems": ""
+    },
+    {
+      "check": "GET /health",
+      "http": 200,
+      "secs": 0.0,
+      "ok": true,
+      "problems": ""
+    },
+    {
+      "check": "GET /users",
+      "http": 200,
+      "secs": 0.18,
+      "ok": true,
+      "problems": ""
+    },
+    {
+      "check": "GET /active-user",
+      "http": 200,
+      "secs": 0.0,
+      "ok": true,
+      "problems": ""
+    },
+    {
+      "check": "GET /latest",
+      "http": 200,
+      "secs": 0.02,
+      "ok": true,
+      "problems": ""
+    },
+    {
+      "check": "GET /session/job",
+      "http": 200,
+      "secs": 0.0,
+      "ok": true,
+      "problems": ""
+    },
+    {
+      "check": "GET /document/job",
+      "http": 200,
+      "secs": 0.02,
+      "ok": true,
+      "problems": ""
+    },
+    {
+      "check": "GET /profile/user",
+      "http": 200,
+      "secs": 0.05,
+      "ok": true,
+      "problems": ""
+    },
+    {
+      "check": "GET /audio/job",
+      "http": 404,
+      "secs": 0.0,
+      "ok": true,
+      "problems": ""
+    },
+    {
+      "check": "GET /session/unknown",
+      "http": 404,
+      "secs": 0.0,
+      "ok": true,
+      "problems": ""
+    },
+    {
+      "check": "GET /document/unknown",
+      "http": 404,
+      "secs": 0.01,
+      "ok": true,
+      "problems": ""
+    },
+    {
+      "check": "POST /ask unknown job",
+      "http": 404,
+      "secs": 0.02,
+      "ok": true,
+      "problems": ""
+    },
+    {
+      "check": "POST /ask empty text",
+      "http": 200,
+      "secs": 11.14,
+      "ok": true,
+      "problems": ""
+    },
+    {
+      "check": "POST /ask no job",
+      "http": 422,
+      "secs": 0.0,
+      "ok": true,
+      "problems": ""
+    },
+    {
+      "check": "POST /regenerate bad index",
+      "http": 404,
+      "secs": 0.02,
+      "ok": true,
+      "problems": ""
+    },
+    {
+      "check": "POST /users bad body",
+      "http": 422,
+      "secs": 0.0,
+      "ok": true,
+      "problems": ""
+    },
+    {
+      "check": "POST /active-user unknown",
+      "http": 200,
+      "secs": 0.02,
+      "ok": true,
+      "problems": ""
+    },
+    {
+      "check": "POST /capture not an image",
+      "http": 400,
+      "secs": 0.08,
+      "ok": true,
+      "problems": ""
+    },
+    {
+      "check": "POST /capture empty file",
+      "http": 400,
+      "secs": 0.0,
+      "ok": true,
+      "problems": ""
+    }
+  ]
+}

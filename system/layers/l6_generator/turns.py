@@ -348,6 +348,12 @@ class _Turn:
         if intent == 'STOP':                                               # N10
             return self.out('STOP', '', 'stop')
 
+        # Nothing was said (an empty transcript). Never a question: it was
+        # stored as the "last question", and every later "say it simpler"
+        # re-asked an empty question that RAG rejected.
+        if not (self.si or '').strip() and not (self.en or '').strip():
+            return self.out('ASK', SI_SAY_AGAIN, 'ask', pending=None)
+
         pending = st.pop('pending', None)
         if pending and pending.get('about') == 'read':                     # R3/R4/N5 answer
             yn = yes_no(self.si, self.en)
@@ -574,6 +580,8 @@ class _Turn:
                                   f'Explain this part of the article: {part}',
                                   style, extra, article=idx, cursor=nxt['cursor'])
         lq = st.get('last_question')
+        if lq and not (lq.get('si') or lq.get('en') or '').strip():
+            lq = None
         if summary or not lq:
             si, en, idx = self._default_question(summary)
             return self._generate(si, en, style, extra, article=idx)
@@ -600,7 +608,7 @@ class _Turn:
                            cursor=self.cursor if cursor is None else cursor)
         text = res.get('speakable') or ''
         q = {'si': si, 'en': en, 'article': article}
-        if not text or text in ERRORS:                                     # E1 / E2
+        if not text or text in ERRORS or res.get('ok') is False:          # E1 / E2
             st['last_error'] = {**q, 'style': style, 'real': real_question}
             return self.out('MSG', text or l6gen.SI_FAILED, 'error', ok=False, res=res,
                             route='GENERATE', style=style_eff, question=q,

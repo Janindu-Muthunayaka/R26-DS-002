@@ -1,0 +1,379 @@
+{
+  "service": "http://127.0.0.1:8101/interpret",
+  "user": "user_001",
+  "run_at": "2026-10-18 10:50",
+  "sets": {
+    "gen500": {
+      "n": 478,
+      "accuracy": 0.8536,
+      "macro_f1": 0.8624,
+      "weighted_f1": 0.8785,
+      "per_intent": {
+        "EXPLAIN": {
+          "n": 51,
+          "precision": 0.868,
+          "recall": 0.647,
+          "f1": 0.742
+        },
+        "GO_TO_PAGE": {
+          "n": 12,
+          "precision": 0.571,
+          "recall": 1.0,
+          "f1": 0.727
+        },
+        "GO_TO_SECTION": {
+          "n": 27,
+          "precision": 0.963,
+          "recall": 0.963,
+          "f1": 0.963
+        },
+        "IDENTIFY_CONTENT": {
+          "n": 21,
+          "precision": 0.731,
+          "recall": 0.905,
+          "f1": 0.809
+        },
+        "NEXT": {
+          "n": 55,
+          "precision": 1.0,
+          "recall": 0.873,
+          "f1": 0.932
+        },
+        "PREVIOUS": {
+          "n": 54,
+          "precision": 1.0,
+          "recall": 0.685,
+          "f1": 0.813
+        },
+        "READ_ALOUD": {
+          "n": 8,
+          "precision": 0.583,
+          "recall": 0.875,
+          "f1": 0.7
+        },
+        "READ_HEADLINES": {
+          "n": 29,
+          "precision": 0.929,
+          "recall": 0.897,
+          "f1": 0.912
+        },
+        "REPEAT": {
+          "n": 34,
+          "precision": 0.914,
+          "recall": 0.941,
+          "f1": 0.928
+        },
+        "REPHRASE": {
+          "n": 48,
+          "precision": 0.917,
+          "recall": 0.917,
+          "f1": 0.917
+        },
+        "SIMPLIFY": {
+          "n": 51,
+          "precision": 0.957,
+          "recall": 0.863,
+          "f1": 0.907
+        },
+        "STOP": {
+          "n": 31,
+          "precision": 0.938,
+          "recall": 0.968,
+          "f1": 0.952
+        },
+        "SUMMARIZE": {
+          "n": 57,
+          "precision": 0.943,
+          "recall": 0.877,
+          "f1": 0.909
+        }
+      },
+      "top_confusions": [
+        {
+          "true": "EXPLAIN",
+          "pred": "ELABORATE",
+          "count": 14
+        },
+        {
+          "true": "NEXT",
+          "pred": "GO_TO_PAGE",
+          "count": 4
+        },
+        {
+          "true": "PREVIOUS",
+          "pred": "GO_TO_PAGE",
+          "count": 4
+        },
+        {
+          "true": "SIMPLIFY",
+          "pred": "SUMMARIZE",
+          "count": 3
+        },
+        {
+          "true": "PREVIOUS",
+          "pred": "REPHRASE",
+          "count": 3
+        },
+        {
+          "true": "READ_HEADLINES",
+          "pred": "IDENTIFY_CONTENT",
+          "count": 3
+        },
+        {
+          "true": "PREVIOUS",
+          "pred": "REPEAT",
+          "count": 3
+        },
+        {
+          "true": "PREVIOUS",
+          "pred": "STOP",
+          "count": 2
+        }
+      ]
+    },
+    "p2b45": {
+      "n": 45,
+      "accuracy": 0.8222,
+      "macro_f1": 0.8251,
+      "weighted_f1": 0.8348,
+      "per_intent": {
+        "EXPLAIN": {
+          "n": 6,
+          "precision": 0.833,
+          "recall": 0.833,
+          "f1": 0.833
+        },
+        "IDENTIFY_CONTENT": {
+          "n": 6,
+          "precision": 0.857,
+          "recall": 1.0,
+          "f1": 0.923
+        },
+        "NEXT": {
+          "n": 5,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        },
+        "READ_ALOUD": {
+          "n": 5,
+          "precision": 1.0,
+          "recall": 0.8,
+          "f1": 0.889
+        },
+        "REPEAT": {
+          "n": 5,
+          "precision": 1.0,
+          "recall": 0.6,
+          "f1": 0.75
+        },
+        "REPHRASE": {
+          "n": 4,
+          "precision": 0.667,
+          "recall": 0.5,
+          "f1": 0.571
+        },
+        "SIMPLIFY": {
+          "n": 4,
+          "precision": 0.75,
+          "recall": 0.75,
+          "f1": 0.75
+        },
+        "STOP": {
+          "n": 5,
+          "precision": 0.833,
+          "recall": 1.0,
+          "f1": 0.909
+        },
+        "SUMMARIZE": {
+          "n": 5,
+          "precision": 0.8,
+          "recall": 0.8,
+          "f1": 0.8
+        }
+      },
+      "top_confusions": [
+        {
+          "true": "EXPLAIN",
+          "pred": "SIMPLIFY",
+          "count": 1
+        },
+        {
+          "true": "SIMPLIFY",
+          "pred": "SUMMARIZE",
+          "count": 1
+        },
+        {
+          "true": "REPHRASE",
+          "pred": "EXPLAIN",
+          "count": 1
+        },
+        {
+          "true": "SUMMARIZE",
+          "pred": "STOP",
+          "count": 1
+        },
+        {
+          "true": "REPHRASE",
+          "pred": "ASK_QUESTION",
+          "count": 1
+        },
+        {
+          "true": "REPEAT",
+          "pred": "PREVIOUS",
+          "count": 1
+        },
+        {
+          "true": "REPEAT",
+          "pred": "REPHRASE",
+          "count": 1
+        },
+        {
+          "true": "READ_ALOUD",
+          "pred": "IDENTIFY_CONTENT",
+          "count": 1
+        }
+      ]
+    },
+    "multi": {
+      "n": 16,
+      "accuracy": 0.9375,
+      "macro_f1": 0.9524,
+      "weighted_f1": 0.9583,
+      "per_intent": {
+        "ASK_QUESTION": {
+          "n": 1,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        },
+        "CHANGE_SPEED": {
+          "n": 6,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        },
+        "NEXT": {
+          "n": 2,
+          "precision": 1.0,
+          "recall": 0.5,
+          "f1": 0.667
+        },
+        "READ_ALOUD": {
+          "n": 1,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        },
+        "REPEAT": {
+          "n": 4,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        },
+        "SIMPLIFY": {
+          "n": 1,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        },
+        "STEP_BY_STEP": {
+          "n": 1,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        }
+      },
+      "top_confusions": [
+        {
+          "true": "NEXT",
+          "pred": "STOP",
+          "count": 1
+        }
+      ]
+    },
+    "fresh": {
+      "n": 17,
+      "accuracy": 0.7647,
+      "macro_f1": 0.66,
+      "weighted_f1": 0.7941,
+      "per_intent": {
+        "ASK_QUESTION": {
+          "n": 3,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        },
+        "CHANGE_SPEED": {
+          "n": 5,
+          "precision": 0.8,
+          "recall": 0.8,
+          "f1": 0.8
+        },
+        "ELABORATE": {
+          "n": 1,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0
+        },
+        "IDENTIFY_CONTENT": {
+          "n": 1,
+          "precision": 0.5,
+          "recall": 1.0,
+          "f1": 0.667
+        },
+        "REPEAT": {
+          "n": 7,
+          "precision": 1.0,
+          "recall": 0.714,
+          "f1": 0.833
+        }
+      },
+      "top_confusions": [
+        {
+          "true": "CHANGE_SPEED",
+          "pred": "SUMMARIZE",
+          "count": 1
+        },
+        {
+          "true": "REPEAT",
+          "pred": "SIMPLIFY",
+          "count": 1
+        },
+        {
+          "true": "REPEAT",
+          "pred": "CHANGE_SPEED",
+          "count": 1
+        },
+        {
+          "true": "ELABORATE",
+          "pred": "IDENTIFY_CONTENT",
+          "count": 1
+        }
+      ]
+    }
+  },
+  "modifiers": {
+    "repeat": {
+      "n": 33,
+      "accuracy": 1.0
+    },
+    "speed": {
+      "n": 33,
+      "accuracy": 1.0
+    },
+    "style": {
+      "n": 33,
+      "accuracy": 1.0
+    },
+    "all_three": 1.0
+  },
+  "latency_sec": {
+    "n": 556,
+    "mean": 3.345,
+    "median": 3.191,
+    "p95": 4.833,
+    "max": 7.917
+  },
+  "errors": 0
+}

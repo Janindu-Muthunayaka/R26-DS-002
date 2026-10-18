@@ -1,0 +1,141 @@
+{
+  "run_at": "2026-10-18 10:27",
+  "headlines": 2,
+  "head_px": 58,
+  "fonts": [
+    "Nirmala UI Bold",
+    "Iskoola Pota",
+    "Dinamina Unicode",
+    "Malithi Web"
+  ],
+  "overall": {
+    "n": 6,
+    "baseline": {
+      "cer": 0.0508,
+      "wer": 0.124,
+      "exact_match": 0.3333,
+      "median_sec": 0.27
+    },
+    "deployed": {
+      "cer": 0.3587,
+      "wer": 0.4263,
+      "exact_match": 0.0,
+      "median_sec": 4.73
+    },
+    "mat": {
+      "cer": 0.6222,
+      "wer": 0.845,
+      "exact_match": 0.0,
+      "median_sec": 1.08
+    }
+  },
+  "by_condition": {
+    "clean": {
+      "n": 2,
+      "baseline": {
+        "cer": 0.0571,
+        "wer": 0.1395,
+        "exact_match": 0.5,
+        "median_sec": 0.25
+      },
+      "deployed": {
+        "cer": 0.0571,
+        "wer": 0.1395,
+        "exact_match": 0.0,
+        "median_sec": 12.41
+      },
+      "mat": {
+        "cer": 0.3524,
+        "wer": 0.721,
+        "exact_match": 0.0,
+        "median_sec": 1.95
+      }
+    },
+    "degraded": {
+      "n": 2,
+      "baseline": {
+        "cer": 0.0381,
+        "wer": 0.093,
+        "exact_match": 0.5,
+        "median_sec": 0.3
+      },
+      "deployed": {
+        "cer": 0.0571,
+        "wer": 0.1395,
+        "exact_match": 0.0,
+        "median_sec": 4.92
+      },
+      "mat": {
+        "cer": 0.6953,
+        "wer": 0.8605,
+        "exact_match": 0.0,
+        "median_sec": 1.44
+      }
+    },
+    "hard": {
+      "n": 2,
+      "baseline": {
+        "cer": 0.0572,
+        "wer": 0.1396,
+        "exact_match": 0.0,
+        "median_sec": 0.27
+      },
+      "deployed": {
+        "cer": 0.9619,
+        "wer": 1.0,
+        "exact_match": 0.0,
+        "median_sec": 4.07
+      },
+      "mat": {
+        "cer": 0.819,
+        "wer": 0.9535,
+        "exact_match": 0.0,
+        "median_sec": 0.31
+      }
+    }
+  },
+  "by_font": {
+    "Nirmala UI Bold": {
+      "n": 3,
+      "baseline": {
+        "cer": 0.1111,
+        "wer": 0.2632,
+        "exact_match": 0.0,
+        "median_sec": 0.28
+      },
+      "deployed": {
+        "cer": 0.3407,
+        "wer": 0.3684,
+        "exact_match": 0.0,
+        "median_sec": 4.96
+      },
+      "mat": {
+        "cer": 0.7778,
+        "wer": 0.9123,
+        "exact_match": 0.0,
+        "median_sec": 1.83
+      }
+    },
+    "Iskoola Pota": {
+      "n": 3,
+      "baseline": {
+        "cer": 0.0056,
+        "wer": 0.0139,
+        "exact_match": 0.6667,
+        "median_sec": 0.26
+      },
+      "deployed": {
+        "cer": 0.3722,
+        "wer": 0.4722,
+        "exact_match": 0.0,
+        "median_sec": 4.59
+      },
+      "mat": {
+        "cer": 0.5056,
+        "wer": 0.7917,
+        "exact_match": 0.0,
+        "median_sec": 1.04
+      }
+    }
+  }
+}

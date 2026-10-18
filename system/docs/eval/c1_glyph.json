@@ -1,0 +1,155 @@
+{
+  "model": "EfficientNetV2-S, best_model.pth (epoch 19)",
+  "split": "stratified 80/20, random_state 42 (same as trainer.py)",
+  "n_val": 18323,
+  "n_classes": 315,
+  "accuracy": 0.9904,
+  "top5_accuracy": 0.9997,
+  "macro": {
+    "precision": 0.9735,
+    "recall": 0.9766,
+    "f1": 0.9748
+  },
+  "weighted": {
+    "precision": 0.9871,
+    "recall": 0.9904,
+    "f1": 0.9885
+  },
+  "merged_duplicate_labels": {
+    "n_classes": 309,
+    "duplicated_labels": [
+      "pili_adhayaAdvanced",
+      "pili_adhayaBasic",
+      "pili_alapiliHalkirima",
+      "pili_alapilla",
+      "pili_kobuwaSingle",
+      "pili_kombuDouble"
+    ],
+    "accuracy": 0.9959,
+    "macro_f1": 0.9959,
+    "classes_f1_below_0.95": 0
+  },
+  "by_difficulty": {
+    "Basic": {
+      "n": 5074,
+      "accuracy": 0.9797
+    },
+    "Hard": {
+      "n": 7258,
+      "accuracy": 0.9917
+    },
+    "Intermediate": {
+      "n": 5991,
+      "accuracy": 0.998
+    }
+  },
+  "classes_f1_below_0.95": 12,
+  "worst_classes": [
+    {
+      "class": "pili_adhayaBasic_0003",
+      "n": 15,
+      "f1": 0.0
+    },
+    {
+      "class": "pili_alapiliHalkirima_0007",
+      "n": 16,
+      "f1": 0.0
+    },
+    {
+      "class": "pili_alapilla_0002",
+      "n": 15,
+      "f1": 0.0
+    },
+    {
+      "class": "pili_kobuwaSingle_0005",
+      "n": 15,
+      "f1": 0.0
+    },
+    {
+      "class": "pili_kombuDouble_0006",
+      "n": 16,
+      "f1": 0.0
+    },
+    {
+      "class": "pili_adhayaAdvanced_0004",
+      "n": 15,
+      "f1": 0.091
+    },
+    {
+      "class": "pili_adhayaAdvanced_0301",
+      "n": 59,
+      "f1": 0.825
+    },
+    {
+      "class": "pili_adhayaBasic_0300",
+      "n": 59,
+      "f1": 0.872
+    },
+    {
+      "class": "pili_alapiliHalkirima_0304",
+      "n": 59,
+      "f1": 0.872
+    },
+    {
+      "class": "pili_alapilla_0299",
+      "n": 59,
+      "f1": 0.879
+    }
+  ],
+  "top_confusions": [
+    {
+      "true": "pili_kombuDouble_0006",
+      "pred": "pili_kombuDouble_0303",
+      "count": 16
+    },
+    {
+      "true": "pili_alapiliHalkirima_0007",
+      "pred": "pili_alapiliHalkirima_0304",
+      "count": 16
+    },
+    {
+      "true": "pili_adhayaBasic_0003",
+      "pred": "pili_adhayaBasic_0300",
+      "count": 15
+    },
+    {
+      "true": "pili_kobuwaSingle_0005",
+      "pred": "pili_kobuwaSingle_0302",
+      "count": 15
+    },
+    {
+      "true": "pili_alapilla_0002",
+      "pred": "pili_alapilla_0299",
+      "count": 15
+    },
+    {
+      "true": "pili_adhayaAdvanced_0004",
+      "pred": "pili_adhayaAdvanced_0301",
+      "count": 14
+    },
+    {
+      "true": "pili_adhayaAdvanced_0301",
+      "pred": "pili_adhayaAdvanced_0004",
+      "count": 6
+    },
+    {
+      "true": "combo_ලු_0201",
+      "pred": "combo_ලූ_0202",
+      "count": 3
+    },
+    {
+      "true": "combo_ථි_0087",
+      "pred": "combo_ටි_0048",
+      "count": 3
+    },
+    {
+      "true": "combo_සැ_0234",
+      "pred": "combo_සෑ_0235",
+      "count": 2
+    }
+  ],
+  "inference": {
+    "device": "cuda",
+    "images_per_sec": 136.3
+  }
+}

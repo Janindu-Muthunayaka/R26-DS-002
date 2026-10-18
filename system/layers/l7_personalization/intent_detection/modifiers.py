@@ -64,6 +64,23 @@ NOT_REPEAT_EN = [r"\bchange", r"\bsimpl", r"\beas(y|ier|ily)\b", r"\banother way
                  r"\bstep by step\b", r"\bbrief", r"\bsummar"]
 
 
+# "Again" while MOVING to another item is navigation, not a replay (18 Oct
+# 2026, replay of 556 commands): "ආයෙත් කලින් ප්‍රවෘත්තියට යන්න" (go back to the
+# previous news again) was replayed instead of going back. A back / next word
+# AND a movement word (go, take, to-the-page ...) = PREVIOUS / NEXT.
+# "කලින් කියපු කොටස තව පාරක් කියන්න" (say the earlier part once more) has no
+# movement word and stays a repeat.
+NAV_DIRECTION_SI = r"(කලින්|පෙර|පස්සට|ආපස්සට|ඊළඟ|ඊලඟ|මීළඟ|මීලඟ)"
+NAV_MOVE_SI = (r"(^| )(යන්න|යමු|ගිහින්|ගන්න|අරගන්න|ගනිමු)( |$)"
+               r"|(ප්‍රවෘත්තියට|පුවතට|ලිපියට|පිටුවට|සිරස්තලයට|එකට)( |$)")
+
+
+def navigation_move_si(si):
+    """True if the Sinhala says to MOVE back or forward to another item."""
+    si = _clean(si)
+    return bool(re.search(NAV_DIRECTION_SI, si)) and bool(re.search(NAV_MOVE_SI, si))
+
+
 def _apasu_repeat(si):
     return bool(re.search(APASU_REPEAT_SI, si)) and not re.search(APASU_BACK_SI, si)
 
@@ -78,15 +95,19 @@ def _not_repeat_si(si):
 
 
 def repeat_in_sinhala(sinhala):
-    """True if the Sinhala text alone says "again" with no change/style word."""
+    """True if the Sinhala text alone says "again" with no change/style word
+    and no move to another item."""
     si = _clean(sinhala)
-    return bool(si) and not _not_repeat_si(si) and _repeat_signal_si(si)
+    return (bool(si) and not _not_repeat_si(si) and not navigation_move_si(si)
+            and _repeat_signal_si(si))
 
 
 def _repeat_with_source(sinhala, english, intent):
     si, en = _clean(sinhala), _clean(english)
     if si and _not_repeat_si(si):
         return False, "sinhala_change_or_style_word"
+    if si and navigation_move_si(si):
+        return False, "sinhala_navigation"
     if si and _repeat_signal_si(si):
         return True, "sinhala"
     if not si and _any(NOT_REPEAT_EN, en):
@@ -172,7 +193,10 @@ LESS_PAUSE_EN = [r"\b(fewer|less|shorter|no) pauses?\b", r"\bwithout (stopping|p
 MORE_PAUSE_EN = [r"\bmore pauses?\b", r"\blonger pauses?\b", r"\bpause (more|between)\b"]
 SMALLER_CHUNK_SI = [r"කෑලි කෑලි", r"කොටසින් කොටස", r"ටික ටික", r"පොඩි කොටස්"]
 SMALLER_CHUNK_EN = [r"\bsmaller (parts|pieces|chunks)\b", r"\bbit by bit\b", r"\bpiece by piece\b"]
-VOLUME_SI = [r"ශබ්දය", r"සද්දෙ", r"සද්දය", r"හයියෙන්"]
+# A loudness word needs a direction to be a volume request: "සද්දෙ නිසා මට
+# ඇහුනෙ නෑ" (I didn't hear because of the NOISE) is a repeat, and was being
+# answered with "turn your phone up".
+VOLUME_SI = [r"(ශබ්ද|සද්ද)\S*( \S+)? (වැඩි|අඩු)", r"හයියෙන්", r"(ශබ්ද|සද්ද)\S* (මදි|වැඩියි)"]
 VOLUME_EN = [r"\bvolume\b", r"\blouder\b", r"\bquieter\b"]
 
 

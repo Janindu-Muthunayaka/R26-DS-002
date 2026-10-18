@@ -1,0 +1,1407 @@
+{
+  "run_at": "2026-10-18 13:09",
+  "server": "http://127.0.0.1:8000",
+  "captures": {
+    "n": 41,
+    "phone_bursts": 35,
+    "pipeline_ok": 36,
+    "readable_document": 36,
+    "readable_rate": 0.878,
+    "verdicts": {
+      "None": 0,
+      "good": 35,
+      "poor": 1,
+      "unreadable": 4
+    },
+    "articles_per_capture_mean": 3.14,
+    "capture_latency_sec": {
+      "n": 41,
+      "median": 110.26,
+      "p95": 196.15,
+      "mean": 109.11
+    },
+    "stage_latency_sec": {
+      "select": {
+        "n": 40,
+        "median": 1.1,
+        "p95": 1.29,
+        "mean": 0.99
+      },
+      "segment_pass1": {
+        "n": 40,
+        "median": 4.31,
+        "p95": 4.85,
+        "mean": 4.37
+      },
+      "processing_parallel": {
+        "n": 40,
+        "median": 78.13,
+        "p95": 156.78,
+        "mean": 80.07
+      },
+      "polish_batch": {
+        "n": 40,
+        "median": 23.33,
+        "p95": 39.81,
+        "mean": 23.7
+      },
+      "total": {
+        "n": 40,
+        "median": 108.48,
+        "p95": 194.47,
+        "mean": 109.14
+      },
+      "body_ocr": {
+        "n": 40,
+        "median": 14.21,
+        "p95": 32.06,
+        "mean": 16.87
+      },
+      "body_mt5": {
+        "n": 40,
+        "median": 130.09,
+        "p95": 494.38,
+        "mean": 167.71
+      }
+    }
+  },
+  "turns": {
+    "n": 288,
+    "passed": 218,
+    "task_success_rate": 0.7569,
+    "by_turn": {
+      "read_article_1": {
+        "n": 36,
+        "passed": 36,
+        "rate": 1.0,
+        "latency_sec": {
+          "n": 36,
+          "median": 3.01,
+          "p95": 4.82,
+          "mean": 3.46
+        }
+      },
+      "next_part": {
+        "n": 36,
+        "passed": 36,
+        "rate": 1.0,
+        "latency_sec": {
+          "n": 36,
+          "median": 3.11,
+          "p95": 5.14,
+          "mean": 3.42
+        }
+      },
+      "repeat": {
+        "n": 36,
+        "passed": 2,
+        "rate": 0.0556,
+        "latency_sec": {
+          "n": 36,
+          "median": 3.0,
+          "p95": 4.62,
+          "mean": 3.08
+        }
+      },
+      "slower": {
+        "n": 36,
+        "passed": 1,
+        "rate": 0.0278,
+        "latency_sec": {
+          "n": 36,
+          "median": 2.95,
+          "p95": 5.78,
+          "mean": 3.52
+        }
+      },
+      "summarize": {
+        "n": 36,
+        "passed": 36,
+        "rate": 1.0,
+        "latency_sec": {
+          "n": 36,
+          "median": 27.76,
+          "p95": 35.49,
+          "mean": 28.09
+        }
+      },
+      "question": {
+        "n": 36,
+        "passed": 35,
+        "rate": 0.9722,
+        "latency_sec": {
+          "n": 36,
+          "median": 26.19,
+          "p95": 36.5,
+          "mean": 33.67
+        }
+      },
+      "simpler": {
+        "n": 36,
+        "passed": 36,
+        "rate": 1.0,
+        "latency_sec": {
+          "n": 36,
+          "median": 23.98,
+          "p95": 36.45,
+          "mean": 28.15
+        }
+      },
+      "stop": {
+        "n": 36,
+        "passed": 36,
+        "rate": 1.0,
+        "latency_sec": {
+          "n": 36,
+          "median": 2.91,
+          "p95": 5.16,
+          "mean": 3.29
+        }
+      }
+    },
+    "latency_sec": {
+      "local": {
+        "n": 180,
+        "median": 3.02,
+        "p95": 5.16,
+        "mean": 3.35
+      },
+      "generate": {
+        "n": 107,
+        "median": 26.19,
+        "p95": 36.45,
+        "mean": 27.45
+      }
+    }
+  },
+  "sessions_all_turns_passed": 0,
+  "capture_rows": [
+    {
+      "source_job": "b9bc8984",
+      "phone_burst": false,
+      "n_frames": 1,
+      "job": "110029b5",
+      "ok": true,
+      "n_articles": 2,
+      "verdict": "good",
+      "secs": 52.01,
+      "timings": {
+        "select": 0.05,
+        "segment_pass1": 4.35,
+        "processing_parallel": 27.52,
+        "polish_batch": 19.94,
+        "total": 51.86,
+        "body_ocr": 2.52,
+        "body_mt5": 35.35
+      },
+      "error": null,
+      "warnings": [
+        "Article 1: polish: discarded, body does not make sense",
+        "Article 2: polish: applied, 5.4% of body chars changed",
+        "Article 3: polish: applied, 2.8% of body chars changed",
+        "Article 1 excluded: polish: discarded, body does not make sense",
+        "Article 2: glyph 22px (want >=25) — closer; glyph 22px (want >=25) — closer",
+        "Article 3: glyph 21px (want >=25) — closer; glyph 21px (want >=25) — closer"
+      ],
+      "readable": true
+    },
+    {
+      "source_job": "3e8f099f",
+      "phone_burst": true,
+      "n_frames": 3,
+      "job": "06a89e82",
+      "ok": true,
+      "n_articles": 7,
+      "verdict": "good",
+      "secs": 183.57,
+      "timings": {
+        "select": 1.21,
+        "segment_pass1": 4.51,
+        "processing_parallel": 156.78,
+        "polish_batch": 19.23,
+        "total": 181.73,
+        "body_ocr": 32.06,
+        "body_mt5": 518.91
+      },
+      "error": null,
+      "warnings": [
+        "Article 1: polish: discarded, body does not make sense",
+        "Article 2: polish: applied, 30.9% of body chars changed",
+        "Article 3: polish: applied, 37.7% of body chars changed",
+        "Article 4: polish: REJECTED body — rewrote too much (similarity 0.51 < 0.55)",
+        "Article 5: polish: REJECTED body — the reply is less Sinhala than the input",
+        "Article 6: polish: REJECTED body — rewrote too much (similarity 0.16 < 0.55)",
+        "Article 7: polish: REJECTED body — rewrote too much (similarity 0.48 < 0.55)",
+        "Article 8: polish: REJECTED body — rewrote too much (similarity 0.17 < 0.55)",
+        "Article 1 skipped: glyph 9px (need >=25) — much closer; title: no title region detected by L3; glyph 9px (need >=25) — much closer; title: no title region detected by L3",
+        "Article 2: glyph 20px (want >=25) — closer; glyph 20px (want >=25) — closer",
+        "Article 4: glyph 21px (want >=25) — closer; glyph 21px (want >=25) — closer",
+        "Article 6: glyph 24px (want >=25) — closer; glyph 24px (want >=25) — closer",
+        "Article 7: glyph 21px (want >=25) — closer; glyph 21px (want >=25) — closer",
+        "Article 8: glyph 23px (want >=25) — closer; glyph 23px (want >=25) — closer"
+      ],
+      "readable": true
+    },
+    {
+      "source_job": "fd53fb65",
+      "phone_burst": true,
+      "n_frames": 3,
+      "job": "cc1e72eb",
+      "ok": true,
+      "n_articles": 2,
+      "verdict": "good",
+      "secs": 132.87,
+      "timings": {
+        "select": 1.29,
+        "segment_pass1": 4.34,
+        "processing_parallel": 109.32,
+        "polish_batch": 16.06,
+        "total": 131.01,
+        "body_ocr": 27.09,
+        "body_mt5": 192.03
+      },
+      "error": null,
+      "warnings": [
+        "Article 1: polish: REJECTED body — rewrote too much (similarity 0.20 < 0.55)",
+        "Article 2: polish: applied, 26.0% of body chars changed",
+        "Article 3: polish: discarded, body does not make sense",
+        "Article 4: polish: discarded, body does not make sense",
+        "Article 3 excluded: polish: discarded, body does not make sense",
+        "Article 4 excluded: polish: discarded, body does not make sense"
+      ],
+      "readable": true
+    },
+    {
+      "source_job": "36d2cbe0",
+      "phone_burst": true,
+      "n_frames": 3,
+      "job": "26a51069",
+      "ok": true,
+      "n_articles": 3,
+      "verdict": "poor",
+      "secs": 100.83,
+      "timings": {
+        "select": 1.1,
+        "segment_pass1": 4.53,
+        "processing_parallel": 79.08,
+        "polish_batch": 14.33,
+        "total": 99.04,
+        "body_ocr": 23.56,
+        "body_mt5": 166.7
+      },
+      "error": null,
+      "warnings": [
+        "Article 1: polish: REJECTED body — rewrote too much (similarity 0.43 < 0.55)",
+        "Article 2: polish: REJECTED body — rewrote too much (similarity 0.40 < 0.55)",
+        "Article 3: polish: discarded, body does not make sense",
+        "Article 4: polish: REJECTED body — rewrote too much (similarity 0.28 < 0.55)",
+        "Article 1: glyph 17px (want >=25) — closer; glyph 17px (want >=25) — closer",
+        "Article 2: glyph 17px (want >=25) — closer; glyph 17px (want >=25) — closer",
+        "Article 3 excluded: polish: discarded, body does not make sense",
+        "Article 4: glyph 16px (want >=25) — closer; title: no title region detected by L3; glyph 16px (want >=25) — closer; title: no title region detected by L3",
+        "poor quality: many words are broken into fragments"
+      ],
+      "readable": true
+    },
+    {
+      "source_job": "126bc5a4",
+      "phone_burst": true,
+      "n_frames": 3,
+      "job": "35ad3a70",
+      "ok": true,
+      "n_articles": 2,
+      "verdict": "good",
+      "secs": 123.08,
+      "timings": {
+        "select": 1.11,
+        "segment_pass1": 4.47,
+        "processing_parallel": 90.3,
+        "polish_batch": 25.46,
+        "total": 121.34,
+        "body_ocr": 14.54,
+        "body_mt5": 130.09
+      },
+      "error": null,
+      "warnings": [
+        "Article 1: polish: REJECTED body — rewrote too much (similarity 0.41 < 0.55)",
+        "Article 2: polish: applied, 22.4% of body chars changed",
+        "Article 3: polish: discarded, body does not make sense",
+        "Article 1: glyph 24px (want >=25) — closer; glyph 24px (want >=25) — closer",
+        "Article 2: glyph 24px (want >=25) — closer; glyph 24px (want >=25) — closer",
+        "Article 3 excluded: polish: discarded, body does not make sense"
+      ],
+      "readable": true
+    },
+    {
+      "source_job": "e4c97f7c",
+      "phone_burst": true,
+      "n_frames": 3,
+      "job": "80f7df69",
+      "ok": true,
+      "n_articles": 2,
+      "verdict": "good",
+      "secs": 144.72,
+      "timings": {
+        "select": 1.25,
+        "segment_pass1": 4.38,
+        "processing_parallel": 114.79,
+        "polish_batch": 22.48,
+        "total": 142.9,
+        "body_ocr": 14.21,
+        "body_mt5": 163.22
+      },
+      "error": null,
+      "warnings": [
+        "Article 1: polish: REJECTED body — rewrote too much (similarity 0.14 < 0.55)",
+        "Article 2: polish: REJECTED body — length changed by 0.53x",
+        "Article 3: polish: discarded, body does not make sense",
+        "Article 3 excluded: polish: discarded, body does not make sense"
+      ],
+      "readable": true
+    },
+    {
+      "source_job": "3cca3b32",
+      "phone_burst": true,
+      "n_frames": 3,
+      "job": "a87d7f30",
+      "ok": true,
+      "n_articles": 3,
+      "verdict": "good",
+      "secs": 140.11,
+      "timings": {
+        "select": 1.14,
+        "segment_pass1": 4.29,
+        "processing_parallel": 95.4,
+        "polish_batch": 37.51,
+        "total": 138.34,
+        "body_ocr": 25.06,
+        "body_mt5": 187.72
+      },
+      "error": null,
+      "warnings": [
+        "Article 1: polish: discarded, body does not make sense",
+        "Article 2: polish: discarded, body does not make sense",
+        "Article 3: polish: REJECTED body — length changed by 0.44x",
+        "Article 4: polish: applied, 22.4% of body chars changed",
+        "Article 5: polish: applied, 17.9% of body chars changed",
+        "Article 1: glyph 21px (want >=25) — closer; glyph 21px (want >=25) — closer",
+        "Article 1 excluded: polish: discarded, body does not make sense",
+        "Article 2 excluded: polish: discarded, body does not make sense",
+        "Article 3: glyph 24px (want >=25) — closer; glyph 24px (want >=25) — closer",
+        "Article 4: glyph 24px (want >=25) — closer; glyph 24px (want >=25) — closer",
+        "Article 5: glyph 23px (want >=25) — closer; title: no title region detected by L3; glyph 23px (want >=25) — closer; title: no title region detected by L3"
+      ],
+      "readable": true
+    },
+    {
+      "source_job": "30cc2c49",
+      "phone_burst": true,
+      "n_frames": 3,
+      "job": "2e54edc4",
+      "ok": true,
+      "n_articles": 2,
+      "verdict": "good",
+      "secs": 110.26,
+      "timings": {
+        "select": 1.17,
+        "segment_pass1": 4.52,
+        "processing_parallel": 78.67,
+        "polish_batch": 24.12,
+        "total": 108.48,
+        "body_ocr": 12.97,
+        "body_mt5": 115.4
+      },
+      "error": null,
+      "warnings": [
+        "Article 1: polish: discarded, body does not make sense",
+        "Article 2: polish: REJECTED body — rewrote too much (similarity 0.23 < 0.55)",
+        "Article 3: polish: applied, 37.5% of body chars changed",
+        "Article 4: polish: discarded, body does not make sense",
+        "Article 1 skipped: glyph 13px (need >=25) — much closer; title: no title region detected by L3; glyph 13px (need >=25) — much closer; title: no title region detected by L3",
+        "Article 2: glyph 21px (want >=25) — closer; glyph 21px (want >=25) — closer",
+        "Article 4: glyph 20px (want >=25) — closer; glyph 20px (want >=25) — closer",
+        "Article 4 excluded: polish: discarded, body does not make sense"
+      ],
+      "readable": true
+    },
+    {
+      "source_job": "811015ff",
+      "phone_burst": true,
+      "n_frames": 3,
+      "job": "c4588e7c",
+      "ok": true,
+      "n_articles": 4,
+      "verdict": "good",
+      "secs": 158.45,
+      "timings": {
+        "select": 1.31,
+        "segment_pass1": 4.24,
+        "processing_parallel": 120.48,
+        "polish_batch": 30.64,
+        "total": 156.67,
+        "body_ocr": 27.35,
+        "body_mt5": 338.31
+      },
+      "error": null,
+      "warnings": [
+        "Article 1: polish: REJECTED body — rewrote too much (similarity 0.32 < 0.55)",
+        "Article 2: polish: discarded, body does not make sense",
+        "Article 3: polish: REJECTED body — length changed by 0.51x",
+        "Article 4: polish: REJECTED body — rewrote too much (similarity 0.52 < 0.55)",
+        "Article 5: polish: REJECTED body — rewrote too much (similarity 0.51 < 0.55)",
+        "Article 2 excluded: polish: discarded, body does not make sense"
+      ],
+      "readable": true
+    },
+    {
+      "source_job": "8fc18357",
+      "phone_burst": true,
+      "n_frames": 3,
+      "job": "d614f17e",
+      "ok": true,
+      "n_articles": 2,
+      "verdict": "good",
+      "secs": 110.81,
+      "timings": {
+        "select": 1.19,
+        "segment_pass1": 4.35,
+        "processing_parallel": 78.08,
+        "polish_batch": 25.19,
+        "total": 108.81,
+        "body_ocr": 14.31,
+        "body_mt5": 135.07
+      },
+      "error": null,
+      "warnings": [
+        "Article 1: polish: applied, 28.5% of body chars changed",
+        "Article 2: polish: applied, 21.3% of body chars changed",
+        "Article 3: polish: discarded, body does not make sense",
+        "Article 3 excluded: polish: discarded, body does not make sense"
+      ],
+      "readable": true
+    },
+    {
+      "source_job": "e2c68b40",
+      "phone_burst": true,
+      "n_frames": 3,
+      "job": "00b778b1",
+      "ok": true,
+      "n_articles": 5,
+      "verdict": "good",
+      "secs": 148.42,
+      "timings": {
+        "select": 1.28,
+        "segment_pass1": 4.21,
+        "processing_parallel": 117.26,
+        "polish_batch": 23.83,
+        "total": 146.58,
+        "body_ocr": 31.8,
+        "body_mt5": 267.93
+      },
+      "error": null,
+      "warnings": [
+        "Article 1: polish: discarded, body does not make sense",
+        "Article 3: polish: REJECTED body — rewrote too much (similarity 0.54 < 0.55)",
+        "Article 5: polish: REJECTED body — length changed by 0.55x",
+        "Article 6: polish: discarded, body does not make sense",
+        "Article 7: polish: REJECTED body — rewrote too much (similarity 0.40 < 0.55)",
+        "Article 8: polish: discarded, body does not make sense",
+        "Article 1 excluded: polish: discarded, body does not make sense",
+        "Article 3: glyph 23px (want >=25) — closer; glyph 23px (want >=25) — closer",
+        "Article 6 excluded: polish: discarded, body does not make sense",
+        "Article 7: glyph 23px (want >=25) — closer; glyph 23px (want >=25) — closer",
+        "Article 8 excluded: polish: discarded, body does not make sense"
+      ],
+      "readable": true
+    },
+    {
+      "source_job": "7be6e714",
+      "phone_burst": true,
+      "n_frames": 3,
+      "job": "0ca3da74",
+      "ok": true,
+      "n_articles": 4,
+      "verdict": "good",
+      "secs": 121.06,
+      "timings": {
+        "select": 1.1,
+        "segment_pass1": 4.49,
+        "processing_parallel": 92.99,
+        "polish_batch": 20.66,
+        "total": 119.24,
+        "body_ocr": 30.67,
+        "body_mt5": 265.71
+      },
+      "error": null,
+      "warnings": [
+        "Article 1: polish: REJECTED body — rewrote too much (similarity 0.47 < 0.55)",
+        "Article 2: polish: discarded, body does not make sense",
+        "Article 3: polish: applied, 37.7% of body chars changed",
+        "Article 4: polish: applied, 29.0% of body chars changed",
+        "Article 5: polish: REJECTED body — length changed by 0.51x",
+        "Article 6: polish: discarded, body does not make sense",
+        "Article 7: polish: discarded, body does not make sense",
+        "Article 8: polish: discarded, body does not make sense",
+        "Article 2 excluded: polish: discarded, body does not make sense",
+        "Article 6 excluded: polish: discarded, body does not make sense",
+        "Article 7: glyph 19px (want >=25) — closer; glyph 19px (want >=25) — closer",
+        "Article 7 excluded: polish: discarded, body does not make sense",
+        "Article 8 excluded: polish: discarded, body does not make sense"
+      ],
+      "readable": true
+    },
+    {
+      "source_job": "f4be45a1",
+      "phone_burst": true,
+      "n_frames": 3,
+      "job": "3e054991",
+      "ok": true,
+      "n_articles": 2,
+      "verdict": "good",
+      "secs": 117.82,
+      "timings": {
+        "select": 1.12,
+        "segment_pass1": 4.56,
+        "processing_parallel": 85.64,
+        "polish_batch": 24.6,
+        "total": 115.92,
+        "body_ocr": 17.99,
+        "body_mt5": 111.81
+      },
+      "error": null,
+      "warnings": [
+        "Article 1: polish: REJECTED body — rewrote too much (similarity 0.53 < 0.55)",
+        "Article 2: polish: REJECTED body — rewrote too much (similarity 0.50 < 0.55)",
+        "Article 3: polish: discarded, body does not make sense",
+        "Article 4: polish: discarded, body does not make sense",
+        "Article 1: glyph 24px (want >=25) — closer; glyph 24px (want >=25) — closer",
+        "Article 2: glyph 23px (want >=25) — closer; glyph 23px (want >=25) — closer",
+        "Article 3 excluded: polish: discarded, body does not make sense",
+        "Article 4 excluded: polish: discarded, body does not make sense"
+      ],
+      "readable": true
+    },
+    {
+      "source_job": "56121e5e",
+      "phone_burst": false,
+      "n_frames": 1,
+      "job": "e69ecacb",
+      "ok": true,
+      "n_articles": 3,
+      "verdict": "good",
+      "secs": 121.71,
+      "timings": {
+        "select": 0.37,
+        "segment_pass1": 4.28,
+        "processing_parallel": 90.76,
+        "polish_batch": 25.7,
+        "total": 121.11,
+        "body_ocr": 7.65,
+        "body_mt5": 213.41
+      },
+      "error": null,
+      "warnings": [
+        "Article 1: polish: applied, 2.7% of body chars changed",
+        "Article 2: polish: applied, article discarded by LLM as a dud",
+        "Article 3: polish: applied, 23.1% of body chars changed",
+        "Article 4: polish: applied, 9.5% of body chars changed",
+        "Article 5: polish: discarded, body does not make sense",
+        "Article 6: polish: discarded, body does not make sense",
+        "Article 2 excluded: polish: applied, article discarded by LLM as a dud",
+        "Article 5 excluded: polish: discarded, body does not make sense",
+        "Article 6: glyph 16px (want >=25) — closer; title: no title region detected by L3; glyph 16px (want >=25) — closer; title: no title region detected by L3",
+        "Article 6 excluded: polish: discarded, body does not make sense"
+      ],
+      "readable": true
+    },
+    {
+      "source_job": "e00444c0",
+      "phone_burst": false,
+      "n_frames": 1,
+      "job": "8676e37e",
+      "ok": false,
+      "n_articles": 0,
+      "verdict": "unreadable",
+      "secs": 42.16,
+      "timings": {
+        "select": 0.01,
+        "segment_pass1": 4.06,
+        "processing_parallel": 22.96,
+        "polish_batch": 15.1,
+        "total": 42.13,
+        "body_ocr": 1.71,
+        "body_mt5": 25.33
+      },
+      "error": "nothing could be read from these frames",
+      "warnings": [
+        "Article 2: polish: REJECTED body — rewrote too much (similarity 0.46 < 0.55)",
+        "Article 1 skipped: glyph 6px (need >=25) — much closer; glyph 6px (need >=25) — much closer",
+        "Article 2 skipped: glyph 14px (need >=25) — much closer; glyph 14px (need >=25) — much closer"
+      ],
+      "readable": false
+    },
+    {
+      "source_job": "18d335e8",
+      "phone_burst": true,
+      "n_frames": 3,
+      "job": "3955c4c6",
+      "ok": true,
+      "n_articles": 2,
+      "verdict": "good",
+      "secs": 111.52,
+      "timings": {
+        "select": 1.3,
+        "segment_pass1": 4.25,
+        "processing_parallel": 79.17,
+        "polish_batch": 25.03,
+        "total": 109.75,
+        "body_ocr": 13.9,
+        "body_mt5": 109.83
+      },
+      "error": null,
+      "warnings": [
+        "Article 1: polish: discarded, body does not make sense",
+        "Article 2: polish: discarded, body does not make sense",
+        "Article 3: polish: REJECTED body — rewrote too much (similarity 0.54 < 0.55)",
+        "Article 4: polish: REJECTED body — rewrote too much (similarity 0.40 < 0.55)",
+        "Article 5: polish: discarded, body does not make sense",
+        "Article 6: polish: discarded, body does not make sense",
+        "Article 1 excluded: polish: discarded, body does not make sense",
+        "Article 2 excluded: polish: discarded, body does not make sense",
+        "Article 5 excluded: polish: discarded, body does not make sense",
+        "Article 6 excluded: polish: discarded, body does not make sense"
+      ],
+      "readable": true
+    },
+    {
+      "source_job": "f3e04f06",
+      "phone_burst": true,
+      "n_frames": 3,
+      "job": "8b9ef271",
+      "ok": true,
+      "n_articles": 3,
+      "verdict": "good",
+      "secs": 93.89,
+      "timings": {
+        "select": 1.08,
+        "segment_pass1": 4.36,
+        "processing_parallel": 63.75,
+        "polish_batch": 22.96,
+        "total": 92.15,
+        "body_ocr": 13.12,
+        "body_mt5": 132.02
+      },
+      "error": null,
+      "warnings": [
+        "Article 2: polish: discarded, body does not make sense",
+        "Article 3: polish: applied, 7.6% of body chars changed",
+        "Article 4: polish: discarded, body does not make sense",
+        "Article 5: polish: applied, 18.8% of body chars changed",
+        "Article 6: polish: discarded, body does not make sense",
+        "Article 2 excluded: polish: discarded, body does not make sense",
+        "Article 4 excluded: polish: discarded, body does not make sense",
+        "Article 6 excluded: polish: discarded, body does not make sense"
+      ],
+      "readable": true
+    },
+    {
+      "source_job": "a529fe42",
+      "phone_burst": true,
+      "n_frames": 3,
+      "job": "f3ef334a",
+      "ok": true,
+      "n_articles": 3,
+      "verdict": "good",
+      "secs": 214.43,
+      "timings": {
+        "select": 1.12,
+        "segment_pass1": 4.37,
+        "processing_parallel": 189.2,
+        "polish_batch": 17.87,
+        "total": 212.56,
+        "body_ocr": 26.2,
+        "body_mt5": 380.27
+      },
+      "error": null,
+      "warnings": [
+        "Article 1: polish: REJECTED body — rewrote too much (similarity 0.24 < 0.55)",
+        "Article 2: polish: discarded, body does not make sense",
+        "Article 3: polish: discarded, body does not make sense",
+        "Article 4: polish: applied, 24.1% of body chars changed",
+        "Article 5: polish: REJECTED body — rewrote too much (similarity 0.13 < 0.55)",
+        "Article 1: glyph 16px (want >=25) — closer; glyph 16px (want >=25) — closer",
+        "Article 2 skipped: glyph 10px (need >=25) — much closer; title: no title region detected by L3; glyph 10px (need >=25) — much closer; title: no title region detected by L3",
+        "Article 3 skipped: glyph 9px (need >=25) — much closer; title: no title region detected by L3; glyph 9px (need >=25) — much closer; title: no title region detected by L3",
+        "Article 5: glyph 21px (want >=25) — closer; glyph 21px (want >=25) — closer"
+      ],
+      "readable": true
+    },
+    {
+      "source_job": "b2b952c6",
+      "phone_burst": true,
+      "n_frames": 3,
+      "job": "5eb85b3e",
+      "ok": true,
+      "n_articles": 3,
+      "verdict": "good",
+      "secs": 86.14,
+      "timings": {
+        "select": 1.17,
+        "segment_pass1": 4.44,
+        "processing_parallel": 57.15,
+        "polish_batch": 21.65,
+        "total": 84.41,
+        "body_ocr": 10.36,
+        "body_mt5": 96.37
+      },
+      "error": null,
+      "warnings": [
+        "Article 2: polish: discarded, body does not make sense",
+        "Article 3: polish: discarded, body does not make sense",
+        "Article 4: polish: applied, 19.4% of body chars changed",
+        "Article 5: polish: discarded, body does not make sense",
+        "Article 6: polish: applied, 22.0% of body chars changed",
+        "Article 2 excluded: polish: discarded, body does not make sense",
+        "Article 3 excluded: polish: discarded, body does not make sense",
+        "Article 5 excluded: polish: discarded, body does not make sense"
+      ],
+      "readable": true
+    },
+    {
+      "source_job": "a10be89f",
+      "phone_burst": true,
+      "n_frames": 3,
+      "job": "52ca9634",
+      "ok": true,
+      "n_articles": 3,
+      "verdict": "good",
+      "secs": 90.44,
+      "timings": {
+        "select": 1.17,
+        "segment_pass1": 4.3,
+        "processing_parallel": 64.98,
+        "polish_batch": 18.32,
+        "total": 88.77,
+        "body_ocr": 19.45,
+        "body_mt5": 134.54
+      },
+      "error": null,
+      "warnings": [
+        "Article 2: polish: discarded, body does not make sense",
+        "Article 3: polish: applied, 28.8% of body chars changed",
+        "Article 4: polish: REJECTED body — rewrote too much (similarity 0.44 < 0.55)",
+        "Article 5: polish: discarded, body does not make sense",
+        "Article 6: polish: discarded, body does not make sense",
+        "Article 2 excluded: polish: discarded, body does not make sense",
+        "Article 4: glyph 23px (want >=25) — closer; glyph 23px (want >=25) — closer",
+        "Article 5 excluded: polish: discarded, body does not make sense",
+        "Article 6 excluded: polish: discarded, body does not make sense"
+      ],
+      "readable": true
+    },
+    {
+      "source_job": "c24b2d20",
+      "phone_burst": true,
+      "n_frames": 3,
+      "job": "067e9d54",
+      "ok": true,
+      "n_articles": 6,
+      "verdict": "good",
+      "secs": 159.4,
+      "timings": {
+        "select": 1.24,
+        "segment_pass1": 4.38,
+        "processing_parallel": 124.19,
+        "polish_batch": 27.78,
+        "total": 157.59,
+        "body_ocr": 41.22,
+        "body_mt5": 317.9
+      },
+      "error": null,
+      "warnings": [
+        "Article 1: polish: applied, 25.4% of body chars changed",
+        "Article 2: polish: REJECTED body — length changed by 0.50x",
+        "Article 3: polish: applied, 29.3% of body chars changed",
+        "Article 4: polish: applied, 24.1% of body chars changed",
+        "Article 5: polish: REJECTED body — length changed by 0.58x",
+        "Article 6: polish: discarded, body does not make sense",
+        "Article 7: polish: applied, 25.4% of body chars changed",
+        "Article 2: glyph 22px (want >=25) — closer; glyph 22px (want >=25) — closer",
+        "Article 3: glyph 23px (want >=25) — closer; glyph 23px (want >=25) — closer",
+        "Article 4: glyph 24px (want >=25) — closer; glyph 24px (want >=25) — closer",
+        "Article 5: glyph 24px (want >=25) — closer; glyph 24px (want >=25) — closer",
+        "Article 6 excluded: polish: discarded, body does not make sense",
+        "Article 7: glyph 22px (want >=25) — closer; glyph 22px (want >=25) — closer"
+      ],
+      "readable": true
+    },
+    {
+      "source_job": "a27aaa6e",
+      "phone_burst": true,
+      "n_frames": 3,
+      "job": "1595b417",
+      "ok": true,
+      "n_articles": 3,
+      "verdict": "good",
+      "secs": 91.95,
+      "timings": {
+        "select": 0.76,
+        "segment_pass1": 4.28,
+        "processing_parallel": 61.6,
+        "polish_batch": 24.18,
+        "total": 90.82,
+        "body_ocr": 12.11,
+        "body_mt5": 94.34
+      },
+      "error": null,
+      "warnings": [
+        "Article 2: polish: discarded, body does not make sense",
+        "Article 3: polish: discarded, body does not make sense",
+        "Article 4: polish: REJECTED body — length changed by 0.56x",
+        "Article 5: polish: applied, 41.7% of body chars changed",
+        "Article 6: polish: discarded, body does not make sense",
+        "Article 2 excluded: polish: discarded, body does not make sense",
+        "Article 3 excluded: polish: discarded, body does not make sense",
+        "Article 6 excluded: polish: discarded, body does not make sense"
+      ],
+      "readable": true
+    },
+    {
+      "source_job": "557cfbb0",
+      "phone_burst": true,
+      "n_frames": 3,
+      "job": "d4e8a348",
+      "ok": true,
+      "n_articles": 3,
+      "verdict": "good",
+      "secs": 89.13,
+      "timings": {
+        "select": 0.72,
+        "segment_pass1": 4.34,
+        "processing_parallel": 53.48,
+        "polish_batch": 29.67,
+        "total": 88.21,
+        "body_ocr": 3.44,
+        "body_mt5": 88.55
+      },
+      "error": null,
+      "warnings": [
+        "Article 2: polish: discarded, body does not make sense",
+        "Article 3: polish: applied, 10.6% of body chars changed",
+        "Article 4: polish: applied, 15.6% of body chars changed",
+        "Article 5: polish: discarded, body does not make sense",
+        "Article 2 excluded: polish: discarded, body does not make sense",
+        "Article 5 excluded: polish: discarded, body does not make sense"
+      ],
+      "readable": true
+    },
+    {
+      "source_job": "d4d48b92",
+      "phone_burst": true,
+      "n_frames": 3,
+      "job": "d035a075",
+      "ok": true,
+      "n_articles": 3,
+      "verdict": "good",
+      "secs": 101.72,
+      "timings": {
+        "select": 1.16,
+        "segment_pass1": 4.31,
+        "processing_parallel": 71.26,
+        "polish_batch": 23.19,
+        "total": 99.92,
+        "body_ocr": 21.56,
+        "body_mt5": 170.1
+      },
+      "error": null,
+      "warnings": [
+        "Article 2: polish: applied, 4.5% of body chars changed",
+        "Article 3: polish: discarded, body does not make sense",
+        "Article 4: polish: applied, 15.9% of body chars changed",
+        "Article 5: polish: discarded, body does not make sense",
+        "Article 6: polish: discarded, body does not make sense",
+        "Article 1: glyph 24px (want >=25) — closer; title: no title region detected by L3; glyph 24px (want >=25) — closer; title: no title region detected by L3",
+        "Article 3 excluded: polish: discarded, body does not make sense",
+        "Article 4: glyph 23px (want >=25) — closer; glyph 23px (want >=25) — closer",
+        "Article 5 excluded: polish: discarded, body does not make sense",
+        "Article 6 excluded: polish: discarded, body does not make sense"
+      ],
+      "readable": true
+    },
+    {
+      "source_job": "58d165e3",
+      "phone_burst": false,
+      "n_frames": 1,
+      "job": "406de56e",
+      "ok": true,
+      "n_articles": 7,
+      "verdict": "good",
+      "secs": 242.13,
+      "timings": {
+        "select": 0.76,
+        "segment_pass1": 4.85,
+        "processing_parallel": 182.86,
+        "polish_batch": 52.59,
+        "total": 241.06,
+        "body_ocr": 23.25,
+        "body_mt5": 531.46
+      },
+      "error": null,
+      "warnings": [
+        "Article 1: polish: applied, 29.1% of body chars changed",
+        "Article 2: polish: applied, 29.7% of body chars changed",
+        "Article 3: polish: REJECTED body — length changed by 0.54x",
+        "Article 4: polish: REJECTED body — rewrote too much (similarity 0.34 < 0.55)",
+        "Article 5: polish: applied, 22.4% of body chars changed",
+        "Article 7: polish: REJECTED body — rewrote too much (similarity 0.49 < 0.55)",
+        "Article 8: polish: discarded, body does not make sense",
+        "Segmentation: ignored split hint on article 1 (phrase not found once at a sentence start, or a part too short)",
+        "Article 8 excluded: polish: discarded, body does not make sense"
+      ],
+      "readable": true
+    },
+    {
+      "source_job": "64518f9b",
+      "phone_burst": true,
+      "n_frames": 3,
+      "job": "1596a235",
+      "ok": true,
+      "n_articles": 2,
+      "verdict": "good",
+      "secs": 121.46,
+      "timings": {
+        "select": 0.72,
+        "segment_pass1": 4.23,
+        "processing_parallel": 73.18,
+        "polish_batch": 41.66,
+        "total": 119.79,
+        "body_ocr": 8.65,
+        "body_mt5": 118.79
+      },
+      "error": null,
+      "warnings": [
+        "Article 2: polish: applied, 9.5% of body chars changed",
+        "Article 3: polish: discarded, body does not make sense",
+        "Article 4: polish: discarded, body does not make sense",
+        "Article 2: glyph 23px (want >=25) — closer; glyph 23px (want >=25) — closer",
+        "Article 3 excluded: polish: discarded, body does not make sense",
+        "Article 4 excluded: polish: discarded, body does not make sense"
+      ],
+      "readable": true
+    },
+    {
+      "source_job": "07028ae0",
+      "phone_burst": true,
+      "n_frames": 3,
+      "job": "cce8f33a",
+      "ok": true,
+      "n_articles": 4,
+      "verdict": "good",
+      "secs": 120.71,
+      "timings": {
+        "select": 0.86,
+        "segment_pass1": 4.8,
+        "processing_parallel": 86.21,
+        "polish_batch": 27.61,
+        "total": 119.48,
+        "body_ocr": 24.31,
+        "body_mt5": 190.72
+      },
+      "error": null,
+      "warnings": [
+        "Article 3: polish: discarded, body does not make sense",
+        "Article 4: polish: REJECTED body — rewrote too much (similarity 0.54 < 0.55)",
+        "Article 5: polish: REJECTED body — rewrote too much (similarity 0.38 < 0.55)",
+        "Article 6: polish: discarded, body does not make sense",
+        "Article 1: glyph 17px (want >=25) — closer; title: no title region detected by L3; glyph 17px (want >=25) — closer; title: no title region detected by L3",
+        "Article 3 excluded: polish: discarded, body does not make sense",
+        "Article 5: glyph 23px (want >=25) — closer; glyph 23px (want >=25) — closer",
+        "Article 6 excluded: polish: discarded, body does not make sense"
+      ],
+      "readable": true
+    },
+    {
+      "source_job": "6f2e4264",
+      "phone_burst": true,
+      "n_frames": 3,
+      "job": "507a4cf4",
+      "ok": true,
+      "n_articles": 2,
+      "verdict": "good",
+      "secs": 69.15,
+      "timings": {
+        "select": 0.74,
+        "segment_pass1": 4.57,
+        "processing_parallel": 41.83,
+        "polish_batch": 20.9,
+        "total": 68.04,
+        "body_ocr": 8.53,
+        "body_mt5": 53.37
+      },
+      "error": null,
+      "warnings": [
+        "Article 1: polish: discarded, body does not make sense",
+        "Article 2: polish: REJECTED body — length changed by 0.49x",
+        "Article 3: polish: applied, 26.8% of body chars changed",
+        "Article 1 excluded: polish: discarded, body does not make sense"
+      ],
+      "readable": true
+    },
+    {
+      "source_job": "3d31b937",
+      "phone_burst": true,
+      "n_frames": 3,
+      "job": "d6ef6c0a",
+      "ok": true,
+      "n_articles": 2,
+      "verdict": "good",
+      "secs": 104.14,
+      "timings": {
+        "select": 0.68,
+        "segment_pass1": 4.18,
+        "processing_parallel": 78.13,
+        "polish_batch": 20.15,
+        "total": 103.14,
+        "body_ocr": 13.99,
+        "body_mt5": 99.36
+      },
+      "error": null,
+      "warnings": [
+        "Article 1: polish: applied, 16.3% of body chars changed",
+        "Article 2: polish: applied, 22.0% of body chars changed",
+        "Article 3: polish: discarded, body does not make sense",
+        "Article 4: polish: discarded, body does not make sense",
+        "Article 3 excluded: polish: discarded, body does not make sense",
+        "Article 4 excluded: polish: discarded, body does not make sense"
+      ],
+      "readable": true
+    },
+    {
+      "source_job": "32508d82",
+      "phone_burst": true,
+      "n_frames": 3,
+      "job": "1c2a2bd9",
+      "ok": false,
+      "n_articles": 0,
+      "verdict": "unreadable",
+      "secs": 8.96,
+      "timings": {
+        "select": 0.94,
+        "segment_pass1": 3.58,
+        "processing_parallel": 3.18,
+        "polish_batch": 0.0,
+        "total": 7.7,
+        "body_ocr": 0.68,
+        "body_mt5": 2.45
+      },
+      "error": "nothing could be read from these frames",
+      "warnings": [
+        "Article 1: polish: discarded, body does not make sense",
+        "Article 1 excluded: polish: discarded, body does not make sense"
+      ],
+      "readable": false
+    },
+    {
+      "source_job": "e4d4c798",
+      "phone_burst": true,
+      "n_frames": 3,
+      "job": "91f4e6eb",
+      "ok": true,
+      "n_articles": 3,
+      "verdict": "good",
+      "secs": 87.65,
+      "timings": {
+        "select": 0.97,
+        "segment_pass1": 3.7,
+        "processing_parallel": 55.31,
+        "polish_batch": 26.03,
+        "total": 86.01,
+        "body_ocr": 14.4,
+        "body_mt5": 100.46
+      },
+      "error": null,
+      "warnings": [
+        "Article 2: polish: discarded, body does not make sense",
+        "Article 3: polish: applied, 29.3% of body chars changed",
+        "Article 4: polish: applied, 36.1% of body chars changed",
+        "Article 5: polish: discarded, body does not make sense",
+        "Article 2 excluded: polish: discarded, body does not make sense",
+        "Article 5 excluded: polish: discarded, body does not make sense"
+      ],
+      "readable": true
+    },
+    {
+      "source_job": "0248ccd2",
+      "phone_burst": true,
+      "n_frames": 3,
+      "job": "88a0df3a",
+      "ok": true,
+      "n_articles": 4,
+      "verdict": "good",
+      "secs": 116.07,
+      "timings": {
+        "select": 0.98,
+        "segment_pass1": 3.73,
+        "processing_parallel": 82.31,
+        "polish_batch": 27.56,
+        "total": 114.58,
+        "body_ocr": 28.86,
+        "body_mt5": 182.07
+      },
+      "error": null,
+      "warnings": [
+        "Article 1: polish: REJECTED body — rewrote too much (similarity 0.26 < 0.55)",
+        "Article 2: polish: applied, 27.9% of body chars changed",
+        "Article 3: polish: REJECTED body — rewrote too much (similarity 0.49 < 0.55)",
+        "Article 4: polish: REJECTED body — rewrote too much (similarity 0.35 < 0.55)",
+        "Article 5: polish: discarded, body does not make sense",
+        "Article 3: glyph 22px (want >=25) — closer; title: CRAFT could not extract/stitch any text lines; glyph 22px (want >=25) — closer; title: CRAFT could not extract/stitch any text lines",
+        "Article 4: glyph 24px (want >=25) — closer; glyph 24px (want >=25) — closer",
+        "Article 5 excluded: polish: discarded, body does not make sense"
+      ],
+      "readable": true
+    },
+    {
+      "source_job": "953ed3e4",
+      "phone_burst": true,
+      "n_frames": 3,
+      "job": "ee2d8a83",
+      "ok": true,
+      "n_articles": 2,
+      "verdict": "good",
+      "secs": 76.38,
+      "timings": {
+        "select": 0.98,
+        "segment_pass1": 3.68,
+        "processing_parallel": 48.16,
+        "polish_batch": 22.1,
+        "total": 74.92,
+        "body_ocr": 10.85,
+        "body_mt5": 79.28
+      },
+      "error": null,
+      "warnings": [
+        "Article 1: polish: applied, 42.3% of body chars changed",
+        "Article 2: polish: applied, 11.5% of body chars changed",
+        "Article 3: polish: discarded, body does not make sense",
+        "Article 4: polish: discarded, body does not make sense",
+        "Article 3 excluded: polish: discarded, body does not make sense",
+        "Article 4 excluded: polish: discarded, body does not make sense"
+      ],
+      "readable": true
+    },
+    {
+      "source_job": "530144c3",
+      "phone_burst": true,
+      "n_frames": 3,
+      "job": "e2e957e2",
+      "ok": true,
+      "n_articles": 5,
+      "verdict": "good",
+      "secs": 132.21,
+      "timings": {
+        "select": 1.12,
+        "segment_pass1": 4.11,
+        "processing_parallel": 85.66,
+        "polish_batch": 39.81,
+        "total": 130.7,
+        "body_ocr": 17.64,
+        "body_mt5": 250.65
+      },
+      "error": null,
+      "warnings": [
+        "Article 1: polish: discarded, body does not make sense",
+        "Article 2: polish: REJECTED body — length changed by 0.58x",
+        "Article 3: polish: REJECTED body — length changed by 0.51x",
+        "Article 5: polish: discarded, body does not make sense",
+        "Article 6: polish: applied, 10.9% of body chars changed",
+        "Article 7: polish: applied, 26.8% of body chars changed",
+        "Article 8: polish: discarded, body does not make sense",
+        "Article 1 excluded: polish: discarded, body does not make sense",
+        "Article 5 excluded: polish: discarded, body does not make sense",
+        "Article 7: glyph 22px (want >=25) — closer; glyph 22px (want >=25) — closer",
+        "Article 8 excluded: polish: discarded, body does not make sense"
+      ],
+      "readable": true
+    },
+    {
+      "source_job": "053cc93d",
+      "phone_burst": true,
+      "n_frames": 3,
+      "job": "b43a3b96",
+      "ok": true,
+      "n_articles": 6,
+      "verdict": "good",
+      "secs": 196.15,
+      "timings": {
+        "select": 1.07,
+        "segment_pass1": 3.71,
+        "processing_parallel": 154.96,
+        "polish_batch": 34.73,
+        "total": 194.47,
+        "body_ocr": 34.37,
+        "body_mt5": 494.38
+      },
+      "error": null,
+      "warnings": [
+        "Article 1: polish: applied, 10.7% of body chars changed",
+        "Article 2: polish: applied, 28.5% of body chars changed",
+        "Article 3: polish: applied, 6.2% of body chars changed",
+        "Article 4: polish: applied, 11.1% of body chars changed",
+        "Article 5: polish: applied, 18.6% of body chars changed",
+        "Article 6: polish: applied, 31.3% of body chars changed",
+        "Article 5: glyph 23px (want >=25) — closer; glyph 23px (want >=25) — closer",
+        "Article 6: glyph 24px (want >=25) — closer; glyph 24px (want >=25) — closer"
+      ],
+      "readable": true
+    },
+    {
+      "source_job": "4829e03e",
+      "phone_burst": true,
+      "n_frames": 3,
+      "job": "8dd64145",
+      "ok": true,
+      "n_articles": 1,
+      "verdict": "good",
+      "secs": 61.78,
+      "timings": {
+        "select": 0.95,
+        "segment_pass1": 3.56,
+        "processing_parallel": 32.5,
+        "polish_batch": 23.33,
+        "total": 60.34,
+        "body_ocr": 6.3,
+        "body_mt5": 42.4
+      },
+      "error": null,
+      "warnings": [
+        "Article 1: polish: applied, 8.2% of body chars changed",
+        "Article 2: polish: discarded, body does not make sense",
+        "Article 3: polish: discarded, body does not make sense",
+        "Article 2 excluded: polish: discarded, body does not make sense",
+        "Article 3 excluded: polish: discarded, body does not make sense"
+      ],
+      "readable": true
+    },
+    {
+      "source_job": "0df67e79",
+      "phone_burst": true,
+      "n_frames": 3,
+      "job": "238bbaba",
+      "ok": true,
+      "n_articles": 2,
+      "verdict": "good",
+      "secs": 89.09,
+      "timings": {
+        "select": 1.15,
+        "segment_pass1": 3.54,
+        "processing_parallel": 60.94,
+        "polish_batch": 21.73,
+        "total": 87.36,
+        "body_ocr": 11.69,
+        "body_mt5": 94.84
+      },
+      "error": null,
+      "warnings": [
+        "Article 1: polish: applied, 24.7% of body chars changed",
+        "Article 3: polish: discarded, body does not make sense",
+        "Article 3 excluded: polish: discarded, body does not make sense"
+      ],
+      "readable": true
+    },
+    {
+      "source_job": "46e702f8",
+      "phone_burst": true,
+      "n_frames": 3,
+      "job": "60560307",
+      "ok": true,
+      "n_articles": 1,
+      "verdict": "good",
+      "secs": 107.48,
+      "timings": {
+        "select": 0.99,
+        "segment_pass1": 3.59,
+        "processing_parallel": 66.76,
+        "polish_batch": 34.48,
+        "total": 105.82,
+        "body_ocr": 8.34,
+        "body_mt5": 77.32
+      },
+      "error": null,
+      "warnings": [
+        "Article 1: polish: applied, 14.3% of body chars changed",
+        "Article 2: polish: discarded, body does not make sense",
+        "Article 3: polish: discarded, body does not make sense",
+        "Article 2 excluded: polish: discarded, body does not make sense",
+        "Article 3 excluded: polish: discarded, body does not make sense"
+      ],
+      "readable": true
+    },
+    {
+      "source_job": "f8a0f4ed",
+      "phone_burst": true,
+      "n_frames": 3,
+      "job": "817bccbe",
+      "ok": false,
+      "n_articles": 0,
+      "verdict": "unreadable",
+      "secs": 23.0,
+      "timings": {
+        "select": 1.1,
+        "segment_pass1": 7.3,
+        "processing_parallel": 13.14,
+        "polish_batch": 0.0,
+        "total": 21.54,
+        "body_ocr": 9.24,
+        "body_mt5": 0.0
+      },
+      "error": "nothing could be read from these frames",
+      "warnings": [
+        "Article 1: polish: discarded, body does not make sense",
+        "Article 1: glyph 15px (want >=25) — closer; title: no title region detected by L3; glyph 15px (want >=25) — closer; title: no title region detected by L3",
+        "Article 1 excluded: polish: discarded, body does not make sense"
+      ],
+      "readable": false
+    },
+    {
+      "source_job": "50efa7f8",
+      "phone_burst": false,
+      "n_frames": 3,
+      "job": "d18ba88d",
+      "ok": false,
+      "n_articles": 0,
+      "verdict": "unreadable",
+      "secs": 22.92,
+      "timings": {
+        "select": 1.11,
+        "segment_pass1": 7.17,
+        "processing_parallel": 12.9,
+        "polish_batch": 0.0,
+        "total": 21.18,
+        "body_ocr": 8.84,
+        "body_mt5": 0.0
+      },
+      "error": "nothing could be read from these frames",
+      "warnings": [
+        "Article 1: polish: discarded, body does not make sense",
+        "Article 1: glyph 15px (want >=25) — closer; title: no title region detected by L3; glyph 15px (want >=25) — closer; title: no title region detected by L3",
+        "Article 1 excluded: polish: discarded, body does not make sense"
+      ],
+      "readable": false
+    },
+    {
+      "source_job": "fdaff64c",
+      "phone_burst": false,
+      "n_frames": 3,
+      "job": null,
+      "ok": false,
+      "n_articles": 0,
+      "verdict": null,
+      "secs": 47.6,
+      "timings": {},
+      "error": "ConnectionResetError: [WinError 10054] An existing connection was forcibly closed by the remote host",
+      "warnings": [],
+      "readable": false
+    }
+  ]
+}

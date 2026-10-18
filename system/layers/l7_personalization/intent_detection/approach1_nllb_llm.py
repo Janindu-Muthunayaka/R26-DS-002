@@ -25,6 +25,12 @@ model      = AutoModelForSeq2SeqLM.from_pretrained(MODEL_NAME)
 print("[OK] NLLB model loaded successfully!")
 
 
+try:
+    from intent_detection.sinhala_rules import rule_intent
+except ImportError:
+    from layers.l7_personalization.intent_detection.sinhala_rules import rule_intent
+
+
 # ─── Translate Sinhala to English ──────────────────────
 def translate_to_english(sinhala_text):
     inputs = tokenizer(
@@ -354,14 +360,21 @@ def detect_intent_approach1(sinhala_text):
     Full Approach 1 pipeline:
     Sinhala → NLLB English → Llama JSON
     """
-    # Step 1 — Translate
+    # Step 1 — Translate (always: the English is shown, logged and used by RAG)
     t1 = time.time()
     english_text = translate_to_english(sinhala_text)
     translation_time = time.time() - t1
 
-    # Step 2 — Extract intent
+    # Step 2 — Extract intent. An unambiguous Sinhala command is decided by
+    # the Sinhala rules (intent_detection/sinhala_rules.py) and the LLM is not
+    # asked: the translation is what breaks short commands ("පස්සට යන්න" ->
+    # "Go back to the drawing board"), and the LLM can only label what it is given.
     t2 = time.time()
-    result = extract_intent_llama(english_text)
+    rule = rule_intent(sinhala_text)
+    if rule:
+        result, source = {"intent": rule}, "sinhala_rule"
+    else:
+        result, source = extract_intent_llama(english_text), "llm"
     llm_time = time.time() - t2
 
     total_time = translation_time + llm_time
@@ -371,6 +384,7 @@ def detect_intent_approach1(sinhala_text):
         "sinhala_input":         sinhala_text,
         "english_translation":   english_text,
         "intent":                result["intent"],
+        "intent_source":         source,
         "personalization_flags": {},  # no longer extracted — see SYSTEM_PROMPT note
         "translation_time_sec":  round(translation_time, 3),
         "llm_time_sec":          round(llm_time, 3),

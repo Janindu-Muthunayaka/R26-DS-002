@@ -97,6 +97,11 @@ def _delivery_fields(profile, before):
     }
 
 
+# Control intents from intent_detection/sinhala_rules.py -> system command.
+RULE_COMMANDS = {"NEXT": "GO_FORWARD", "PREVIOUS": "GO_BACK", "STOP": "STOP",
+                 "GO_TO_PAGE": "GO_TO_PAGE", "READ_HEADLINES": "READ_HEADLINES"}
+
+
 def handle_voice_command(sinhala_text, user_id, retrieved_chunk_id=None, dry_run=False,
                          last_spoken_ctx=None):
     """
@@ -180,6 +185,11 @@ def handle_voice_command(sinhala_text, user_id, retrieved_chunk_id=None, dry_run
     # Navigation commands carry no style information, so they bypass the
     # model entirely and are never used as training evidence.
     command = detect_system_command(intent, english_text)
+    if not command and intent_stage.get("intent_source") == "sinhala_rule":
+        # The Sinhala rules recognised a control command. Its English may be a
+        # broken translation ("Next time we go together"), so do not let the
+        # English decide - and never learn a style from it.
+        command = RULE_COMMANDS.get(intent)
     if command:
         if not dry_run:
             log_interaction(user_id, intent_stage, retrieved_chunk_id=retrieved_chunk_id, style_class=None)
