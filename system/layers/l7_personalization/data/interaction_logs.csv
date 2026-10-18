@@ -190,3 +190,292 @@
 189,user_001,2026-10-17T20:32:03.961600,ලිපියක විස්තරාත්මකව කියවන්න,Read the article in detail,ELABORATE,{},,Detailed,False
 190,user_001,2026-10-17T21:20:50.660091,ලිපි දෙක කියවන්න,Read the two articles,READ_ALOUD,{},,Simple,False
 191,user_001,2026-10-17T21:21:08.188036,දෙවනි ලිපිය කියවන්න,Read the second article,GO_TO_PAGE,{},,,False
+192,user_001,2026-10-17T22:33:19.250664,ලිපිය එක කියවන්න,Read the article.,READ_ALOUD,{},,Simple,False
+193,user_001,2026-10-17T22:35:11.558361,අධ්‍යාපන නියෝජ්‍ය ඇමතිගේ නම මොකක්ද,What is the name of the Education Minister,ASK_QUESTION,{},,Simple,False
+755,user_001,2026-10-18T10:51:34.430752,පළමු ලිපිය කියවන්න,First article read,GO_TO_PAGE,{},,,False
+756,user_001,2026-10-18T10:51:37.628720,ඊළඟ කොටස කියවන්න,Read the next part.,NEXT,{},,Simple,False
+757,user_001,2026-10-18T10:51:40.080475,නැවත කියන්න,Say it again,REPEAT,{},,Simple,False
+758,user_001,2026-10-18T10:51:46.338137,මේ ලිපිය සාරාංශ කරන්න,Summarize this article,SUMMARIZE,{},,Simple,False
+759,user_001,2026-10-18T10:52:08.136179,මේ ලිපිය කුමක් ගැනද?,What is this article about?,IDENTIFY_CONTENT,{},,Simple,False
+760,user_001,2026-10-18T10:52:34.229481,සරලව කියන්න,I just want to say,USER_STATEMENT,{},,Simple,False
+761,user_001,2026-10-18T10:52:52.282975,නවත්වන්න,Stop it,STOP,{},,,False
+762,user_001,2026-10-18T10:55:59.380652,පළමු ලිපිය කියවන්න,First article read,GO_TO_PAGE,{},,,False
+763,user_001,2026-10-18T10:56:02.958205,ඊළඟ කොටස කියවන්න,Read the next part.,NEXT,{},,Simple,False
+764,user_001,2026-10-18T10:56:06.018209,නැවත කියන්න,Say it again,REPEAT,{},,Simple,False
+765,user_001,2026-10-18T10:56:16.034501,මේ ලිපිය සාරාංශ කරන්න,Summarize this article,SUMMARIZE,{},,Simple,False
+766,user_001,2026-10-18T10:56:45.962780,මේ ලිපිය කුමක් ගැනද?,What is this article about?,IDENTIFY_CONTENT,{},,Simple,False
+767,user_001,2026-10-18T10:57:12.592025,සරලව කියන්න,I just want to say,USER_STATEMENT,{},,Simple,False
+768,user_001,2026-10-18T10:57:42.186121,නවත්වන්න,Stop it,STOP,{},,,False
+769,user_001,2026-10-18T10:59:58.996520,පළමු ලිපිය කියවන්න,First article read,GO_TO_PAGE,{},,,False
+770,user_001,2026-10-18T11:00:03.802133,ඊළඟ කොටස කියවන්න,Read the next part.,NEXT,{},,Simple,False
+771,user_001,2026-10-18T11:00:06.692233,නැවත කියන්න,Say it again,REPEAT,{},,Simple,False
+772,user_001,2026-10-18T11:00:15.689350,මේ ලිපිය සාරාංශ කරන්න,Summarize this article,SUMMARIZE,{},,Simple,False
+773,user_001,2026-10-18T11:00:43.430198,මේ ලිපිය කුමක් ගැනද?,What is this article about?,IDENTIFY_CONTENT,{},,Simple,False
+774,user_001,2026-10-18T11:01:09.547121,සරලව කියන්න,I just want to say,USER_STATEMENT,{},,Simple,False
+775,user_001,2026-10-18T11:01:32.481342,නවත්වන්න,Stop it,STOP,{},,,False
+776,user_001,2026-10-18T11:03:18.158537,පළමු ලිපිය කියවන්න,First article read,GO_TO_PAGE,{},,,False
+777,user_001,2026-10-18T11:03:21.146117,ඊළඟ කොටස කියවන්න,Read the next part.,NEXT,{},,Simple,False
+778,user_001,2026-10-18T11:03:24.412647,නැවත කියන්න,Say it again,REPEAT,{},,Simple,False
+779,user_001,2026-10-18T11:03:30.255860,මේ ලිපිය සාරාංශ කරන්න,Summarize this article,SUMMARIZE,{},,Simple,False
+780,user_001,2026-10-18T11:03:49.809549,මේ ලිපිය කුමක් ගැනද?,What is this article about?,IDENTIFY_CONTENT,{},,Simple,False
+781,user_001,2026-10-18T11:04:21.044574,සරලව කියන්න,I just want to say,USER_STATEMENT,{},,Simple,False
+782,user_001,2026-10-18T11:04:48.385692,නවත්වන්න,Stop it,STOP,{},,,False
+783,user_001,2026-10-18T11:06:54.564839,පළමු ලිපිය කියවන්න,First article read,GO_TO_PAGE,{},,,False
+784,user_001,2026-10-18T11:06:57.916686,ඊළඟ කොටස කියවන්න,Read the next part.,NEXT,{},,Simple,False
+785,user_001,2026-10-18T11:07:00.899341,නැවත කියන්න,Say it again,REPEAT,{},,Simple,False
+786,user_001,2026-10-18T11:07:07.952504,මේ ලිපිය සාරාංශ කරන්න,Summarize this article,SUMMARIZE,{},,Simple,False
+787,user_001,2026-10-18T11:07:43.806847,මේ ලිපිය කුමක් ගැනද?,What is this article about?,IDENTIFY_CONTENT,{},,Simple,False
+788,user_001,2026-10-18T11:08:09.117697,සරලව කියන්න,I just want to say,USER_STATEMENT,{},,Simple,False
+789,user_001,2026-10-18T11:08:38.387652,නවත්වන්න,Stop it,STOP,{},,,False
+790,user_001,2026-10-18T11:11:07.325303,පළමු ලිපිය කියවන්න,First article read,GO_TO_PAGE,{},,,False
+791,user_001,2026-10-18T11:11:12.450200,ඊළඟ කොටස කියවන්න,Read the next part.,NEXT,{},,Simple,False
+792,user_001,2026-10-18T11:11:15.740018,නැවත කියන්න,Say it again,REPEAT,{},,Simple,False
+793,user_001,2026-10-18T11:11:22.681361,මේ ලිපිය සාරාංශ කරන්න,Summarize this article,SUMMARIZE,{},,Simple,False
+794,user_001,2026-10-18T11:12:04.367590,මේ ලිපිය කුමක් ගැනද?,What is this article about?,IDENTIFY_CONTENT,{},,Simple,False
+795,user_001,2026-10-18T11:12:38.881219,සරලව කියන්න,I just want to say,USER_STATEMENT,{},,Simple,False
+796,user_001,2026-10-18T11:13:06.940083,නවත්වන්න,Stop it,STOP,{},,,False
+797,user_001,2026-10-18T11:15:31.474516,පළමු ලිපිය කියවන්න,First article read,GO_TO_PAGE,{},,,False
+798,user_001,2026-10-18T11:15:35.238955,ඊළඟ කොටස කියවන්න,Read the next part.,NEXT,{},,Simple,False
+799,user_001,2026-10-18T11:15:40.363551,නැවත කියන්න,Say it again,REPEAT,{},,Simple,False
+800,user_001,2026-10-18T11:15:50.358217,මේ ලිපිය සාරාංශ කරන්න,Summarize this article,SUMMARIZE,{},,Simple,False
+801,user_001,2026-10-18T11:16:27.772333,මේ ලිපිය කුමක් ගැනද?,What is this article about?,IDENTIFY_CONTENT,{},,Simple,False
+802,user_001,2026-10-18T11:17:03.001685,සරලව කියන්න,I just want to say,USER_STATEMENT,{},,Simple,False
+803,user_001,2026-10-18T11:17:41.885308,නවත්වන්න,Stop it,STOP,{},,,False
+804,user_001,2026-10-18T11:19:34.860522,පළමු ලිපිය කියවන්න,First article read,GO_TO_PAGE,{},,,False
+805,user_001,2026-10-18T11:19:39.037560,ඊළඟ කොටස කියවන්න,Read the next part.,NEXT,{},,Simple,False
+806,user_001,2026-10-18T11:19:42.400477,නැවත කියන්න,Say it again,REPEAT,{},,Simple,False
+807,user_001,2026-10-18T11:19:48.668852,මේ ලිපිය සාරාංශ කරන්න,Summarize this article,SUMMARIZE,{},,Simple,False
+808,user_001,2026-10-18T11:20:16.428515,මේ ලිපිය කුමක් ගැනද?,What is this article about?,IDENTIFY_CONTENT,{},,Simple,False
+809,user_001,2026-10-18T11:20:49.494846,සරලව කියන්න,I just want to say,USER_STATEMENT,{},,Simple,False
+810,user_001,2026-10-18T11:21:18.072346,නවත්වන්න,Stop it,STOP,{},,,False
+811,user_001,2026-10-18T11:24:00.165225,පළමු ලිපිය කියවන්න,First article read,GO_TO_PAGE,{},,,False
+812,user_001,2026-10-18T11:24:03.998465,ඊළඟ කොටස කියවන්න,Read the next part.,NEXT,{},,Simple,False
+813,user_001,2026-10-18T11:24:07.152744,නැවත කියන්න,Say it again,REPEAT,{},,Simple,False
+814,user_001,2026-10-18T11:24:14.835140,මේ ලිපිය සාරාංශ කරන්න,Summarize this article,SUMMARIZE,{},,Simple,False
+815,user_001,2026-10-18T11:24:40.539266,මේ ලිපිය කුමක් ගැනද?,What is this article about?,IDENTIFY_CONTENT,{},,Simple,False
+816,user_001,2026-10-18T11:25:07.898321,සරලව කියන්න,I just want to say,USER_STATEMENT,{},,Simple,False
+817,user_001,2026-10-18T11:25:27.837437,නවත්වන්න,Stop it,STOP,{},,,False
+818,user_001,2026-10-18T11:27:21.505063,පළමු ලිපිය කියවන්න,First article read,GO_TO_PAGE,{},,,False
+819,user_001,2026-10-18T11:27:25.602273,ඊළඟ කොටස කියවන්න,Read the next part.,NEXT,{},,Simple,False
+820,user_001,2026-10-18T11:27:28.293991,නැවත කියන්න,Say it again,REPEAT,{},,Simple,False
+821,user_001,2026-10-18T11:27:33.995718,මේ ලිපිය සාරාංශ කරන්න,Summarize this article,SUMMARIZE,{},,Simple,False
+822,user_001,2026-10-18T11:28:08.301288,මේ ලිපිය කුමක් ගැනද?,What is this article about?,IDENTIFY_CONTENT,{},,Simple,False
+823,user_001,2026-10-18T11:28:29.211980,සරලව කියන්න,I just want to say,SAY_SOMETHING,{},,Simple,False
+824,user_001,2026-10-18T11:28:58.701274,නවත්වන්න,Stop it,STOP,{},,,False
+825,user_001,2026-10-18T11:31:29.707118,පළමු ලිපිය කියවන්න,First article read,GO_TO_PAGE,{},,,False
+826,user_001,2026-10-18T11:31:33.008421,ඊළඟ කොටස කියවන්න,Read the next part.,NEXT,{},,Simple,False
+827,user_001,2026-10-18T11:31:36.178908,නැවත කියන්න,Say it again,REPEAT,{},,Simple,False
+828,user_001,2026-10-18T11:31:42.729155,මේ ලිපිය සාරාංශ කරන්න,Summarize this article,SUMMARIZE,{},,Simple,False
+829,user_001,2026-10-18T11:31:59.028997,මේ ලිපිය කුමක් ගැනද?,What is this article about?,IDENTIFY_CONTENT,{},,Simple,False
+830,user_001,2026-10-18T11:32:15.195839,සරලව කියන්න,I just want to say,SAY_SOMETHING,{},,Simple,False
+831,user_001,2026-10-18T11:32:33.237765,නවත්වන්න,Stop it,STOP,{},,,False
+832,user_001,2026-10-18T11:34:37.431206,පළමු ලිපිය කියවන්න,First article read,GO_TO_PAGE,{},,,False
+833,user_001,2026-10-18T11:34:41.221159,ඊළඟ කොටස කියවන්න,Read the next part.,NEXT,{},,Simple,False
+834,user_001,2026-10-18T11:34:44.019700,නැවත කියන්න,Say it again,REPEAT,{},,Simple,False
+835,user_001,2026-10-18T11:34:51.877057,මේ ලිපිය සාරාංශ කරන්න,Summarize this article,SUMMARIZE,{},,Simple,False
+836,user_001,2026-10-18T11:35:19.497034,මේ ලිපිය කුමක් ගැනද?,What is this article about?,IDENTIFY_CONTENT,{},,Simple,False
+837,user_001,2026-10-18T11:35:42.871308,සරලව කියන්න,I just want to say,USER_STATEMENT,{},,Simple,False
+838,user_001,2026-10-18T11:36:05.286273,නවත්වන්න,Stop it,STOP,{},,,False
+839,user_001,2026-10-18T11:38:06.503672,පළමු ලිපිය කියවන්න,First article read,GO_TO_PAGE,{},,,False
+840,user_001,2026-10-18T11:38:09.418884,ඊළඟ කොටස කියවන්න,Read the next part.,NEXT,{},,Simple,False
+841,user_001,2026-10-18T11:38:12.404990,නැවත කියන්න,Say it again,REPEAT,{},,Simple,False
+842,user_001,2026-10-18T11:38:19.210711,මේ ලිපිය සාරාංශ කරන්න,Summarize this article,SUMMARIZE,{},,Simple,False
+843,user_001,2026-10-18T11:38:49.660693,මේ ලිපිය කුමක් ගැනද?,What is this article about?,IDENTIFY_CONTENT,{},,Simple,False
+844,user_001,2026-10-18T11:39:13.014558,සරලව කියන්න,I just want to say,USER_STATEMENT,{},,Simple,False
+845,user_001,2026-10-18T11:39:34.312392,නවත්වන්න,Stop it,STOP,{},,,False
+846,user_001,2026-10-18T11:41:40.970061,පළමු ලිපිය කියවන්න,First article read,GO_TO_PAGE,{},,,False
+847,user_001,2026-10-18T11:41:43.643792,ඊළඟ කොටස කියවන්න,Read the next part.,NEXT,{},,Simple,False
+848,user_001,2026-10-18T11:41:46.304351,නැවත කියන්න,Say it again,REPEAT,{},,Simple,False
+849,user_001,2026-10-18T11:41:53.466189,මේ ලිපිය සාරාංශ කරන්න,Summarize this article,SUMMARIZE,{},,Simple,False
+850,user_001,2026-10-18T11:42:15.477379,මේ ලිපිය කුමක් ගැනද?,What is this article about?,IDENTIFY_CONTENT,{},,Simple,False
+851,user_001,2026-10-18T11:42:34.422046,සරලව කියන්න,I just want to say,USER_STATEMENT,{},,Simple,False
+852,user_001,2026-10-18T11:42:58.589525,නවත්වන්න,Stop it,STOP,{},,,False
+853,user_001,2026-10-18T11:45:35.897265,පළමු ලිපිය කියවන්න,First article read,GO_TO_PAGE,{},,,False
+854,user_001,2026-10-18T11:45:38.439709,ඊළඟ කොටස කියවන්න,Read the next part.,NEXT,{},,Simple,False
+855,user_001,2026-10-18T11:45:41.113989,නැවත කියන්න,Say it again,REPEAT,{},,Simple,False
+856,user_001,2026-10-18T11:45:48.079110,මේ ලිපිය සාරාංශ කරන්න,Summarize this article,SUMMARIZE,{},,Simple,False
+857,user_001,2026-10-18T11:46:16.549839,මේ ලිපිය කුමක් ගැනද?,What is this article about?,IDENTIFY_CONTENT,{},,Simple,False
+858,user_001,2026-10-18T11:46:34.051729,සරලව කියන්න,I just want to say,USER_STATEMENT,{},,Simple,False
+859,user_001,2026-10-18T11:46:53.411339,නවත්වන්න,Stop it,STOP,{},,,False
+860,user_001,2026-10-18T11:48:30.690174,පළමු ලිපිය කියවන්න,First article read,GO_TO_PAGE,{},,,False
+861,user_001,2026-10-18T11:48:33.822250,ඊළඟ කොටස කියවන්න,Read the next part.,NEXT,{},,Simple,False
+862,user_001,2026-10-18T11:48:36.951011,නැවත කියන්න,Say it again,REPEAT,{},,Simple,False
+863,user_001,2026-10-18T11:48:43.063491,මේ ලිපිය සාරාංශ කරන්න,Summarize this article,SUMMARIZE,{},,Simple,False
+864,user_001,2026-10-18T11:49:17.795035,මේ ලිපිය කුමක් ගැනද?,What is this article about?,IDENTIFY_CONTENT,{},,Simple,False
+865,user_001,2026-10-18T11:49:45.449200,සරලව කියන්න,I just want to say,USER_STATEMENT,{},,Simple,False
+866,user_001,2026-10-18T11:50:07.241769,නවත්වන්න,Stop it,STOP,{},,,False
+867,user_001,2026-10-18T11:53:46.118835,පළමු ලිපිය කියවන්න,First article read,GO_TO_PAGE,{},,,False
+868,user_001,2026-10-18T11:53:50.326239,ඊළඟ කොටස කියවන්න,Read the next part.,NEXT,{},,,False
+869,user_001,2026-10-18T11:53:53.180367,නැවත කියන්න,Say it again,REPEAT,{},,Simple,False
+870,user_001,2026-10-18T11:53:59.194022,මේ ලිපිය සාරාංශ කරන්න,Summarize this article,SUMMARIZE,{},,Simple,False
+871,user_001,2026-10-18T11:54:32.910537,මේ ලිපිය කුමක් ගැනද?,What is this article about?,IDENTIFY_CONTENT,{},,Simple,False
+872,user_001,2026-10-18T11:55:05.948717,සරලව කියන්න,I just want to say,USER_STATEMENT,{},,Simple,False
+873,user_001,2026-10-18T11:55:42.964465,නවත්වන්න,Stop it,STOP,{},,,False
+874,user_001,2026-10-18T11:57:12.045364,පළමු ලිපිය කියවන්න,First article read,GO_TO_PAGE,{},,,False
+875,user_001,2026-10-18T11:57:14.800769,ඊළඟ කොටස කියවන්න,Read the next part.,NEXT,{},,Simple,False
+876,user_001,2026-10-18T11:57:18.413018,නැවත කියන්න,Say it again,REPEAT,{},,Simple,False
+877,user_001,2026-10-18T11:57:24.447133,මේ ලිපිය සාරාංශ කරන්න,Summarize this article,SUMMARIZE,{},,Simple,False
+878,user_001,2026-10-18T11:57:48.398484,මේ ලිපිය කුමක් ගැනද?,What is this article about?,IDENTIFY_CONTENT,{},,Simple,False
+879,user_001,2026-10-18T11:58:08.433022,සරලව කියන්න,I just want to say,USER_STATEMENT,{},,Simple,False
+880,user_001,2026-10-18T11:58:34.696053,නවත්වන්න,Stop it,STOP,{},,,False
+881,user_001,2026-10-18T12:00:07.880352,පළමු ලිපිය කියවන්න,First article read,GO_TO_PAGE,{},,,False
+882,user_001,2026-10-18T12:00:10.948734,ඊළඟ කොටස කියවන්න,Read the next part.,NEXT,{},,Simple,False
+883,user_001,2026-10-18T12:00:14.421665,නැවත කියන්න,Say it again,REPEAT,{},,Simple,False
+884,user_001,2026-10-18T12:00:20.137850,මේ ලිපිය සාරාංශ කරන්න,Summarize this article,SUMMARIZE,{},,Simple,False
+885,user_001,2026-10-18T12:00:47.671325,මේ ලිපිය කුමක් ගැනද?,What is this article about?,IDENTIFY_CONTENT,{},,Simple,False
+886,user_001,2026-10-18T12:01:14.853175,සරලව කියන්න,I just want to say,USER_STATEMENT,{},,Simple,False
+887,user_001,2026-10-18T12:01:42.180471,නවත්වන්න,Stop it,STOP,{},,,False
+888,user_001,2026-10-18T12:04:23.973566,පළමු ලිපිය කියවන්න,First article read,GO_TO_PAGE,{},,,False
+889,user_001,2026-10-18T12:04:26.934390,ඊළඟ කොටස කියවන්න,Read the next part.,NEXT,{},,Simple,False
+890,user_001,2026-10-18T12:04:30.031117,නැවත කියන්න,Say it again,REPEAT,{},,Simple,False
+891,user_001,2026-10-18T12:04:37.083807,මේ ලිපිය සාරාංශ කරන්න,Summarize this article,SUMMARIZE,{},,Simple,False
+892,user_001,2026-10-18T12:05:01.683549,මේ ලිපිය කුමක් ගැනද?,What is this article about?,IDENTIFY_CONTENT,{},,Simple,False
+893,user_001,2026-10-18T12:05:33.313680,සරලව කියන්න,I just want to say,USER_STATEMENT,{},,Simple,False
+894,user_001,2026-10-18T12:05:53.459890,නවත්වන්න,Stop it,STOP,{},,,False
+895,user_001,2026-10-18T12:07:28.058202,පළමු ලිපිය කියවන්න,First article read,GO_TO_PAGE,{},,,False
+896,user_001,2026-10-18T12:07:31.058280,ඊළඟ කොටස කියවන්න,Read the next part.,NEXT,{},,Simple,False
+897,user_001,2026-10-18T12:07:35.684218,නැවත කියන්න,Say it again,REPEAT,{},,Simple,False
+898,user_001,2026-10-18T12:07:41.308382,මේ ලිපිය සාරාංශ කරන්න,Summarize this article,SUMMARIZE,{},,Simple,False
+899,user_001,2026-10-18T12:08:03.346644,මේ ලිපිය කුමක් ගැනද?,What is this article about?,IDENTIFY_CONTENT,{},,Simple,False
+900,user_001,2026-10-18T12:08:30.580919,සරලව කියන්න,I just want to say,USER_STATEMENT,{},,Simple,False
+901,user_001,2026-10-18T12:09:00.763560,නවත්වන්න,Stop it,STOP,{},,,False
+902,user_001,2026-10-18T12:10:32.940938,පළමු ලිපිය කියවන්න,First article read,GO_TO_PAGE,{},,,False
+903,user_001,2026-10-18T12:10:36.192255,ඊළඟ කොටස කියවන්න,Read the next part.,NEXT,{},,Simple,False
+904,user_001,2026-10-18T12:10:38.552146,නැවත කියන්න,Say it again,REPEAT,{},,Simple,False
+905,user_001,2026-10-18T12:10:43.985400,මේ ලිපිය සාරාංශ කරන්න,Summarize this article,SUMMARIZE,{},,Simple,False
+906,user_001,2026-10-18T12:11:05.085894,මේ ලිපිය කුමක් ගැනද?,What is this article about?,IDENTIFY_CONTENT,{},,Simple,False
+907,user_001,2026-10-18T12:11:29.374098,සරලව කියන්න,I just want to say,USER_STATEMENT,{},,Simple,False
+908,user_001,2026-10-18T12:11:50.987205,නවත්වන්න,Stop it,STOP,{},,,False
+909,user_001,2026-10-18T12:13:35.437668,පළමු ලිපිය කියවන්න,First article read,GO_TO_PAGE,{},,,False
+910,user_001,2026-10-18T12:13:38.273120,ඊළඟ කොටස කියවන්න,Read the next part.,NEXT,{},,Simple,False
+911,user_001,2026-10-18T12:13:40.944895,නැවත කියන්න,Say it again,REPEAT,{},,Simple,False
+912,user_001,2026-10-18T12:13:46.171521,මේ ලිපිය සාරාංශ කරන්න,Summarize this article,SUMMARIZE,{},,Simple,False
+913,user_001,2026-10-18T12:14:04.671111,මේ ලිපිය කුමක් ගැනද?,What is this article about?,IDENTIFY_CONTENT,{},,Simple,False
+914,user_001,2026-10-18T12:14:24.649179,සරලව කියන්න,I just want to say,USER_STATEMENT,{},,Simple,False
+915,user_001,2026-10-18T12:14:53.745848,නවත්වන්න,Stop it,STOP,{},,,False
+916,user_001,2026-10-18T12:18:58.873771,පළමු ලිපිය කියවන්න,First article read,GO_TO_PAGE,{},,,False
+917,user_001,2026-10-18T12:19:02.373824,ඊළඟ කොටස කියවන්න,Read the next part.,NEXT,{},,Simple,False
+918,user_001,2026-10-18T12:19:04.922281,නැවත කියන්න,Say it again,REPEAT,{},,Simple,False
+919,user_001,2026-10-18T12:19:10.649632,මේ ලිපිය සාරාංශ කරන්න,Summarize this article,SUMMARIZE,{},,Simple,False
+920,user_001,2026-10-18T12:19:44.397665,මේ ලිපිය කුමක් ගැනද?,What is this article about?,IDENTIFY_CONTENT,{},,Simple,False
+921,user_001,2026-10-18T12:20:14.949443,සරලව කියන්න,I just want to say,USER_STATEMENT,{},,Simple,False
+922,user_001,2026-10-18T12:20:35.892117,නවත්වන්න,Stop it,STOP,{},,,False
+923,user_001,2026-10-18T12:22:40.063291,පළමු ලිපිය කියවන්න,First article read,GO_TO_PAGE,{},,,False
+924,user_001,2026-10-18T12:22:43.003725,ඊළඟ කොටස කියවන්න,Read the next part.,NEXT,{},,Simple,False
+925,user_001,2026-10-18T12:22:45.708305,නැවත කියන්න,Say it again,REPEAT,{},,Simple,False
+926,user_001,2026-10-18T12:22:51.701269,මේ ලිපිය සාරාංශ කරන්න,Summarize this article,SUMMARIZE,{},,Simple,False
+927,user_001,2026-10-18T12:23:17.696837,මේ ලිපිය කුමක් ගැනද?,What is this article about?,IDENTIFY_CONTENT,{},,Simple,False
+928,user_001,2026-10-18T12:24:25.794351,සරලව කියන්න,I just want to say,USER_STATEMENT,{},,Simple,False
+929,user_001,2026-10-18T12:26:11.054021,නවත්වන්න,Stop it,STOP,{},,,False
+930,user_001,2026-10-18T12:28:15.491716,පළමු ලිපිය කියවන්න,First article read,GO_TO_PAGE,{},,,False
+931,user_001,2026-10-18T12:28:20.594144,ඊළඟ කොටස කියවන්න,Read the next part.,NEXT,{},,Simple,False
+932,user_001,2026-10-18T12:28:23.556040,නැවත කියන්න,Say it again,REPEAT,{},,Simple,False
+933,user_001,2026-10-18T12:28:36.171706,මේ ලිපිය සාරාංශ කරන්න,Summarize this article,SUMMARIZE,{},,Simple,False
+934,user_001,2026-10-18T12:29:46.381414,මේ ලිපිය කුමක් ගැනද?,What is this article about?,IDENTIFY_CONTENT,{},,Simple,False
+935,user_001,2026-10-18T12:30:11.916710,සරලව කියන්න,I just want to say,USER_STATEMENT,{},,Simple,False
+936,user_001,2026-10-18T12:30:30.015690,නවත්වන්න,Stop it,STOP,{},,,False
+937,user_001,2026-10-18T12:31:42.111967,පළමු ලිපිය කියවන්න,First article read,GO_TO_PAGE,{},,,False
+938,user_001,2026-10-18T12:31:45.099513,ඊළඟ කොටස කියවන්න,Read the next part.,NEXT,{},,Simple,False
+939,user_001,2026-10-18T12:31:48.159260,නැවත කියන්න,Say it again,REPEAT,{},,Simple,False
+940,user_001,2026-10-18T12:31:54.121037,මේ ලිපිය සාරාංශ කරන්න,Summarize this article,SUMMARIZE,{},,Simple,False
+941,user_001,2026-10-18T12:32:23.591812,මේ ලිපිය කුමක් ගැනද?,What is this article about?,IDENTIFY_CONTENT,{},,Simple,False
+942,user_001,2026-10-18T12:32:50.940650,සරලව කියන්න,I just want to say,USER_STATEMENT,{},,Simple,False
+943,user_001,2026-10-18T12:33:21.566572,නවත්වන්න,Stop it,STOP,{},,,False
+944,user_001,2026-10-18T12:35:08.146089,පළමු ලිපිය කියවන්න,First article read,GO_TO_PAGE,{},,,False
+945,user_001,2026-10-18T12:35:10.650474,ඊළඟ කොටස කියවන්න,Read the next part.,NEXT,{},,Simple,False
+946,user_001,2026-10-18T12:35:13.014474,නැවත කියන්න,Say it again,REPEAT,{},,Simple,False
+947,user_001,2026-10-18T12:35:18.463400,මේ ලිපිය සාරාංශ කරන්න,Summarize this article,SUMMARIZE,{},,Simple,False
+948,user_001,2026-10-18T12:35:35.301426,මේ ලිපිය කුමක් ගැනද?,What is this article about?,IDENTIFY_CONTENT,{},,Simple,False
+949,user_001,2026-10-18T12:35:51.181595,සරලව කියන්න,I just want to say,USER_STATEMENT,{},,Simple,False
+950,user_001,2026-10-18T12:36:08.707213,නවත්වන්න,Stop it,STOP,{},,,False
+951,user_001,2026-10-18T12:37:48.299862,පළමු ලිපිය කියවන්න,First article read,GO_TO_PAGE,{},,,False
+952,user_001,2026-10-18T12:37:50.979810,ඊළඟ කොටස කියවන්න,Read the next part.,NEXT,{},,Simple,False
+953,user_001,2026-10-18T12:37:53.145449,නැවත කියන්න,Say it again,REPEAT,{},,Simple,False
+954,user_001,2026-10-18T12:37:57.724130,මේ ලිපිය සාරාංශ කරන්න,Summarize this article,SUMMARIZE,{},,Simple,False
+955,user_001,2026-10-18T12:38:30.123820,මේ ලිපිය කුමක් ගැනද?,What is this article about?,IDENTIFY_CONTENT,{},,Simple,False
+956,user_001,2026-10-18T12:38:52.636773,සරලව කියන්න,I just want to say,USER_STATEMENT,{},,Simple,False
+957,user_001,2026-10-18T12:39:14.645571,නවත්වන්න,Stop it,STOP,{},,,False
+958,user_001,2026-10-18T12:41:13.287002,පළමු ලිපිය කියවන්න,First article read,GO_TO_PAGE,{},,,False
+959,user_001,2026-10-18T12:41:15.891525,ඊළඟ කොටස කියවන්න,Read the next part.,NEXT,{},,Simple,False
+960,user_001,2026-10-18T12:41:18.451815,නැවත කියන්න,Say it again,REPEAT,{},,Simple,False
+961,user_001,2026-10-18T12:41:23.690299,මේ ලිපිය සාරාංශ කරන්න,Summarize this article,SUMMARIZE,{},,Simple,False
+962,user_001,2026-10-18T12:41:42.923694,මේ ලිපිය කුමක් ගැනද?,What is this article about?,IDENTIFY_CONTENT,{},,Simple,False
+963,user_001,2026-10-18T12:42:07.191842,සරලව කියන්න,I just want to say,USER_STATEMENT,{},,Simple,False
+964,user_001,2026-10-18T12:42:24.993764,නවත්වන්න,Stop it,STOP,{},,,False
+965,user_001,2026-10-18T12:43:44.458336,පළමු ලිපිය කියවන්න,First article read,GO_TO_PAGE,{},,,False
+966,user_001,2026-10-18T12:43:47.227302,ඊළඟ කොටස කියවන්න,Read the next part.,NEXT,{},,Simple,False
+967,user_001,2026-10-18T12:43:49.634785,නැවත කියන්න,Say it again,REPEAT,{},,Simple,False
+968,user_001,2026-10-18T12:43:54.820587,මේ ලිපිය සාරාංශ කරන්න,Summarize this article,SUMMARIZE,{},,Simple,False
+969,user_001,2026-10-18T12:44:12.721263,මේ ලිපිය කුමක් ගැනද?,What is this article about?,IDENTIFY_CONTENT,{},,Simple,False
+970,user_001,2026-10-18T12:44:31.701598,සරලව කියන්න,I just want to say,USER_STATEMENT,{},,Simple,False
+971,user_001,2026-10-18T12:44:53.589177,නවත්වන්න,Stop it,STOP,{},,,False
+972,user_001,2026-10-18T12:47:08.439631,පළමු ලිපිය කියවන්න,First article read,GO_TO_PAGE,{},,,False
+973,user_001,2026-10-18T12:47:11.514034,ඊළඟ කොටස කියවන්න,Read the next part.,NEXT,{},,Simple,False
+974,user_001,2026-10-18T12:47:13.972550,නැවත කියන්න,Say it again,REPEAT,{},,Simple,False
+975,user_001,2026-10-18T12:47:19.383942,මේ ලිපිය සාරාංශ කරන්න,Summarize this article,SUMMARIZE,{},,Simple,False
+976,user_001,2026-10-18T12:47:36.063257,මේ ලිපිය කුමක් ගැනද?,What is this article about?,IDENTIFY_CONTENT,{},,Simple,False
+977,user_001,2026-10-18T12:47:51.868457,සරලව කියන්න,I just want to say,USER_STATEMENT,{},,Simple,False
+978,user_001,2026-10-18T12:48:12.340541,නවත්වන්න,Stop it,STOP,{},,,False
+979,user_001,2026-10-18T12:51:33.133804,පළමු ලිපිය කියවන්න,First article read,GO_TO_PAGE,{},,,False
+980,user_001,2026-10-18T12:51:37.532361,ඊළඟ කොටස කියවන්න,Read the next part.,NEXT,{},,Simple,False
+981,user_001,2026-10-18T12:51:41.537074,නැවත කියන්න,Say it again,REPEAT,{},,Simple,False
+982,user_001,2026-10-18T12:51:57.930573,මේ ලිපිය සාරාංශ කරන්න,Summarize this article,SUMMARIZE,{},,Simple,False
+983,user_001,2026-10-18T12:52:27.940145,මේ ලිපිය කුමක් ගැනද?,What is this article about?,IDENTIFY_CONTENT,{},,Simple,False
+984,user_001,2026-10-18T12:53:01.952766,සරලව කියන්න,I just want to say,USER_STATEMENT,{},,Simple,False
+985,user_001,2026-10-18T12:53:32.533114,නවත්වන්න,Stop it,STOP,{},,,False
+986,user_001,2026-10-18T12:54:38.287235,පළමු ලිපිය කියවන්න,First article read,GO_TO_PAGE,{},,,False
+987,user_001,2026-10-18T12:54:40.933559,ඊළඟ කොටස කියවන්න,Read the next part.,NEXT,{},,Simple,False
+988,user_001,2026-10-18T12:54:43.920295,නැවත කියන්න,Say it again,REPEAT,{},,Simple,False
+989,user_001,2026-10-18T12:54:52.946864,මේ ලිපිය සාරාංශ කරන්න,Summarize this article,SUMMARIZE,{},,Simple,False
+990,user_001,2026-10-18T12:55:16.540297,මේ ලිපිය කුමක් ගැනද?,What is this article about?,IDENTIFY_CONTENT,{},,Simple,False
+991,user_001,2026-10-18T12:55:42.387149,සරලව කියන්න,I just want to say,USER_STATEMENT,{},,Simple,False
+992,user_001,2026-10-18T12:56:11.956667,නවත්වන්න,Stop it,STOP,{},,,False
+993,user_001,2026-10-18T12:57:43.409380,පළමු ලිපිය කියවන්න,First article read,GO_TO_PAGE,{},,,False
+994,user_001,2026-10-18T12:57:46.104123,ඊළඟ කොටස කියවන්න,Read the next part.,NEXT,{},,Simple,False
+995,user_001,2026-10-18T12:57:49.388100,නැවත කියන්න,Say it again,REPEAT,{},,Simple,False
+996,user_001,2026-10-18T12:57:55.722688,මේ ලිපිය සාරාංශ කරන්න,Summarize this article,SUMMARIZE,{},,Simple,False
+997,user_001,2026-10-18T12:58:35.345361,මේ ලිපිය කුමක් ගැනද?,What is this article about?,IDENTIFY_CONTENT,{},,Simple,False
+998,user_001,2026-10-18T12:59:02.701867,සරලව කියන්න,I just want to say,USER_STATEMENT,{},,Simple,False
+999,user_001,2026-10-18T12:59:29.025225,නවත්වන්න,Stop it,STOP,{},,,False
+1000,user_001,2026-10-18T13:01:26.201848,පළමු ලිපිය කියවන්න,First article read,GO_TO_PAGE,{},,,False
+1001,user_001,2026-10-18T13:01:31.395200,ඊළඟ කොටස කියවන්න,Read the next part.,NEXT,{},,Simple,False
+1002,user_001,2026-10-18T13:01:36.221323,නැවත කියන්න,Say it again,REPEAT,{},,Simple,False
+1003,user_001,2026-10-18T13:01:43.027856,මේ ලිපිය සාරාංශ කරන්න,Summarize this article,SUMMARIZE,{},,Simple,False
+1004,user_001,2026-10-18T13:02:17.466660,මේ ලිපිය කුමක් ගැනද?,What is this article about?,IDENTIFY_CONTENT,{},,Simple,False
+1005,user_001,2026-10-18T13:07:18.009264,සරලව කියන්න,I just want to say,USER_STATEMENT,{},,Simple,False
+1006,user_001,2026-10-18T13:07:41.559818,නවත්වන්න,Stop it,STOP,{},,,False
+1007,user_001,2026-10-18T13:36:50.538900,ලිපිය දෙක කියවන්න,Read the article,READ_ALOUD,{},,StepByStep,True
+1008,user_001,2026-10-18T13:38:57.207205,ලිපිය දෙක පියවරෙන් පියවර කියවන්න,Read the article step by step,STEP_BY_STEP,{},,StepByStep,False
+1009,user_001,2026-10-18T13:41:01.916950,එම ලිපියේ නරැඳෙන බෝධි දින කීයක් සංචාරා යෙදුනොත්,If the number of days of travel is not shown in the article,IDENTIFY_CONTENT,{},,Simple,False
+1010,user_001,2026-10-18T13:41:50.142516,මෙහි සඳහන් පුවත්පත් සේවයේ නම මොකක්ද,What is the name of the newspaper service mentioned here?,ASK_QUESTION,{},,Simple,False
+1011,user_001,2026-10-18T13:44:14.547539,ලිපියේ එකෙහි සඳහන් නෂ්ටික ගිවිසුමට අත්සන් තැබූ රටවල් දෙක කුමක්ද,Which of the two countries has signed the Native Agreement mentioned in the article,ASK_QUESTION,{},,Simple,False
+1012,user_001,2026-10-18T13:45:09.138700,ලිපිය එකේ සඳහන් ගිවිසුමට අත්සන් තැබූ රටවල් මොනවාද,The article contains the following countries which have signed the agreement:,IDENTIFY_CONTENT,{},,Simple,False
+1013,user_001,2026-10-18T13:45:59.791364,ආලිපිය එකෙහි සඳහන් නරේන්ද්‍ර මෝධි දින කීය සංචාර යෙදුනාද,How many days of visits were made to Narendra Modi mentioned in the Alippiya ?,ASK_QUESTION,{},,Simple,False
+1014,user_001,2026-10-18T13:47:18.327063,ලිපිය එකේ සඳහන් ගිවිසුමට අත්සන් තැබූ රටවල් මොනවාද,The article contains the following countries which have signed the agreement:,IDENTIFY_CONTENT,{},,Simple,False
+1015,user_001,2026-10-18T14:11:14.619833,ලිපිය දෙක කියවන්න,Read the article,READ_ALOUD,{},,Simple,False
+1016,user_001,2026-10-18T14:31:08.999337,ලිපිය දෙක කියවන්න,Read the article,READ_ALOUD,{},,StepByStep,True
+1017,user_001,2026-10-18T14:31:52.132886,එම ලිපිය පියවරෙන් පියවර කියන්න,The article step by step tell,STEP_BY_STEP,{},,StepByStep,False
+1018,user_001,2026-10-18T14:33:44.316659,වී වලට ලබාදුන් සහතික මිල කීයද,What is the price of the certificate given to you?,ASK_QUESTION,{},,StepByStep,False
+1019,user_001,2026-10-18T14:34:21.894313,මිලදීගෙන ඇති වී ප්‍රමාණය කීයද,How much has been purchased?,ASK_QUESTION,{},,StepByStep,False
+1020,user_001,2026-10-18T14:35:12.035813,විපක්ෂ නායක නම කුමක්ද,What is the name of the opposition leader?,ASK_QUESTION,{},,Detailed,True
+1021,user_001,2026-10-18T14:35:58.922081,මෙම ලිපිය ගැඹුරින් විස්තර කරන්න,Describe this article in depth,ELABORATE,{},,Detailed,False
+1022,user_001,2026-10-18T14:38:58.989347,චාරගේ නම පුවත්පත්තියේ රැඳී ද,The name of the character is in the newspaper .,IDENTIFY_CONTENT,{},,Detailed,False
+1023,user_001,2026-10-18T14:39:26.643264,මල් කොල්ලෙක්ද,A little boy ?,ASK_QUESTION,{},,Detailed,False
+1024,user_test_verify,2026-10-18T17:03:28.254450,ටෙස්ට් විමසුම,test query,EXPLAIN,{},,Simple,False
+1025,user_test_verify,2026-10-18T17:04:24.365348,ටෙස්ට් විමසුම,test query,EXPLAIN,{},,Simple,False
+1026,user_001,2026-10-18T17:04:54.578588,මේ ලිපිය ගැන කියන්න,Tell me about this article,IDENTIFY_CONTENT,{},,Simple,False
+1027,user_001,2026-10-18T17:04:55.920892,නැවත කියවන්න,Read it again,REPEAT,{},,Simple,False
+1028,user_001,2026-10-18T17:04:57.192725,නැවත කියවන්න,Read it again,REPEAT,{},,Simple,False
+1029,user_001,2026-10-18T17:05:01.534109,කියවන්න,Read it,READ_ALOUD,{},,Simple,False
+1030,user_001,2026-10-18T17:05:04.491119,ශීර්ෂය කියන්නද,Can you tell me the title?,IDENTIFY_CONTENT,{},,Simple,False
+1031,user_001,2026-10-18T17:05:22.449845,වචන කීයද,How many words?,ASK_QUESTION,{},,Simple,False
+1032,user_001,2026-10-18T17:05:41.664494,මොනවා හරි මඟ හැරුණාද,Did you miss something?,ASK_QUESTION,{},,Simple,False
+1033,user_001,2026-10-18T17:06:02.209473,මුල සිට කියවන්න,Read it from the beginning,READ_ALOUD,{},,Simple,False
+1034,user_001,2026-10-18T17:06:03.168582,ඊළඟ කොටස,Next part,NEXT,{},,,False
+1035,user_001,2026-10-18T17:06:06.268155,මුල සිට කියවන්න,Read it from the beginning,READ_ALOUD,{},,Simple,False
+1036,user_001,2026-10-18T17:06:07.319594,ඊළඟ කොටස,Next part,NEXT,{},,,False
+1037,user_001,2026-10-18T17:06:09.909312,කලින් කොටස,Previous article,PREVIOUS,{},,,False
+1038,user_001,2026-10-18T17:06:20.328886,මුල සිට කියවන්න,Read it from the beginning,READ_ALOUD,{},,Simple,False
+1039,user_001,2026-10-18T17:06:23.046469,ඊළඟ කොටස,Next part,NEXT,{},,,False
+1040,user_001,2026-10-18T17:06:25.912487,ඊළඟ කොටස,Next part,NEXT,{},,,False
+1041,user_001,2026-10-18T17:06:30.304926,මුල සිට කියවන්න,Read it from the beginning,READ_ALOUD,{},,Simple,False

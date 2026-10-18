@@ -117,9 +117,21 @@ def test_the_cursor_lives_with_its_article():
     assert s.get('j') is None and s.cursor('j') == 0
 
 
-def test_a_new_capture_resets_the_cursor():
+def test_a_new_capture_starts_at_the_beginning():
+    """Every /capture mints a NEW job id, so a new page starts at cursor 0."""
     s = SessionStore()
     s.put('j', _doc())
     s.set_cursor('j', 5)
-    s.put('j', _doc('new'))
-    assert s.cursor('j') == 0
+    s.put('k', _doc('new'))
+    assert s.cursor('k') == 0 and s.cursor('j') == 5
+
+
+def test_storing_the_same_job_again_keeps_the_cursor_and_state():
+    """/ask re-stores the job after every turn. Resetting there sent "next"
+    back to the start of the article on every question."""
+    s = SessionStore()
+    s.put('j', _doc())
+    s.set_cursor('j', 5)
+    s.state('j')['current_article'] = 1
+    s.put('j', _doc('same page, one more turn'))
+    assert s.cursor('j') == 5 and s.state('j')['current_article'] == 1

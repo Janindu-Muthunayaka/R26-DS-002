@@ -37,6 +37,12 @@ children: list = []
 
 def spawn(label, args, cwd=None, extra_env=None):
     e = dict(os.environ)
+    # UTF-8 output for every child. Without it a Sinhala log line
+    # (print(f'[rag] {n}')) raises UnicodeEncodeError whenever the output is
+    # not a UTF-8 console (cp1252 on Windows), and the finished answer is
+    # thrown away as an HTTP 500 - measured 7 times in one glitch run.
+    e.setdefault('PYTHONIOENCODING', 'utf-8')
+    e.setdefault('PYTHONUTF8', '1')
     e.update(extra_env or {})
     print(f'  starting {label}: {" ".join(str(a) for a in args)}')
     p = subprocess.Popen([str(a) for a in args], cwd=str(cwd or _SYSTEM), env=e)

@@ -326,23 +326,14 @@ def answer(document: Document, voice: dict, mode: str = None,
             warnings.append(f'rag: {n}')
 
         if not service_ok:
+            # Say that it failed. Until 18 Oct 2026 this read article text
+            # instead (picked by "1" / "එක" anywhere in the question), and a
+            # failed "say it simpler" was heard as raw newsprint presented as
+            # the answer.
             warnings.append('rag: the service reported a failure')
-            q_raw = (voice.get('english_translation') or voice.get('sinhala_input') or voice.get('query') or '').strip().lower()
-            if '3' in q_raw or 'තුන' in q_raw or 'third' in q_raw:
-                return _local(document, 'ARTICLE_3', max(0, int(cursor or 0)), warnings)
-            elif '2' in q_raw or 'දෙක' in q_raw or 'second' in q_raw:
-                return _local(document, 'ARTICLE_2', max(0, int(cursor or 0)), warnings)
-            elif '1' in q_raw or 'එක' in q_raw or 'first' in q_raw:
-                return _local(document, 'ARTICLE_1', max(0, int(cursor or 0)), warnings)
-            if speakable and speakable != SI_FAILED:
-                return _out(False, 'GENERATE', str(reply.get('intent') or intent),
-                            speakable=speakable, answer_si=answer_si,
-                            sources=[s for s in (reply.get('retrieved_sources') or []) if isinstance(s, dict)],
-                            warnings=warnings, cursor=cursor)
-            elif document.articles:
-                res_loc = _local(document, intent, max(0, int(cursor or 0)), warnings)
-                res_loc['ok'] = False
-                return res_loc
+            return _out(False, 'GENERATE', str(reply.get('intent') or intent),
+                        speakable=speakable if speakable else SI_FAILED,
+                        answer_si=answer_si, warnings=warnings, cursor=cursor)
 
         sources = reply.get('retrieved_sources') or []
         if not isinstance(sources, list):
@@ -379,19 +370,6 @@ def answer(document: Document, voice: dict, mode: str = None,
     # Fallback if in-process generation fails
     if intent == 'FIRST_SCAN':
         return _local(document, intent, max(0, int(cursor or 0)), warnings)
-
-    q_raw = (voice.get('english_translation') or voice.get('sinhala_input') or voice.get('query') or '').strip().lower()
-    if '3' in q_raw or 'තුන' in q_raw or 'third' in q_raw:
-        return _local(document, 'ARTICLE_3', max(0, int(cursor or 0)), warnings)
-    elif '2' in q_raw or 'දෙක' in q_raw or 'second' in q_raw:
-        return _local(document, 'ARTICLE_2', max(0, int(cursor or 0)), warnings)
-    elif '1' in q_raw or 'එක' in q_raw or 'first' in q_raw:
-        return _local(document, 'ARTICLE_1', max(0, int(cursor or 0)), warnings)
-
-    if document.articles:
-        res_loc = _local(document, intent, max(0, int(cursor or 0)), warnings)
-        res_loc['ok'] = False
-        return res_loc
 
     return _out(False, 'GENERATE', intent, speakable=SI_FAILED,
                 warnings=warnings, cursor=cursor)

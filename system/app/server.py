@@ -296,7 +296,11 @@ def build(pipeline, web_dir: Path):
             # exif_transpose ON ARRIVAL. CameraX writes rotation into EXIF and
             # does not rotate pixels. The file written here is already upright
             # and carries no orientation tag, so nothing downstream repeats it.
-            im = imdecode_upright(data)
+            # An empty or broken upload is skipped (it was an HTTP 500).
+            try:
+                im = imdecode_upright(data) if data else None
+            except Exception:
+                im = None
             if im is None:
                 continue
             p = sess / f'f{i}{_stamp_of(f.filename)}.jpg'

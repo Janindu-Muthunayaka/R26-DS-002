@@ -116,3 +116,4 @@ Work/Janindu/0_Data/Model/checkpoint.pth
 *.pem
 *.key
 secrets.json
+/services/rag/chat_sessions

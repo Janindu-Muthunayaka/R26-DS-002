@@ -1,0 +1,105 @@
+{
+  "run_at": "2026-10-18 10:25",
+  "device": "cpu",
+  "font_px": 34,
+  "passages": 1,
+  "fonts": [
+    "Iskoola Pota",
+    "Dinamina Unicode",
+    "Malithi Web",
+    "Nirmala UI"
+  ],
+  "overall": {
+    "n": 3,
+    "cer_raw": 0.0279,
+    "cer_mt5": 0.0243,
+    "wer_raw": 0.0653,
+    "wer_mt5": 0.045,
+    "cer_mt5_better_in": 2,
+    "cer_mt5_worse_in": 1,
+    "correction": {
+      "tp_fixed": 15,
+      "fp_broken": 2,
+      "fn_missed": 14,
+      "precision": 0.8824,
+      "recall": 0.5172,
+      "f1": 0.6522
+    }
+  },
+  "by_condition": {
+    "clean": {
+      "n": 1,
+      "cer_raw": 0.0189,
+      "cer_mt5": 0.0054,
+      "wer_raw": 0.0473,
+      "wer_mt5": 0.0135,
+      "cer_mt5_better_in": 1,
+      "cer_mt5_worse_in": 0,
+      "correction": {
+        "tp_fixed": 5,
+        "fp_broken": 0,
+        "fn_missed": 2,
+        "precision": 1.0,
+        "recall": 0.7143,
+        "f1": 0.8333
+      }
+    },
+    "degraded": {
+      "n": 1,
+      "cer_raw": 0.0216,
+      "cer_mt5": 0.0135,
+      "wer_raw": 0.0541,
+      "wer_mt5": 0.027,
+      "cer_mt5_better_in": 1,
+      "cer_mt5_worse_in": 0,
+      "correction": {
+        "tp_fixed": 5,
+        "fp_broken": 0,
+        "fn_missed": 3,
+        "precision": 1.0,
+        "recall": 0.625,
+        "f1": 0.7692
+      }
+    },
+    "hard": {
+      "n": 1,
+      "cer_raw": 0.0431,
+      "cer_mt5": 0.0539,
+      "wer_raw": 0.0946,
+      "wer_mt5": 0.0946,
+      "cer_mt5_better_in": 0,
+      "cer_mt5_worse_in": 1,
+      "correction": {
+        "tp_fixed": 5,
+        "fp_broken": 2,
+        "fn_missed": 9,
+        "precision": 0.7143,
+        "recall": 0.3571,
+        "f1": 0.4762
+      }
+    }
+  },
+  "by_font": {
+    "Iskoola Pota": {
+      "n": 3,
+      "cer_raw": 0.0279,
+      "cer_mt5": 0.0243,
+      "wer_raw": 0.0653,
+      "wer_mt5": 0.045,
+      "cer_mt5_better_in": 2,
+      "cer_mt5_worse_in": 1,
+      "correction": {
+        "tp_fixed": 15,
+        "fp_broken": 2,
+        "fn_missed": 14,
+        "precision": 0.8824,
+        "recall": 0.5172,
+        "f1": 0.6522
+      }
+    }
+  },
+  "latency_sec": {
+    "ocr_median": 0.58,
+    "mt5_median": 16.24
+  }
+}
