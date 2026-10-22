@@ -1,28 +1,28 @@
 {
-  "run_at": "2026-10-18 19:27",
+  "run_at": "2026-10-18 20:42",
   "captures": [
     {
       "source_job": "e2c68b40",
-      "job": "c9d2051f",
+      "job": "9d8adabd",
       "ok": true,
       "n_articles": 5,
-      "secs": 5606.5,
+      "secs": 37.5,
       "verdict": "good"
     },
     {
       "source_job": "530144c3",
-      "job": "34111b39",
+      "job": "427b03af",
       "ok": true,
       "n_articles": 5,
-      "secs": 105.7,
+      "secs": 35.2,
       "verdict": "good"
     },
     {
       "source_job": "811015ff",
-      "job": "f555aabb",
+      "job": "1427e662",
       "ok": true,
       "n_articles": 4,
-      "secs": 136.3,
+      "secs": 36.7,
       "verdict": "good"
     }
   ],
@@ -32,7 +32,7 @@
   },
   "turns": {
     "n": 60,
-    "glitches": 1,
+    "glitches": 4,
     "by_turn": {
       "read_article_2": {
         "n": 3,
@@ -88,15 +88,15 @@
       },
       "simpler": {
         "n": 3,
-        "glitches": 0
+        "glitches": 1
       },
       "step_by_step": {
         "n": 3,
-        "glitches": 0
+        "glitches": 1
       },
       "rephrase": {
         "n": 3,
-        "glitches": 0
+        "glitches": 1
       },
       "off_topic": {
         "n": 3,
@@ -116,6 +116,7 @@
       }
     },
     "by_problem": {
+      "\"not enough information\"": 3,
       "code / English in speech": 1
     }
   },
@@ -130,14 +131,14 @@
     {
       "check": "GET /reader",
       "http": 200,
-      "secs": 0.0,
+      "secs": 0.04,
       "ok": true,
       "problems": ""
     },
     {
       "check": "GET /debug",
       "http": 200,
-      "secs": 0.0,
+      "secs": 0.03,
       "ok": true,
       "problems": ""
     },
@@ -151,7 +152,7 @@
     {
       "check": "GET /users",
       "http": 200,
-      "secs": 0.18,
+      "secs": 0.16,
       "ok": true,
       "problems": ""
     },
@@ -165,7 +166,7 @@
     {
       "check": "GET /latest",
       "http": 200,
-      "secs": 0.02,
+      "secs": 0.01,
       "ok": true,
       "problems": ""
     },
@@ -186,7 +187,7 @@
     {
       "check": "GET /profile/user",
       "http": 200,
-      "secs": 0.05,
+      "secs": 0.04,
       "ok": true,
       "problems": ""
     },
@@ -200,28 +201,28 @@
     {
       "check": "GET /session/unknown",
       "http": 404,
-      "secs": 0.0,
+      "secs": 0.01,
       "ok": true,
       "problems": ""
     },
     {
       "check": "GET /document/unknown",
       "http": 404,
-      "secs": 0.01,
+      "secs": 0.0,
       "ok": true,
       "problems": ""
     },
     {
       "check": "POST /ask unknown job",
       "http": 404,
-      "secs": 0.02,
+      "secs": 0.01,
       "ok": true,
       "problems": ""
     },
     {
       "check": "POST /ask empty text",
       "http": 200,
-      "secs": 11.14,
+      "secs": 3.85,
       "ok": true,
       "problems": ""
     },
@@ -235,35 +236,35 @@
     {
       "check": "POST /regenerate bad index",
       "http": 404,
-      "secs": 0.02,
+      "secs": 0.0,
       "ok": true,
       "problems": ""
     },
     {
       "check": "POST /users bad body",
       "http": 422,
-      "secs": 0.0,
+      "secs": 0.01,
       "ok": true,
       "problems": ""
     },
     {
       "check": "POST /active-user unknown",
       "http": 200,
-      "secs": 0.02,
+      "secs": 0.0,
       "ok": true,
       "problems": ""
     },
     {
       "check": "POST /capture not an image",
       "http": 400,
-      "secs": 0.08,
+      "secs": 0.1,
       "ok": true,
       "problems": ""
     },
     {
       "check": "POST /capture empty file",
       "http": 400,
-      "secs": 0.0,
+      "secs": 0.01,
       "ok": true,
       "problems": ""
     }

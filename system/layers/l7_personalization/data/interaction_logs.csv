@@ -479,3 +479,44 @@
 1039,user_001,2026-10-18T17:06:23.046469,ඊළඟ කොටස,Next part,NEXT,{},,,False
 1040,user_001,2026-10-18T17:06:25.912487,ඊළඟ කොටස,Next part,NEXT,{},,,False
 1041,user_001,2026-10-18T17:06:30.304926,මුල සිට කියවන්න,Read it from the beginning,READ_ALOUD,{},,Simple,False
+1042,user_001,2026-10-18T21:11:23.271560,දෙවැනි ලිපියේ,Second article,NEXT,{},,,False
+1043,user_001,2026-10-18T21:11:51.350537,පළමුවන ලිපිය මොකක් ගැනද,First article about what?,IDENTIFY_CONTENT,{},,Simple,False
+1044,user_001,2026-10-18T21:13:19.642692,පළමු වන ලිපිය පළමු වන ලිපිය,First article First article,GO_TO_PAGE,{},,,False
+1045,user_001,2026-10-18T21:13:56.267964,පළමුවන ලිපිය ඉතාම,First article very much,GO_TO_PAGE,{},,,False
+1046,user_001,2026-10-18T21:14:07.342784,පළමු වන ලිපිය ඉතාමත්,First article very well,IDENTIFY_CONTENT,{},,Detailed,True
+1047,user_001,2026-10-18T21:14:56.814264,පළමු ලිපිය ඉතාමත් ගැඹුරින් කියන්න,First article very deeply tell,ELABORATE,{},,Detailed,False
+1048,user_001,2026-10-18T21:20:07.008116,ලිපිය එක කියවන්න,Read the article.,READ_ALOUD,{},,Detailed,False
+1049,user_001,2026-10-18T21:20:49.595554,ලිපිය එක කවුරු ගැනද කියන්නේ,The article is about who?,ASK_QUESTION,{},,Detailed,False
+1050,user_001,2026-10-18T21:21:27.526566,ගැඹුරින් පහදන්න,Go down deep,GO_TO_SECTION,{},,,False
+1051,user_001,2026-10-18T21:21:49.110052,පිය එක ගැඹුරින් කියවන්න,Read the paper in depth,ELABORATE,{},,Detailed,False
+1052,user_004,2026-10-18T22:32:20.673943,ලිපිය තුන කියවන්න,Read the article,READ_ALOUD,{},,StepByStep,False
+1053,user_004,2026-10-18T22:35:44.823831,ලිපිය තුන කියවන්න,Read the article,READ_ALOUD,{},,StepByStep,False
+1054,user_004,2026-10-18T22:36:01.256054,පියවරෙන් පියවර එම ලිපිය කියවන්න,Step by step read the article,STEP_BY_STEP,{},,StepByStep,False
+1055,user_004,2026-10-18T22:37:14.360611,විපක්ෂ නායකගේ නම කුමක්ද,What is the name of the opposition leader,ASK_QUESTION,{},,StepByStep,False
+1056,user_004,2026-10-18T22:37:54.464043,වී වලට ලබාදුන් සහතික මිල කීයද,What is the price of the certificate given to you?,ASK_QUESTION,{},,StepByStep,False
+1057,user_004,2026-10-18T22:39:20.271382,ලිපිය තුන අන්දයකුට කියනවා වගේද කියන්න,The letter is three and you tell me what to say,IDENTIFY_CONTENT,{},,StepByStep,False
+1058,user_004,2026-10-18T22:40:17.348199,තම ගැඹුරින් පවසන්නේ,He says in his deepest,IDENTIFY_CONTENT,{},,StepByStep,False
+1059,user_004,2026-10-18T22:40:45.645931,තුනෙහි සඳහන් මහාචාර්යවරයාගේ නම කුමක්ද,What is the name of the mentioned professor,ASK_QUESTION,{},,Simple,True
+1060,user_004,2026-10-18T22:41:10.785348,ඔබ හඳුනාගත් ලිපි සියල්ල මට සාරාංශ කර දෙන්න,Give me a summary of all the articles you have identified.,SUMMARIZE,{},,Detailed,True
+1061,user_004,2026-10-19T00:53:58.864531,පළමු වගන්තිය ඉතා සවිස්තරාත්මකව පැහැදිලි කරන්න.,The first article shall be explained in great detail.,ELABORATE,{},,Simple,True
+1062,user_004,2026-10-19T06:00:37.919116,පළමුවන ලිපිය සාරාංශ කරන්න,Summarize the first article,SUMMARIZE,{},,StepByStep,True
+1063,user_004,2026-10-19T06:01:45.148833,දෙවෙනි ලිපිය පියවරෙන් පියවර කියන්න,"Second article , step by step tell",STEP_BY_STEP,{},,StepByStep,False
+1064,user_004,2026-10-19T06:05:00.716795,ලිපිය එක නවත්තරයක් කියන්නම්,Let me tell you a new one .,SHARE_ARTICLE,{},,StepByStep,False
+1065,user_004,2026-10-19T06:06:02.832238,පළමු වන ලිපියේ කවුද අමුතු නැටුවක් කරේ,First article Who has done a strange dance,ASK_QUESTION,{},,StepByStep,False
+1066,user_004,2026-10-19T06:09:31.450153,කාගෙද විවාද මංගල්‍යයක් තිබ්බේ,There was a debate party .,IDENTIFY_CONTENT,{},,StepByStep,False
+1067,user_004,2026-10-19T06:10:26.515616,කාගෙද විවාහක මංගල්‍යයක් තිබ්බේ,Who had a wedding party?,ASK_QUESTION,{},,StepByStep,False
+1068,user_004,2026-10-19T06:11:26.737743,අභිෂේකය සම්පූර්ණ නම මොකක්ද,What is the full name of the subject,ASK_QUESTION,{},,Simple,True
+1069,user_004,2026-10-19T06:28:57.393583,දෙවෙනි ලිපිය සාරාංශ කරන්න,Summary of the second article,SUMMARIZE,{},,Simple,False
+1070,user_004,2026-10-19T06:29:47.397729,ඩොලර් කීයක් පරිත්‍යාග කරල තියෙනවද,How many dollars have you donated ?,ASK_QUESTION,{},,Simple,False
+1071,user_004,2026-10-19T06:32:05.799735,තුන්වන ලිපිය ඉතාමත් ගැඹුරින් කියන්න,The third article is very deeply told.,IDENTIFY_CONTENT,{},,Detailed,False
+1072,user_004,2026-10-19T06:32:48.035660,ලිපි කීයක් ඇතේ ද මේකේ,There are many articles in this,IDENTIFY_CONTENT,{},,Simple,False
+1073,user_004,2026-10-19T06:33:29.335377,පළමු වන ලිපිය සාරාංශ කරන ඉතා ලේසිම විදිහකට,First article summarized in the simplest way,SUMMARIZE,{},,Simple,False
+1074,user_004,2026-10-19T09:09:56.009559,ලිපිය එක පළවෙනි ලිපිය කියවන්න,Read the first article,GO_TO_PAGE,{},,,False
+1075,user_004,2026-10-19T09:10:30.665307,පියවරෙන් පියවර විස්තර කරන්න,Step by step description,STEP_BY_STEP,{},,StepByStep,False
+1076,user_004,2026-10-19T09:12:45.123660,එම මාර්ගය වසර කීයකට පෙර ඉදිකරන ලද්දක්ද,That road was built a few years ago?,PREVIOUS,{},,,False
+1077,user_004,2026-10-19T10:21:16.917896,දෙක කියවන්න,Read it .,READ_ALOUD,{},,StepByStep,False
+1078,user_004,2026-10-19T10:25:40.200867,විශ්ව විෂයක මොකක්ද වෙන්නේ,What is happening in the world?,ASK_QUESTION,{},,StepByStep,False
+1079,user_004,2026-10-19T10:26:30.276473,ජූලි විශ්ව විෂයක මොනවද වෙන්නේ,What is going on in the world ?,ASK_QUESTION,{},,StepByStep,False
+1080,user_004,2026-10-19T10:29:02.867921,එම ලිපිය පියවරෙන් පියවර කියවන්න,The article is read step by step,STEP_BY_STEP,{},,StepByStep,False
+1081,user_004,2026-10-19T11:05:00.180753,තුන්වන ලිපිය පැහැදිලි කරන්න,Explain the third article,EXPLAIN,{},,StepByStep,False
+1082,user_004,2026-10-19T11:06:05.568662,පියවරෙන් පියවර මෙම ලිපිය පැහැදිලි කරන්න,Step by step clarify this article,STEP_BY_STEP,{},,StepByStep,False

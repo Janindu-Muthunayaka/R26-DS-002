@@ -24,7 +24,15 @@ except ImportError:
 RATE_MIN, RATE_MAX = 0.8, 1.3
 CHUNK_MIN, CHUNK_MAX = 1, 6
 PAUSE_SCALE_MIN, PAUSE_SCALE_MAX = 0.5, 2.0
-SLOWER_FACTOR, FASTER_FACTOR = 0.90, 1.10
+# 18 Oct 2026: bigger steps, so one request is clearly heard (1.0 -> 1.15 or
+# 0.88; a second one reaches the limit), and a quick way back (RELAX_FACTOR).
+SLOWER_FACTOR, FASTER_FACTOR = 0.88, 1.15
+# Every turn with no delivery request moves rate and pause 40% of the way back
+# to normal, and snaps to normal once within RELAX_SNAP: "faster" lasts
+# 1.15 -> 1.09 -> 1.05 -> 1.03 -> 1.0, about four turns. A user who wants it
+# fast for longer just says so again.
+NORMAL_RATE, NORMAL_PAUSE = 1.0, 1.0
+RELAX_FACTOR, RELAX_SNAP, RELAX_PAUSE_SNAP = 0.6, 0.03, 0.05
 REPEAT_RATE_FACTOR, REPEAT_PAUSE_STEP = 0.95, 0.1
 # TURN_CONDITIONS.xlsx G5: faster always pairs with fewer pauses, slower (and
 # repeat) with more. An explicit "more / fewer pauses" moves twice as far.
@@ -107,6 +115,21 @@ def _step_pause(profile, decision, step):
     _set(profile, decision, "pause_scale", pause)
 
 
+def _relax(profile, decision):
+    """One step back towards normal speed and pauses."""
+    for key, normal, snap in (("rate", NORMAL_RATE, RELAX_SNAP),
+                              ("pause_scale", NORMAL_PAUSE, RELAX_PAUSE_SNAP)):
+        cur = float(profile.get(key, normal))
+        if cur == normal:
+            continue
+        new = normal + (cur - normal) * RELAX_FACTOR
+        if abs(new - normal) < snap:
+            new = normal
+        _set(profile, decision, key, round(new, 3 if key == "rate" else 2))
+    if decision["changes"]:
+        decision["reasons"].append("no delivery request this turn: back towards normal speed")
+
+
 def _add_channel(decision, channel):
     if channel not in decision["channels"]:
         decision["channels"].append(channel)
@@ -185,6 +208,10 @@ def apply_turn(profile, frame, now):
         _add_channel(d, "content")
         d["reasons"].append(f"{label}: content (style) channel, delivery unchanged")
 
+    # Nothing about delivery was asked (or learned) this turn: drift back.
+    if "delivery" not in d["channels"] and not d["ask"]:
+        _relax(p, d)
+
     count_turn(p)
     return p, d
 
@@ -192,7 +219,7 @@ def apply_turn(profile, frame, now):
 def apply_speed_answer(profile, sinhala, english=None, now=None):
     """
     The turn right after SPEED_QUESTION_SI was asked. A short slower/faster
-    reply sets the speed exactly like an explicit request (rate x0.90 / x1.10).
+    reply sets the speed exactly like an explicit request (rate x0.88 / x1.15).
     Returns (new_profile, decision), or (profile, None) when the reply is not
     a slower/faster answer — then it is a normal new request.
     """

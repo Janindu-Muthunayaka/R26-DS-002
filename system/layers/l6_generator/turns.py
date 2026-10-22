@@ -277,19 +277,20 @@ class _Turn:
         if str(self.voice.get('source', 'stub')).startswith('stub'):
             # Component 4 is not answering: apply ITS rules to the session copy
             # (E3) so the rate is kept, not reset to 1.0.
-            if any(m.get(k) for k in ('speed', 'repeat', 'pause', 'chunk')):
-                prof = new_profile()
-                prof.update(rate=cur['rate'], pause_scale=cur['pause_scale'],
-                            chunk_size=cur['chunk_size'])
-                if self.ctx['has_last']:
-                    at = datetime.fromtimestamp(self.now - (self.ctx['age_s'] or 0))
-                    prof['last_spoken'] = {'text': '', 'kind': 'answer', 'style': None,
-                                           'completed': True, 'resume_at': None,
-                                           'finished_at': at.isoformat(timespec='seconds'),
-                                           'turns_since': 0 if self.ctx['next_turn'] else 1}
-                prof, _ = apply_turn(prof, self.frame, datetime.fromtimestamp(self.now))
-                cur.update(rate=prof['rate'], pause_scale=prof['pause_scale'],
-                           chunk_size=prof['chunk_size'])
+            # Every turn: one with no delivery request drifts back towards
+            # normal speed (delivery/feedback.py, RELAX_FACTOR).
+            prof = new_profile()
+            prof.update(rate=cur['rate'], pause_scale=cur['pause_scale'],
+                        chunk_size=cur['chunk_size'])
+            if self.ctx['has_last']:
+                at = datetime.fromtimestamp(self.now - (self.ctx['age_s'] or 0))
+                prof['last_spoken'] = {'text': '', 'kind': 'answer', 'style': None,
+                                       'completed': True, 'resume_at': None,
+                                       'finished_at': at.isoformat(timespec='seconds'),
+                                       'turns_since': 0 if self.ctx['next_turn'] else 1}
+            prof, _ = apply_turn(prof, self.frame, datetime.fromtimestamp(self.now))
+            cur.update(rate=prof['rate'], pause_scale=prof['pause_scale'],
+                       chunk_size=prof['chunk_size'])
         else:
             b = self.voice.get('delivery_before')
             if isinstance(b, dict) and b.get('rate') is not None:

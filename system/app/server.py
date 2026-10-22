@@ -101,6 +101,25 @@ SI_NOTHING_READ = 'කිසිවක් තවම කියවා නොමැ�
 SI_ASK_FAILED = 'පිළිතුර ලබාගැනීමට නොහැකි විය. කරුණාකර නැවත උත්සාහ කරන්න.'
 SI_MOVE_CLOSER = 'ලිපිය හඳුනාගත නොහැකි විය. ටිකක් ළං වී නැවත උත්සාහ කරන්න.'
 
+# The user picked in the web UI survives a restart: the next session starts
+# with whoever was used last instead of falling back to VOICE_USER_ID.
+ACTIVE_USER_FILE = WORK_DIR / 'active_user.txt'
+
+
+def _load_active_user():
+    try:
+        uid = ACTIVE_USER_FILE.read_text(encoding='utf-8').strip()
+        return uid or VOICE_USER_ID
+    except OSError:
+        return VOICE_USER_ID
+
+
+def _save_active_user(uid):
+    try:
+        ACTIVE_USER_FILE.write_text(uid, encoding='utf-8')
+    except OSError:
+        pass                                  # still active for this run
+
 
 def _document_to_reply(doc, job):
     """Flatten a Document into what the phone speaks.
@@ -236,7 +255,7 @@ def build(pipeline, web_dir: Path):
     app.state.sessions = sessions
     # The user picked in the web UI. Used whenever a request does not name
     # one: the phone's /capture never does, and /ask may not.
-    app.state.active_user = VOICE_USER_ID
+    app.state.active_user = _load_active_user()
 
     def _page(name):
         p = web_dir / name
@@ -577,6 +596,7 @@ def build(pipeline, web_dir: Path):
     @app.post('/active-user')
     def active_user_set(a: ActiveUser):
         app.state.active_user = a.user_id or VOICE_USER_ID
+        _save_active_user(app.state.active_user)
         return {'ok': True, 'user_id': app.state.active_user}
 
     @app.post('/regenerate')
@@ -719,6 +739,11 @@ def build(pipeline, web_dir: Path):
     @app.get('/profile/{user_id}')
     def get_profile(user_id: str):
         return l0.get_profile(user_id)
+
+    @app.get('/profile/{user_id}/history')
+    def get_profile_history(user_id: str):
+        """Complete weight history since the user was created or reset."""
+        return l0.get_profile_history(user_id)
 
     @app.get('/audio/{job}')
     def audio(job: str):

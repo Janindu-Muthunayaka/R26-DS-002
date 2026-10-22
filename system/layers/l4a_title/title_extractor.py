@@ -434,6 +434,54 @@ from pathlib import Path
 PAD_WHITE         = 254   # >= this in the stitched strip = border/gap padding (or white paper)
 MAX_TEXT_FRACTION = 0.50  # strip more black than this = mis-thresholded (good strips: ~0.15-0.35)
 
+EDGE_PX           = 6     # light rim where a rotated word crop meets the padding
+
+
+def _fix_inverted_words(resized: np.ndarray, binary: np.ndarray) -> np.ndarray:
+    """Re-threshold, one word crop at a time, any crop that came out inverted.
+
+    COLOURED-BAND FAILURE. Light text on a dark or coloured band (yellow on
+    maroon, white on a photo) comes out of the strip threshold as a solid black
+    box with white letters. The strip-level check above misses it because the
+    white padding between crops keeps the strip under MAX_TEXT_FRACTION, and
+    polarity can differ from one crop to the next. So each crop (a column run
+    of non-padding pixels) is checked on its own: if more than
+    MAX_TEXT_FRACTION of its pixels, or most of the band just inside its edge,
+    are foreground, it is thresholded on its own pixels (Otsu) and the class
+    that owns that edge band is taken as background, whatever its colour. The
+    light rim where a rotated crop meets the padding is never foreground.
+    Crops that are already right are left as they are.
+    """
+    padding = resized >= PAD_WHITE
+    content_cols = ~padding.all(axis=0)
+    # Column runs of content = one stitched word crop each.
+    edges = np.flatnonzero(np.diff(np.r_[0, content_cols.astype(np.int8), 0]))
+    kernel = lambda r: cv2.getStructuringElement(cv2.MORPH_RECT, (2 * r + 1,) * 2)
+    pad8 = padding.astype(np.uint8)
+    rim = cv2.dilate(pad8, kernel(EDGE_PX)) > 0
+    # Band just inside the rim: real background of the crop, whatever its colour.
+    ring = (cv2.dilate(pad8, kernel(3 * EDGE_PX)) > 0) & ~rim
+    out = binary.copy()
+    for c0, c1 in zip(edges[::2], edges[1::2]):
+        pad, seg_ring = padding[:, c0:c1], ring[:, c0:c1]
+        seg = binary[:, c0:c1]
+        if not (~pad).any() or not seg_ring.any():
+            continue
+        if seg[~pad].mean() <= MAX_TEXT_FRACTION and seg[seg_ring].mean() <= 0.5:
+            continue  # mostly white with a white edge: polarity already right
+        grey = resized[:, c0:c1]
+        content = grey[~pad]
+        if content.size < 100:
+            continue
+        thr, _ = cv2.threshold(content.reshape(-1, 1), 0, 255,
+                               cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        dark = (grey <= thr) & ~pad
+        # Text = the class that does NOT own the crop's edge band.
+        fg = (~dark & ~pad) if dark[seg_ring].mean() > 0.5 else dark
+        out[:, c0:c1] = fg & ~rim[:, c0:c1]
+    return out
+
+
 def binarize_strip(img_bgr: np.ndarray, is_dark_bg: bool) -> tuple[np.ndarray, np.ndarray]:
     # 1. Image Loading / Grayscale
     grey = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY)
@@ -481,6 +529,8 @@ def binarize_strip(img_bgr: np.ndarray, is_dark_bg: bool) -> tuple[np.ndarray, n
             # pixels; padding never becomes foreground.
             if binary.mean() > MAX_TEXT_FRACTION:
                 binary = ~binary & ~padding
+
+    binary = _fix_inverted_words(resized, binary)
 
     # Remove specks and noise particles dynamically
     num_labels, labels, stats, _ = cv2.connectedComponentsWithStats(binary.astype(np.uint8), connectivity=8)

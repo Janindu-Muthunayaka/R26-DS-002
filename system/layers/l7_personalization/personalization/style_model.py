@@ -21,6 +21,7 @@
 
 import os
 import pickle
+from datetime import datetime
 from river import compose, feature_extraction, linear_model
 
 STYLE_CLASSES = ["Simple", "Detailed", "StepByStep"]
@@ -57,6 +58,12 @@ USER_DOMINANT_STYLES = {
 # a 50/25/25 split), so the first few confirmations move it noticeably but do
 # not swamp it.
 BASE_HISTORY_MASS = 2.0
+
+# The weight TIMELINE (18 Oct 2026): one point per change of the weights, from
+# the user's creation or last reset, so the web page can draw the user's
+# complete history and not only the current session. Capped so the pickle
+# cannot grow without bound; the first point (the reset) is always kept.
+TIMELINE_MAX = 2000
 
 
 def _base_weights(user_id):
@@ -101,7 +108,7 @@ def _fresh_user_state(user_id=None):
     if base:
         for cls in STYLE_CLASSES:
             hist[cls] = base.get(cls, 0.0) * BASE_HISTORY_MASS
-    return {
+    state = {
         "model": compose.Pipeline(
             compose.TransformerUnion(
                 compose.Select("text") | feature_extraction.TFIDF(on="text"),
@@ -111,7 +118,27 @@ def _fresh_user_state(user_id=None):
         ),
         "history": hist,
         "n_confirmed": 3 if base else 0,
+        "timeline": [],
     }
+    _record(state, user_id, "reset")
+    return state
+
+
+def _weights(state):
+    hist = state.get("history") or {}
+    total = sum(hist.values()) or 1.0
+    return {cls: round(hist.get(cls, 0.0) / total, 3) for cls in STYLE_CLASSES}
+
+
+def _record(state, user_id, reason, style=None):
+    """Append the current weights to the user's timeline."""
+    _enforce_base_limits(state, user_id)
+    tl = state.setdefault("timeline", [])
+    tl.append({"at": datetime.now().isoformat(timespec="seconds"), "reason": reason,
+               "style": style, "n_confirmed": state.get("n_confirmed", 0),
+               "weights": _weights(state)})
+    if len(tl) > TIMELINE_MAX:
+        del tl[1:len(tl) - TIMELINE_MAX + 1]
 
 
 # The pre-registry starting split (1.10 / 0.45 / 0.45, i.e. 55/22.5/22.5).
@@ -251,7 +278,16 @@ def learn_style(user_id, english_text, confirmed_class):
     state["history"][confirmed_class] += 1.0
     state["n_confirmed"] += 1
     _enforce_base_limits(state, user_id)
+    _record(state, user_id, "learned", confirmed_class)
 
+    _save_all_users()
+
+
+def record_turn(user_id, style=None):
+    """One timeline point for a turn that learned nothing, so the complete
+    history grows with every turn and not only with learned preferences."""
+    state = _get_user_state(user_id)
+    _record(state, user_id, "turn", style)
     _save_all_users()
 
 
@@ -267,6 +303,19 @@ def get_user_summary(user_id):
         "history_weights": {k: round(v / total, 3) for k, v in hist.items()},
         "dominant_preference": _history_majority(state, user_id),
     }
+
+
+def get_user_timeline(user_id):
+    """Every weight change since the user was created or last reset:
+    {"since", "points": [{at, reason, style, n_confirmed, weights}]}.
+    A user from before the timeline existed starts with one point now."""
+    state = _get_user_state(user_id)
+    if not state.get("timeline"):
+        _record(state, user_id, "recording started")
+        _save_all_users()
+    tl = state["timeline"]
+    return {"user_id": user_id, "since": tl[0]["at"], "reset": tl[0]["reason"] == "reset",
+            "points": tl}
 
 
 def reset_user(user_id):

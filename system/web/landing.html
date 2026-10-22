@@ -657,8 +657,10 @@
             border-radius: 16px;
             padding: 24px 28px 20px;
             box-shadow: 0 8px 40px rgba(0,0,0,0.55);
-            min-width: 480px;
-            max-width: 94vw;
+            /* Fixed width: both charts are sized from it, so a long subtitle
+               must not widen the popup after the first chart is drawn. */
+            width: min(760px, 94vw);
+            box-sizing: border-box;
             position: relative;
         }
         #hw-popup h4 {
@@ -673,7 +675,13 @@
             color: var(--ink-soft);
             margin-bottom: 18px;
         }
-        #hw-chart-canvas {
+        #hw-popup { max-height: 92vh; overflow-y: auto; }
+        #hw-popup .hw-section-title {
+            font-size: 11.5px; font-weight: 700; color: var(--ink);
+            text-transform: uppercase; letter-spacing: 0.06em; margin: 10px 0 2px;
+        }
+        #hw-popup .hw-section-title.hw-second { margin-top: 22px; }
+        #hw-chart-canvas, #hw-all-canvas {
             width: 100%;
             border-radius: 8px;
             display: block;
@@ -1204,9 +1212,13 @@
     <div id="hw-overlay" onclick="closeHWOverlay(event)">
         <div id="hw-popup" onclick="event.stopPropagation()">
             <button class="hw-close" onclick="closeHWOverlay()">&#x2715;</button>
-            <h4>📈 History Weights Over Turns</h4>
-            <div class="hw-subtitle">Tracks how the system weighted each response style across conversation turns</div>
+            <h4>📈 History Weights</h4>
+            <div class="hw-section-title">This session</div>
+            <div class="hw-subtitle">How the system weighted each response style across this session's turns</div>
             <canvas id="hw-chart-canvas" height="220"></canvas>
+            <div class="hw-section-title hw-second">Complete history · <span id="hw-all-user"></span></div>
+            <div class="hw-subtitle" id="hw-all-subtitle">Loading…</div>
+            <canvas id="hw-all-canvas" height="220"></canvas>
             <div class="hw-legend">
                 <span><i style="background:#6EE7B7;"></i> Simple</span>
                 <span><i style="background:#93C5FD;"></i> Detail</span>
@@ -2878,6 +2890,7 @@ ${copy.outerHTML}
                 for (const k of Object.keys(hw)) entry[k] = hw[k] != null ? hw[k] : 0;
                 weightHistory.push(entry);
                 weightHistory.sort((a, b) => a.turn - b.turn);
+                hwRefreshIfOpen();
             } else {
                 for (const k of Object.keys(hw)) alreadyHas[k] = hw[k] != null ? hw[k] : 0;
             }
@@ -2903,6 +2916,89 @@ ${copy.outerHTML}
         function openHWOverlay() {
             document.getElementById('hw-overlay').classList.add('active');
             drawHWChart();
+            loadHWHistory();
+        }
+
+        // ---- Complete history: every weight change since the user's reset ----
+        let hwAllData = null;      // { user, since, reset, points: [{label, at, Simple, ...}] }
+
+        /** A new turn arrived: grow both charts if the overlay is open. */
+        let hwRefreshTimer = null;
+        function hwRefreshIfOpen() {
+            if (!document.getElementById('hw-overlay').classList.contains('active')) return;
+            clearTimeout(hwRefreshTimer);
+            hwRefreshTimer = setTimeout(() => { drawHWChart(); loadHWHistory(true); }, 300);
+        }
+
+        async function loadHWHistory(quiet) {
+            const uid = activeUser;
+            document.getElementById('hw-all-user').textContent = userLabel(uid);
+            const sub = document.getElementById('hw-all-subtitle');
+            if (!quiet || !hwAllData || hwAllData.user !== uid) {
+                sub.textContent = 'Loading…';
+                hwAllData = null;
+                drawHWAllChart();
+            }
+            let d = null, why = 'could not reach the server';
+            try {
+                const r = await fetch(`/profile/${encodeURIComponent(uid)}/history`);
+                d = r.ok ? await r.json() : null;
+                if (!r.ok) why = `history endpoint returned HTTP ${r.status} (restart the server)`;
+                else if (!d.ok) why = d.error || 'the personalisation service did not answer';
+            } catch (e) { d = null; }
+            if (uid !== activeUser) return;              // user switched while loading
+            try {
+                if (!d || !d.ok || !Array.isArray(d.points) || !d.points.length) {
+                    // No timeline: still show where this user stands now.
+                    const now = await hwCurrentWeights(uid);
+                    if (uid !== activeUser) return;
+                    if (now) {
+                        hwAllData = { user: uid, points: [{ label: 'now', ...now }] };
+                        sub.textContent = `Current weights only — full history unavailable (${why})`;
+                    } else {
+                        hwAllData = { user: uid, points: [] };
+                        sub.textContent = 'Not available — ' + why;
+                    }
+                    drawHWAllChart();
+                    return;
+                }
+                const pts = d.points.map((p, i) => ({ label: '#' + i, at: p.at, ...(p.weights || {}) }));
+                hwAllData = { user: uid, since: d.since, reset: d.reset, points: pts };
+                const when = new Date(d.since).toLocaleString();
+                const turns = d.points.filter(p => p.reason === 'turn' || p.reason === 'learned').length;
+                const learned = d.points.filter(p => p.reason === 'learned').length;
+                sub.textContent = (d.reset ? `Since this user was created or last reset (${when})`
+                                           : `Since recording started (${when}); earlier turns were not recorded`)
+                    + ` · ${turns} turn${turns === 1 ? '' : 's'}, ${learned} learned`;
+            } catch (e) {
+                sub.textContent = 'Not available — could not read the history';
+            }
+            drawHWAllChart();
+        }
+
+        /** The user's learned weights right now, or the latest session point. */
+        async function hwCurrentWeights(uid) {
+            try {
+                const r = await fetch(`/profile/${encodeURIComponent(uid)}`);
+                const p = r.ok ? await r.json() : null;
+                const w = p && p.history_weights;
+                if (w && Object.values(w).some(v => v > 0)) return { ...w };
+            } catch (e) { }
+            const last = weightHistory[weightHistory.length - 1];
+            if (!last) return null;
+            const { turn, ...w } = last;
+            return w;
+        }
+
+        function drawHWAllChart() {
+            const canvas = document.getElementById('hw-all-canvas');
+            const pts = hwAllData ? hwAllData.points : [];
+            drawWeightChart(canvas, pts, {
+                xTitle: 'Turns across all sessions (#0 = starting weights)',
+                empty: hwAllData === null ? 'Loading…' : 'No history yet',
+                // Many points: label only a few on the x axis and skip value labels.
+                maxXLabels: 12, valueLabels: pts.length <= 15,
+            });
         }
 
         function closeHWOverlay(e) {
@@ -2911,7 +3007,15 @@ ${copy.outerHTML}
         }
 
         function drawHWChart() {
-            const canvas = document.getElementById('hw-chart-canvas');
+            drawWeightChart(document.getElementById('hw-chart-canvas'),
+                weightHistory.map(d => ({ ...d, label: 'T' + d.turn })),
+                { xTitle: 'Conversation Turn', empty: 'No data yet — make some conversation turns',
+                  maxXLabels: 30, valueLabels: true });
+        }
+
+        /** One weights chart. data: [{label, <style>: 0..1, ...}] in order. */
+        function drawWeightChart(canvas, data, opts) {
+            opts = opts || {};
             const dpr = window.devicePixelRatio || 1;
             const W = canvas.parentElement.clientWidth - 56;
             const H = 220;
@@ -2931,7 +3035,6 @@ ${copy.outerHTML}
             ctx.fillStyle = '#08213A';
             ctx.fillRect(0, 0, W, H);
 
-            const data = weightHistory;
             const n = data.length;
 
             // Grid lines (horizontal 0%, 25%, 50%, 75%, 100%)
@@ -2954,84 +3057,80 @@ ${copy.outerHTML}
                 ctx.fillStyle = '#5F7895';
                 ctx.font = '12px -apple-system, sans-serif';
                 ctx.textAlign = 'center';
-                ctx.fillText('No data yet — make some conversation turns', PAD.left + cw / 2, PAD.top + ch / 2);
+                ctx.fillText(opts.empty || 'No data yet', PAD.left + cw / 2, PAD.top + ch / 2);
                 return;
             }
 
-            // Derive keys dynamically from the stored data
-            const allKeys = data.length > 0
-                ? Object.keys(data[0]).filter(k => k !== 'turn')
-                : [];
+            // Series keys from the data itself (everything but the label fields)
+            const allKeys = Object.keys(data[0]).filter(k => !['turn', 'label', 'at'].includes(k));
+            const xOf = i => n === 1 ? PAD.left + cw / 2 : PAD.left + (i / (n - 1)) * cw;
 
-            // X axis labels (Turn N)
+            // X axis labels, thinned so they never overlap
+            const step = Math.max(1, Math.ceil(n / (opts.maxXLabels || 30)));
             ctx.fillStyle = '#5F7895';
             ctx.font = '9px -apple-system, sans-serif';
             ctx.textAlign = 'center';
             data.forEach((d, i) => {
-                const x = n === 1 ? PAD.left + cw / 2 : PAD.left + (i / (n - 1)) * cw;
-                const y = PAD.top + ch + 16;
-                ctx.fillText('T' + d.turn, x, y);
+                if (i % step && i !== n - 1) return;
+                ctx.fillText(d.label, xOf(i), PAD.top + ch + 16);
             });
 
-            // X axis label
+            // X axis title
             ctx.fillStyle = '#2B5079';
             ctx.font = '9px -apple-system, sans-serif';
             ctx.textAlign = 'center';
-            ctx.fillText('Conversation Turn', PAD.left + cw / 2, PAD.top + ch + 30);
+            ctx.fillText(opts.xTitle || '', PAD.left + cw / 2, PAD.top + ch + 30);
 
-            // Draw each series using dynamic keys + dynamic colours
+            // Each series
             for (const key of allKeys) {
                 const color = getHWColor(key);
                 ctx.save();
                 ctx.shadowColor = color;
                 ctx.shadowBlur = 6;
                 ctx.strokeStyle = color;
-                ctx.lineWidth = 2.5;
+                ctx.lineWidth = n > 60 ? 1.6 : 2.5;
                 ctx.lineJoin = 'round';
                 ctx.lineCap  = 'round';
-
                 ctx.beginPath();
                 data.forEach((d, i) => {
-                    const x = n === 1 ? PAD.left + cw / 2 : PAD.left + (i / (n - 1)) * cw;
                     const y = PAD.top + ch - (d[key] || 0) * ch;
-                    if (i === 0) ctx.moveTo(x, y);
-                    else        ctx.lineTo(x, y);
+                    if (i === 0) ctx.moveTo(xOf(i), y);
+                    else        ctx.lineTo(xOf(i), y);
                 });
                 ctx.stroke();
                 ctx.restore();
 
-                // Dots + value labels
+                // Dots (and value labels when there are few points)
                 data.forEach((d, i) => {
-                    const x = n === 1 ? PAD.left + cw / 2 : PAD.left + (i / (n - 1)) * cw;
-                    const y = PAD.top + ch - (d[key] || 0) * ch;
-                    ctx.beginPath();
-                    ctx.arc(x, y, 3.5, 0, Math.PI * 2);
-                    ctx.fillStyle = color;
-                    ctx.fill();
-                    ctx.fillStyle = color;
-                    ctx.font = 'bold 8px -apple-system, sans-serif';
-                    ctx.textAlign = 'center';
-                    ctx.fillText(Math.round((d[key] || 0) * 100) + '%', x, y - 8);
+                    const x = xOf(i), y = PAD.top + ch - (d[key] || 0) * ch;
+                    if (n <= 60 || i === n - 1) {
+                        ctx.beginPath();
+                        ctx.arc(x, y, n > 30 ? 2.2 : 3.5, 0, Math.PI * 2);
+                        ctx.fillStyle = color;
+                        ctx.fill();
+                    }
+                    if (opts.valueLabels !== false || i === n - 1) {
+                        ctx.fillStyle = color;
+                        ctx.font = 'bold 8px -apple-system, sans-serif';
+                        ctx.textAlign = 'center';
+                        ctx.fillText(Math.round((d[key] || 0) * 100) + '%', x, y - 8);
+                    }
                 });
             }
 
-            // Dynamic legend at bottom of canvas area
-            if (allKeys.length > 0) {
-                const legY = H - 6;
-                const totalW = allKeys.length * 90;
-                let legX = PAD.left + cw / 2 - totalW / 2;
-                ctx.font = '9px -apple-system, sans-serif';
-                ctx.textAlign = 'left';
-                allKeys.forEach(k => {
-                    const col = getHWColor(k);
-                    ctx.fillStyle = col;
-                    ctx.fillRect(legX, legY - 4, 18, 3);
-                    ctx.fillStyle = '#95AAC3';
-                    const label = k.replace(/_/g, ' ');
-                    ctx.fillText(label, legX + 22, legY);
-                    legX += 90;
-                });
-            }
+            // Legend at the bottom of the canvas
+            const legY = H - 6;
+            const totalW = allKeys.length * 90;
+            let legX = PAD.left + cw / 2 - totalW / 2;
+            ctx.font = '9px -apple-system, sans-serif';
+            ctx.textAlign = 'left';
+            allKeys.forEach(k => {
+                ctx.fillStyle = getHWColor(k);
+                ctx.fillRect(legX, legY - 4, 18, 3);
+                ctx.fillStyle = '#95AAC3';
+                ctx.fillText(k.replace(/_/g, ' '), legX + 22, legY);
+                legX += 90;
+            });
         }
     </script>
 </body>

@@ -133,6 +133,16 @@ def get_profile(user_id: str):
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.get("/profile/{user_id}/history")
+def get_profile_history(user_id: str):
+    """The user's weights at every change since they were created or reset."""
+    try:
+        return style_model.get_user_timeline(user_id)
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
 # ── User registry ─────────────────────────────────────────────────────────
 
 def _user_view(u):

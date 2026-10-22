@@ -26,7 +26,7 @@ try:
     from personalization.diagnostic import (
         style_from_intent, style_from_keywords, detect_correction_signal
     )
-    from personalization.style_model import predict_style, learn_style, get_user_summary
+    from personalization.style_model import predict_style, learn_style, get_user_summary, record_turn
     from personalization.system_commands import detect_system_command, get_command_action
     from delivery.voice_profile import (
         get_profile as get_delivery_profile, save_profile as save_delivery_profile
@@ -42,7 +42,7 @@ except ImportError:
     from layers.l7_personalization.personalization.diagnostic import (
         style_from_intent, style_from_keywords, detect_correction_signal
     )
-    from layers.l7_personalization.personalization.style_model import predict_style, learn_style, get_user_summary
+    from layers.l7_personalization.personalization.style_model import predict_style, learn_style, get_user_summary, record_turn
     from layers.l7_personalization.personalization.system_commands import detect_system_command, get_command_action
     from layers.l7_personalization.delivery.voice_profile import (
         get_profile as get_delivery_profile, save_profile as save_delivery_profile
@@ -140,8 +140,9 @@ def handle_voice_command(sinhala_text, user_id, retrieved_chunk_id=None, dry_run
     delivery_profile = get_delivery_profile(user_id)
     before = {k: delivery_profile.get(k) for k in ("rate", "pause_scale", "chunk_size")}
     mods = frame.get("modifiers", {})
-    if (mods.get("speed") or mods.get("repeat") or mods.get("pause") or mods.get("chunk")) \
-            and not dry_run:
+    # Every turn, not only speed turns: a turn with no delivery request moves
+    # the rate back towards normal (delivery/feedback.py, RELAX_FACTOR).
+    if not dry_run:
         delivery_profile = _with_last_spoken(delivery_profile, last_spoken_ctx, now)
         delivery_profile, _ = apply_delivery_turn(delivery_profile, frame, now)
         save_delivery_profile(user_id, delivery_profile)
@@ -156,6 +157,8 @@ def handle_voice_command(sinhala_text, user_id, retrieved_chunk_id=None, dry_run
         style = (last or {}).get("style_class") or "Detailed"
         if style not in STYLE_PROMPT_MODIFIERS:
             style = "Detailed"
+        if not dry_run:
+            record_turn(user_id)
         return {
             "stt_stage": stt_stage,
             "intent_stage": intent_stage,
@@ -193,6 +196,7 @@ def handle_voice_command(sinhala_text, user_id, retrieved_chunk_id=None, dry_run
     if command:
         if not dry_run:
             log_interaction(user_id, intent_stage, retrieved_chunk_id=retrieved_chunk_id, style_class=None)
+            record_turn(user_id)
         return {
             "stt_stage": stt_stage,
             "intent_stage": intent_stage,
@@ -260,6 +264,8 @@ def handle_voice_command(sinhala_text, user_id, retrieved_chunk_id=None, dry_run
     #     own prediction, we deliberately do not train on it.
     if is_evidence and not dry_run:
         learn_style(user_id, english_text, style)
+    elif not dry_run and corrected_style is None:
+        record_turn(user_id, style)          # learn_style already added a point
 
     return {
         "stt_stage": stt_stage,

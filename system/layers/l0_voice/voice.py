@@ -305,6 +305,18 @@ def get_profile(user_id: str) -> dict:
     }
 
 
+def get_profile_history(user_id: str) -> dict:
+    """The user's weights at every change since creation / last reset.
+    `ok: False` with an empty list when Component 4 cannot be reached."""
+    mode = (VOICE_MODE or 'stub').lower()
+    if mode == 'http':
+        reply, reason = svc.get_json(f'{VOICE_URL.rstrip("/")}/profile/{user_id}/history', timeout_s=10)
+        if reply:
+            return {'ok': True, **reply}
+        return {'ok': False, 'user_id': user_id, 'points': [], 'error': reason}
+    return {'ok': False, 'user_id': user_id, 'points': [], 'error': 'voice service is in stub mode'}
+
+
 
 # ==========================================================================
 # USER REGISTRY (Component 4). Proxied so the web UI talks to one server.
