@@ -1,0 +1,62 @@
+name: Bug report
+description: Something in the reader is broken or gives wrong output
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. For security problems, follow SECURITY.md instead.
+  - type: dropdown
+    id: layer
+    attributes:
+      label: Affected layer
+      options:
+        - L0 voice
+        - L1 phone app / capture
+        - L2 frame select
+        - L3 segmentation
+        - L4A title OCR
+        - L4B body OCR / correction
+        - L4C polish
+        - L5 assemble
+        - L6 generator / RAG
+        - L7 personalization
+        - L8A listen (STT)
+        - L8B speech (TTS)
+        - Server / web UI
+        - Not sure
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Describe the problem and what you expected instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Start the server with ...
+        2. Capture / upload ...
+        3. See ...
+    validations:
+      required: true
+  - type: textarea
+    id: input
+    attributes:
+      label: Sample input
+      description: Attach the image, audio or text that triggers the problem, if you can share it.
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or error output
+      render: shell
+  - type: input
+    id: env
+    attributes:
+      label: Environment
+      placeholder: "Windows 11, Python 3.11, CPU / GPU, phone model"
